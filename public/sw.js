@@ -11,12 +11,18 @@ const PRE_CACHE_RESOURCES = [
   "/icons/icon-512.png",
 ];
 
-// Install Event: Pre-cache shell and offline assets
+// Install Event: Pre-cache shell and offline assets (jangan gagal total jika satu aset 404)
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(async (cache) => {
       console.log("[PWA SW] Pre-caching offline shell resources");
-      return cache.addAll(PRE_CACHE_RESOURCES);
+      await Promise.all(
+        PRE_CACHE_RESOURCES.map((url) =>
+          cache.add(url).catch((error) => {
+            console.warn("[PWA SW] Gagal pre-cache:", url, error);
+          })
+        )
+      );
     })
   );
   self.skipWaiting();

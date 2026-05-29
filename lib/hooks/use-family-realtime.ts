@@ -11,6 +11,8 @@ type UseFamilyRealtimeOptions = {
   /** ID akun ortu yang login — untuk notifikasi */
   accountId: string | null;
   enabled?: boolean;
+  /** Dipanggil saat task_history atau goals berubah (mis. router.refresh di beranda ortu) */
+  onFamilyDataChange?: () => void;
 };
 
 /**
@@ -21,6 +23,7 @@ export function useFamilyRealtime({
   childProfileIds,
   accountId,
   enabled = true,
+  onFamilyDataChange,
 }: UseFamilyRealtimeOptions) {
   const queryClient = useQueryClient();
 
@@ -43,6 +46,7 @@ export function useFamilyRealtime({
         () => {
           void queryClient.invalidateQueries({ queryKey: ["task-history", profileId] });
           void queryClient.invalidateQueries({ queryKey: ["parent-queue"] });
+          onFamilyDataChange?.();
         },
       );
       channel.on(
@@ -55,6 +59,7 @@ export function useFamilyRealtime({
         },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["goals", profileId] });
+          onFamilyDataChange?.();
         },
       );
     }
@@ -79,5 +84,5 @@ export function useFamilyRealtime({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [childProfileIds, accountId, enabled, queryClient]);
+  }, [childProfileIds, accountId, enabled, onFamilyDataChange, queryClient]);
 }

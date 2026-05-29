@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { PwaInstallPrompt } from "@/components/shared/pwa-install-prompt";
 
 export function PwaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -53,5 +54,10 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <PwaInstallPrompt />
+    </>
+  );
 }
