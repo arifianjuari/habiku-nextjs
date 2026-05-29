@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Habiku — Next.js
 
-## Getting Started
+Aplikasi web **Habiku** (pembentukan karakter anak) — stack **Next.js + Supabase**.
 
-First, run the development server:
+## Dokumentasi
+
+- [PRD Next.js](./docs/prd-habiku-nextjs.md)
+- [Arsitektur database](./docs/database-architecture.md) — skema PostgreSQL, RLS, RPC
+- [PRD referensi React Native](./docs/prd-habiku-react.md)
+- [Roadmap implementasi](./docs/implementation-roadmap-nextjs.md)
+
+## Prasyarat
+
+- Node.js ≥ 20
+- pnpm
+- Proyek Supabase (atau Supabase CLI lokal)
+
+## Mulai cepat
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local
+# Edit .env.local — isi URL & anon key Supabase Anda
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Skrip
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Perintah | Fungsi |
+|----------|--------|
+| `pnpm dev` | Development server |
+| `pnpm build` | Production build |
+| `pnpm start` | Jalankan build |
+| `pnpm lint` | ESLint |
 
-## Learn More
+## Struktur utama
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/                # App Router (marketing, auth, parent, child)
+components/         # UI + layout + domain components
+lib/
+  database/         # enum domain, nama RPC
+  supabase/         # klien SSR + helper RPC typed
+  auth/             # session context (accounts + families)
+types/database.ts   # Tipe tabel (manual ↔ database-architecture.md)
+supabase/           # Migrasi & Edge Functions (salin dari repo lama)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Database
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Salin migrasi dari repositori Expo/React Native ke `supabase/migrations`, lalu:
 
-## Deploy on Vercel
+```bash
+supabase link --project-ref <ref>
+supabase db push
+supabase gen types typescript --linked > types/database.ts
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy ke [Vercel](https://vercel.com) dengan environment variables dari `.env.example`.
+
+## Lisensi
+
+Private — Habiku.

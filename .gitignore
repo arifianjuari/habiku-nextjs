@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local SDK installs (should not live in repo)
+/google-cloud-sdk/

@@ -3,8 +3,9 @@
 Dokumen ini adalah **Product Requirements Document** resmi untuk **Habiku** pada stack **Next.js (App Router) + React + Supabase**. Produk, aturan bisnis, skema database, dan RPC **diwarisi** dari implementasi referensi React Native; dokumen ini mendefinisikan **bagaimana** persyaratan yang sama diimplementasikan di web.
 
 **Dokumen terkait:**
-- [`prd-habiku-react.md`](./prd-habiku-react.md) — PRD referensi (React Native + Expo); sumber kebenaran domain & skema DB
-- [`implementation-roadmap-nextjs.md`](./implementation-roadmap-nextjs.md) — Rencana tahapan implementasi web (v1) *(direncanakan)*
+- [`database-architecture.md`](./database-architecture.md) — **Skema fisik PostgreSQL** (tabel, RLS, RPC, Storage, triggers)
+- [`prd-habiku-react.md`](./prd-habiku-react.md) — PRD referensi (React Native + Expo); domain produk
+- [`implementation-roadmap-nextjs.md`](./implementation-roadmap-nextjs.md) — Rencana tahapan implementasi web (v1)
 - [`fsd-punishment-habiku.md`](./fsd-punishment-habiku.md) — Sistem Konsekuensi & Perjanjian *(direncanakan; salin dari repo RN)*
 - [`setup-wajib-v1-nextjs.md`](./setup-wajib-v1-nextjs.md) — Setup Supabase, env, Vercel, Web Push *(direncanakan)*
 
@@ -37,7 +38,7 @@ Sama dengan versi mobile: anak cenderung ke layar instan, kebiasaan baik sulit k
 |-------|-----------|
 | **Framework** | **Next.js 15+** (App Router, React 19) |
 | **Styling** | **Tailwind CSS v4** + komponen UI (shadcn/ui atau setara) |
-| **Backend** | **Supabase** — PostgreSQL, Auth, Storage, Realtime, Edge Functions *(skema & RPC sama dengan RN)* |
+| **Backend** | **Hybrid: Supabase** (PostgreSQL, Auth, Realtime, RLS) + **Google Cloud Platform** (Vertex AI, Google Cloud Storage, BigQuery) |
 | **Auth di web** | `@supabase/ssr` — cookie httpOnly, middleware refresh sesi |
 | **Data fetching** | TanStack Query v5 + Server Components untuk data read-only awal |
 | **Deploy** | **Vercel** (preview per PR, production di domain Habiku) |
@@ -77,8 +78,8 @@ Gratis (Free-to-use); donasi komunitas di masa depan (gateway §7). Tidak ada pa
 | F8 | **Goal Progress** | `goal_progress_events` |
 | F9 | **Streak** | Per kategori + full daily mission streak |
 | F10 | **Child Mode** | Sesi anak di browser; keluar/ganti profil = PIN ortu (RPC `verify_child_profile_pin`) |
-| F11 | **Bukti Misi** | Upload foto via `<input type="file" capture>` / drag-drop → Supabase Storage |
-| F12 | **Notifikasi** | **In-app** wajib P0; **Web Push** P0+ (VAPID + service worker); tidak mengandalkan FCM native |
+| F11 | **Bukti Misi** | Upload foto via `<input type="file" capture>` / drag-drop → Google Cloud Storage (GCS) + verifikasi otomatis via **Vertex AI (Gemini 1.5 Flash)** |
+| F12 | **Notifikasi** | **In-app** wajib P0; **Web Push** P0+ berbasis browser token menggunakan **Firebase Cloud Messaging (FCM)** |
 | F13 | **Misi Insidental** | `give_incidental_reward` |
 | F14 | **Engagement Beranda Anak** | Check-in, sorotan, badge, tips, refleksi, kebun energi |
 | F15 | **Validasi Tugas** | Konfirmasi manual ortu |
@@ -394,25 +395,26 @@ Edge Functions yang **wajib** sama:
 | Analytics | posthog-js | |
 | Errors | @sentry/nextjs | Opsional P0 |
 
-### 7.2. Backend (unchanged)
+### 7.2. Backend
 
-| Layer | Teknologi |
-|-------|-----------|
-| BaaS | Supabase |
-| DB | PostgreSQL |
-| Auth | Supabase Auth (Email + Google) |
-| Storage | Supabase Storage |
-| Realtime | Supabase Realtime |
-| Edge | Deno Edge Functions |
+| Layer | Teknologi | Catatan / Peran |
+|-------|-----------|-----------------|
+| BaaS | Supabase | PostgreSQL relational data, Auth, Realtime listeners, RLS |
+| DB | PostgreSQL | Database operasional (Supabase) |
+| Auth | Supabase Auth (Email + Google) | Otentikasi utama orang tua |
+| Storage | Google Cloud Storage (GCS) & Supabase | GCS untuk bukti tugas (task-evidence), Supabase untuk avatar/cover |
+| Realtime | Supabase Realtime | Sinkronisasi live update dashboard |
+| AI Service | Vertex AI (Gemini 1.5 Flash) | Validasi otomatis bukti foto tugas anak |
+| Analytics | Google BigQuery | Sinkronisasi data operasional harian untuk analitik parenting |
 
 ### 7.3. Notifikasi Web (P0+)
 
 | Kanal | Implementasi |
 |-------|--------------|
 | In-app | Tabel `notifications` + Realtime (sama RN) |
-| Web Push | VAPID keys; subscription di `push_subscriptions`; Route Handler simpan subscription; Edge kirim via `web-push` |
+| Web Push | Browser Push Token (VAPID) menggunakan **Firebase Cloud Messaging (FCM)** |
 
-**Tidak** memakai Expo Notifications / FCM di stack ini.
+**Tidak** memakai Expo Notifications native (kita menggunakan Web Push FCM untuk browser).
 
 ### 7.4. Pembayaran & donasi
 
@@ -476,7 +478,14 @@ pnpm dev
 
 ## 9. Database Schema
 
-**Identik** dengan implementasi referensi React Native. Diagram ER, entitas, enum, dan tabel masa depan (P1) — lihat [`prd-habiku-react.md` §9](./prd-habiku-react.md).
+**Acuan utama:** [`database-architecture.md`](./database-architecture.md) (ERD §2, kamus tabel §4, RPC §6, Storage §7).
+
+Ringkasan produk juga ada di [`prd-habiku-react.md` §9](./prd-habiku-react.md). Jika ada perbedaan detail fisik, **utamakan `database-architecture.md`**.
+
+**Catatan skema penting untuk UI web:**
+- Satu anak **maksimal satu goal `active`** (`goals_one_active_per_child` — indeks unik parsial).
+- Klien hanya boleh `INSERT` `task_history` berstatus `pending`; approve/reject **hanya via RPC**.
+- `point_ledger` append-only dari sisi klien (tanpa INSERT langsung).
 
 **Tidak ada perubahan skema wajib** hanya karena pindah ke Next.js, kecuali:
 
@@ -610,13 +619,14 @@ Alur identik RN §15.3; langkah 6 animasi memakai Framer Motion, tanpa haptics.
 |:------|:---------:|:------:|:-----------|
 | Auth & Family | P0 | ⬜ | Google + email |
 | Child Profile & PIN | P0 | ⬜ | Child Mode web |
-| Goals & Tasks | P0 | ⬜ | Paritas RN P0 |
+| Goals & Tasks | P0 | ⬜ | Upload GCS & Verifikasi Otomatis Vertex AI (Gemini) |
 | Approval + Ledger | P0 | ⬜ | RPC atomik |
 | Realtime | P0 | ⬜ | |
 | In-app notifications | P0 | ⬜ | |
 | PWA install | P0 | ⬜ | manifest + SW shell |
 | Missed job | P0 | ⬜ | Edge cron |
-| Web Push | P0+ | ⬜ | Setelah in-app stabil |
+| Web Push (FCM) | P0+ | ⬜ | Menggunakan Firebase Cloud Messaging |
+| BigQuery Analytics | P1 | ⬜ | Pipeline data & dasbor Looker Studio |
 | Engagement P1/P2 | P1–P2 | ⬜ | Ikut §3 |
 | Perjanjian FSD | P1 | ⬜ | Setelah migrasi 10.A |
 | App Store release | — | N/A | Web distribution |
