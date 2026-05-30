@@ -92,6 +92,7 @@
   }
   html {
     @apply font-sans;
+    color-scheme: light;
   }
   .font-heading {
     font-family: var(--font-heading), var(--font-sans), system-ui, sans-serif;
