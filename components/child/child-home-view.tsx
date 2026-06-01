@@ -1,122 +1,33 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useTransition } from "react";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap,
   Target,
   Flame,
-  Award,
   Sparkles,
-  Shield,
   Calendar,
   CheckCircle,
-  HelpCircle,
   Trophy,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { checkInChildAction } from "@/app/child/actions";
-import type { ChildProfile, Goal, Streak } from "@/types/database";
 import { ChildAvatar } from "@/components/shared/child-avatar";
-
-interface CheckInResponse {
-  already: boolean;
-  bonus: number;
-  chain_length: number;
-  check_in_date: string;
-}
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
+import {
+  useChildHomeData,
+  usePatchChildHomeCache,
+} from "@/lib/hooks/use-child-home-data";
 
 export function ChildHomeView() {
   const { profileId, profileName } = useChildModeStore();
-  const [child, setChild] = useState<ChildProfile | null>(null);
-  const [activeGoal, setActiveGoal] = useState<Goal | null>(null);
-  const [totalPoints, setTotalPoints] = useState(0);
-  const [checkInChain, setCheckInChain] = useState(0);
-  const [isCheckedInToday, setIsCheckedInToday] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading, isFetching } = useChildHomeData(profileId);
+  const patchHome = usePatchChildHomeCache(profileId ?? "");
   const [isPending, startTransition] = useTransition();
-
-  const supabase = createClient();
-
-  useEffect(() => {
-    if (!profileId) return;
-    const activeProfileId = profileId;
-
-    // Guard: Pastikan profileId adalah UUID yang valid untuk mencegah Postgres 22P02 error
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(activeProfileId)) {
-      console.warn("⚠️ Invalid profileId UUID format in Home:", activeProfileId);
-      setLoading(false);
-      return;
-    }
-
-    async function loadChildData() {
-      try {
-        setLoading(true);
-
-        // 1. Fetch child profile
-        const { data: profile } = await supabase
-          .from("child_profiles")
-          .select("*")
-          .eq("id", activeProfileId)
-          .maybeSingle();
-        
-        if (profile) setChild(profile);
-
-        // 2. Fetch point ledger sum
-        const { data: ledger } = await supabase
-          .from("point_ledger")
-          .select("amount")
-          .eq("profile_id", activeProfileId);
-        
-        const sum = ledger?.reduce((sum, entry) => sum + entry.amount, 0) || 0;
-        setTotalPoints(sum);
-
-        // 3. Fetch active goal
-        const { data: goal } = await supabase
-          .from("goals")
-          .select("*")
-          .eq("profile_id", activeProfileId)
-          .eq("status", "active")
-          .maybeSingle();
-        
-        if (goal) setActiveGoal(goal);
-
-        // 4. Fetch daily check-in chain length
-        const { data: chainData, error: chainError } = await (supabase as any).rpc(
-          "compute_check_in_chain_length",
-          { p_profile_id: activeProfileId }
-        );
-        if (!chainError && typeof chainData === "number") {
-          setCheckInChain(chainData);
-        }
-
-        // 5. Check if checked in today
-        const todayStr = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }))
-          .toISOString()
-          .split("T")[0];
-        
-        const { data: checkInToday } = await supabase
-          .from("daily_check_ins")
-          .select("id")
-          .eq("profile_id", activeProfileId)
-          .eq("check_in_date", todayStr)
-          .maybeSingle();
-
-        setIsCheckedInToday(!!checkInToday);
-      } catch (err) {
-        console.error("Error loading child dashboard data:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadChildData();
-  }, [profileId, isCheckedInToday]);
 
   const handleCheckIn = () => {
     if (!profileId) return;
@@ -125,41 +36,49 @@ export function ChildHomeView() {
       const res = await checkInChildAction(profileId);
       if (res?.error) {
         toast.error(res.error);
-      } else {
-        setIsCheckedInToday(true);
-        if (res.already) {
-          toast.info("Kamu sudah melakukan check-in hari ini!");
-        } else {
-          toast.success(`Check-in berhasil! Kamu mendapatkan +${res.bonus} Energi! 🎯`);
-          setTotalPoints((prev) => prev + (res.bonus || 2));
-        }
-        if (typeof res.chain_length === "number") {
-          setCheckInChain(res.chain_length);
-        }
+        return;
       }
+
+      if (res.already) {
+        toast.info("Kamu sudah melakukan check-in hari ini!");
+      } else {
+        toast.success(`Check-in berhasil! Kamu mendapatkan +${res.bonus} Energi! 🎯`);
+      }
+
+      patchHome({
+        isCheckedInToday: true,
+        checkInChain:
+          typeof res.chain_length === "number"
+            ? res.chain_length
+            : (data?.checkInChain ?? 0),
+        totalPoints:
+          (data?.totalPoints ?? 0) + (res.already ? 0 : (res.bonus || 2)),
+      });
     });
   };
 
-  if (loading) {
+  if (!profileId || (isLoading && !data)) {
+    return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
+  }
+
+  if (!data) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
-        <span className="text-xs font-semibold text-emerald-800">Menyiapkan Beranda RPG Kamu…</span>
+      <div className="flex min-h-[50vh] items-center justify-center text-center text-sm text-emerald-800">
+        Gagal memuat beranda. Coba refresh halaman.
       </div>
     );
   }
 
-  const childAccent = child?.home_card_accent || "#10B981"; // Default emerald
+  const { child, activeGoal, totalPoints, checkInChain, isCheckedInToday } = data;
+  const childAccent = child?.home_card_accent || "#10B981";
 
   return (
-    <div className="space-y-6">
-      {/* 1. Welcoming RPG Banner */}
+    <div className="space-y-6" data-fetching={isFetching ? "" : undefined}>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-3xl p-5 text-white bg-gradient-to-r from-emerald-600 to-teal-500 shadow-lg shadow-emerald-700/10"
       >
-        {/* Sparkles background effect */}
         <div className="absolute top-2 right-4 opacity-30">
           <Sparkles className="h-20 w-20 text-white fill-white animate-pulse" />
         </div>
@@ -185,7 +104,6 @@ export function ChildHomeView() {
           </div>
         </div>
 
-        {/* Energy bar summary */}
         <div className="mt-4 flex items-center justify-between bg-emerald-950/20 rounded-2xl p-2 px-3 border border-emerald-500/20">
           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-100 flex items-center gap-1">
             <Zap className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
@@ -195,7 +113,6 @@ export function ChildHomeView() {
         </div>
       </motion.div>
 
-      {/* 2. Daily Check-in RPG Card */}
       <Card className="border border-emerald-100 bg-white/70 backdrop-blur-md rounded-3xl shadow-sm overflow-hidden">
         <CardContent className="p-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -209,7 +126,6 @@ export function ChildHomeView() {
               </div>
             </div>
 
-            {/* Streak Counter */}
             {checkInChain > 0 && (
               <div className="flex items-center gap-1 bg-orange-50 border border-orange-100 rounded-full px-3 py-1">
                 <Flame className="h-4 w-4 text-orange-500 fill-orange-500 animate-bounce" />
@@ -250,7 +166,6 @@ export function ChildHomeView() {
         </CardContent>
       </Card>
 
-      {/* 3. RPG Active Goal Progress */}
       {activeGoal ? (
         <Card className="border border-rose-100 bg-white/70 backdrop-blur-md rounded-3xl shadow-sm overflow-hidden">
           <CardContent className="p-5 space-y-4">
@@ -274,16 +189,22 @@ export function ChildHomeView() {
                 </span>
               </div>
 
-              {/* Progress Bar */}
               <div className="relative h-3.5 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-500 ease-out"
-                  style={{ width: `${Math.min(100, (activeGoal.current_hp / activeGoal.target_hp) * 100)}%` }}
+                  style={{
+                    width: `${Math.min(100, (activeGoal.current_hp / activeGoal.target_hp) * 100)}%`,
+                  }}
                 />
               </div>
 
               <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold">
-                <span>{Math.round(Math.min(100, (activeGoal.current_hp / activeGoal.target_hp) * 100))}% Selesai</span>
+                <span>
+                  {Math.round(
+                    Math.min(100, (activeGoal.current_hp / activeGoal.target_hp) * 100),
+                  )}
+                  % Selesai
+                </span>
                 <span>
                   {activeGoal.current_hp >= activeGoal.target_hp
                     ? "Hadiah siap diklaim ke Papa/Mama! 🎉"

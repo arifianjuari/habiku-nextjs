@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Account, Family } from "@/types/database";
 
@@ -7,11 +8,14 @@ export type SessionContext = {
   family: Family;
 };
 
+type AccountWithFamily = Account & {
+  families: Family | Family[] | null;
+};
+
 /**
- * Muat akun ortu + keluarga untuk sesi aktif.
- * Dipakai di layout/server components setelah migrasi & RLS aktif.
+ * Muat akun ortu + keluarga untuk sesi aktif (deduplikasi per-request via React.cache).
  */
-export async function getSessionContext(): Promise<SessionContext | null> {
+export const getSessionContext = cache(async (): Promise<SessionContext | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,27 +23,25 @@ export async function getSessionContext(): Promise<SessionContext | null> {
 
   if (!user) return null;
 
-  const { data: accountRow, error: accountError } = await supabase
+  const { data: row, error } = await supabase
     .from("accounts")
-    .select("*")
+    .select("*, families(*)")
     .eq("id", user.id)
     .maybeSingle();
 
-  const account = accountRow as Account | null;
-  if (accountError || !account) return null;
+  if (error || !row) return null;
 
-  const { data: familyRow, error: familyError } = await supabase
-    .from("families")
-    .select("*")
-    .eq("id", account.family_id)
-    .maybeSingle();
+  const accountRow = row as AccountWithFamily;
+  const familyRaw = accountRow.families;
+  const family = (Array.isArray(familyRaw) ? familyRaw[0] : familyRaw) as Family | null;
 
-  const family = familyRow as Family | null;
-  if (familyError || !family) return null;
+  if (!family) return null;
+
+  const { families: _families, ...account } = accountRow;
 
   return {
     userId: user.id,
-    account,
+    account: account as Account,
     family,
   };
-}
+});

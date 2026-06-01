@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
-import { createClient } from "@/lib/supabase/server";
+import { fetchFamilyChildrenAndTasks } from "@/lib/parent/fetch-family-page-data";
 import { TasksClientView } from "@/components/parent/tasks-client-view";
 
 export const metadata: Metadata = {
@@ -16,30 +16,7 @@ export default async function ParentTasksPage() {
     redirect("/login");
   }
 
-  const { family } = context;
-  const supabase = await createClient();
-
-  // Fetch children profiles
-  const { data: childrenRaw, error: childrenError } = await supabase
-    .from("child_profiles")
-    .select("*")
-    .eq("family_id", family.id)
-    .order("name", { ascending: true });
-
-  const children = childrenRaw || [];
-  const childIds = children.map((c) => c.id);
-
-  let tasks: any[] = [];
-  if (childIds.length > 0) {
-    // Fetch active and inactive tasks for these children profiles
-    const { data: tasksRaw, error: tasksError } = await supabase
-      .from("tasks")
-      .select("*")
-      .in("profile_id", childIds)
-      .order("created_at", { ascending: false });
-    
-    tasks = tasksRaw || [];
-  }
+  const { children, tasks } = await fetchFamilyChildrenAndTasks(context.family.id);
 
   return (
     <div className="space-y-4">

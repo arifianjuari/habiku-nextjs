@@ -1,4 +1,4 @@
-const CACHE_NAME = "habiku-pwa-cache-v1";
+const CACHE_NAME = "habiku-pwa-cache-v2";
 const OFFLINE_URL = "/offline";
 
 const PRE_CACHE_RESOURCES = [
@@ -45,22 +45,29 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+function shouldBypassServiceWorker(request, url) {
+  if (request.method !== "GET") return true;
+  if (url.origin.includes("supabase.co") || url.pathname.startsWith("/api/")) {
+    return true;
+  }
+  // Biarkan Next.js App Router menangani prefetch/RSC tanpa menunggu jaringan penuh
+  if (url.pathname.startsWith("/_next")) return true;
+  if (request.headers.get("RSC") === "1") return true;
+  if (request.headers.get("Next-Router-Prefetch") === "1") return true;
+  if (request.headers.get("Next-Router-State-Tree")) return true;
+  return false;
+}
+
 // Fetch Event: Caching strategies
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // 1. Bypass non-GET requests (e.g. Supabase POST/INSERT, Edge functions, APIs)
-  if (request.method !== "GET") {
+  if (shouldBypassServiceWorker(request, url)) {
     return;
   }
 
-  // 2. Bypass Supabase auth endpoints and websockets
-  if (url.origin.includes("supabase.co") || url.pathname.startsWith("/api/")) {
-    return;
-  }
-
-  // 3. For dynamic Webpages / Pages: Network First with Cache and Offline fallback
+  // For dynamic Webpages / Pages: Network First with Cache and Offline fallback
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -86,7 +93,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 4. For static assets (Fonts, Images, CSS, SVG, JS): Cache First with network update
+  // Static assets (Fonts, Images, CSS, SVG, JS): Cache First with network update
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {

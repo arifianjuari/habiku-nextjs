@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
-import { createClient } from "@/lib/supabase/client";
+import { useChildTargetsData } from "@/lib/hooks/use-child-targets-data";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Target,
@@ -22,70 +22,28 @@ import { Badge } from "@/components/ui/badge";
 import type { Goal } from "@/types/database";
 
 export function ChildTargetsView() {
-  const { profileId, profileName } = useChildModeStore();
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [totalPoints, setTotalPoints] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { profileId } = useChildModeStore();
+  const { data, isLoading, isFetching } = useChildTargetsData(profileId);
 
-  const supabase = createClient();
+  if (!profileId || (isLoading && !data)) {
+    return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
+  }
 
-  useEffect(() => {
-    if (!profileId) return;
-
-    // Guard UUID
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(profileId)) {
-      setLoading(false);
-      return;
-    }
-
-    const activeProfileId = profileId;
-
-    async function loadGoalsData() {
-      try {
-        setLoading(true);
-        // 1. Fetch child goals
-        const { data: goalsData } = await supabase
-          .from("goals")
-          .select("*")
-          .eq("profile_id", activeProfileId)
-          .order("created_at", { ascending: false });
-
-        if (goalsData) setGoals(goalsData);
-
-        // 2. Fetch point ledger sum
-        const { data: ledger } = await supabase
-          .from("point_ledger")
-          .select("amount")
-          .eq("profile_id", activeProfileId);
-
-        const sum = ledger?.reduce((sum, entry) => sum + entry.amount, 0) || 0;
-        setTotalPoints(sum);
-      } catch (err) {
-        console.error("Error loading child goals:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadGoalsData();
-  }, [profileId]);
-
-  if (loading) {
+  if (!data) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
-        <span className="text-xs font-semibold text-emerald-800">Menyiapkan Target Hadiahmu…</span>
+      <div className="flex min-h-[50vh] items-center justify-center text-center text-sm text-emerald-800">
+        Gagal memuat target. Coba refresh halaman.
       </div>
     );
   }
 
+  const { goals, totalPoints } = data;
   const activeGoals = goals.filter((g) => g.status === "active");
   const completedGoals = goals.filter((g) => g.status === "completed");
   const archivedGoals = goals.filter((g) => g.status === "archived");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-fetching={isFetching ? "" : undefined}>
       {/* 1. Header Area */}
       <div className="flex items-center justify-between">
         <div>

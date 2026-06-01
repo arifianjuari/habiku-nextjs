@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
-import { createClient } from "@/lib/supabase/server";
+import { fetchFamilyChildrenAndGoals } from "@/lib/parent/fetch-family-page-data";
 import { TargetsClientView } from "@/components/parent/targets-client-view";
 
 export const metadata: Metadata = {
@@ -16,30 +16,7 @@ export default async function ParentTargetsPage() {
     redirect("/login");
   }
 
-  const { family } = context;
-  const supabase = await createClient();
-
-  // Fetch children profiles
-  const { data: childrenRaw, error: childrenError } = await supabase
-    .from("child_profiles")
-    .select("*")
-    .eq("family_id", family.id)
-    .order("name", { ascending: true });
-
-  const children = childrenRaw || [];
-  const childIds = children.map((c) => c.id);
-
-  let goals: any[] = [];
-  if (childIds.length > 0) {
-    // Fetch all goals for these children profiles
-    const { data: goalsRaw, error: goalsError } = await supabase
-      .from("goals")
-      .select("*")
-      .in("profile_id", childIds)
-      .order("created_at", { ascending: false });
-    
-    goals = goalsRaw || [];
-  }
+  const { children, goals } = await fetchFamilyChildrenAndGoals(context.family.id);
 
   return (
     <div className="space-y-4">

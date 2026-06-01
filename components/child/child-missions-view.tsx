@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
-import { createClient } from "@/lib/supabase/client";
+import { useChildMissionsData } from "@/lib/hooks/use-child-missions-data";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -21,17 +21,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { Task, TaskHistory } from "@/types/database";
-
-interface TaskWithStatus extends Task {
-  submissionsToday: number;
-  isCompletedToday: boolean;
-  isPendingToday: boolean;
-  isFeatured?: boolean;
-  featuredMultiplierText?: string;
-  featuredMultiplierValue?: number;
-}
-
 const CATEGORY_CONFIG: Record<
   string,
   {
@@ -86,106 +75,15 @@ const CATEGORY_CONFIG: Record<
 };
 
 export function ChildMissionsView() {
-  const { profileId, profileName } = useChildModeStore();
-  const [tasks, setTasks] = useState<TaskWithStatus[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { profileId } = useChildModeStore();
+  const { data: tasks = [], isLoading, isFetching } = useChildMissionsData(profileId);
 
-  const supabase = createClient();
-
-  useEffect(() => {
-    if (!profileId) return;
-    const activeProfileId = profileId;
-
-    // Guard: Pastikan profileId adalah UUID yang valid untuk mencegah Postgres 22P02 error
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(activeProfileId)) {
-      console.warn("⚠️ Invalid profileId UUID format:", activeProfileId);
-      setTasks([]);
-      setLoading(false);
-      return;
-    }
-
-    async function loadMissions() {
-      try {
-        setLoading(true);
-
-        // 1. Fetch active tasks for profileId
-        const { data: fetchedTasks, error: tasksError } = await supabase
-          .from("tasks")
-          .select("*")
-          .eq("profile_id", activeProfileId)
-          .eq("is_active", true)
-          .order("created_at", { ascending: false });
-
-        if (tasksError) throw tasksError;
-
-        // 2. Fetch today's submissions for this child
-        const todayStr = new Date(
-          new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
-        )
-          .toISOString()
-          .split("T")[0];
-
-        const { data: todayHistory, error: historyError } = await supabase
-          .from("task_history")
-          .select("id, task_id, status")
-          .eq("profile_id", activeProfileId)
-          .eq("period_date", todayStr);
-
-        if (historyError) throw historyError;
-
-        // 3. Fetch active computed featured task for the child
-        const { data: featuredData, error: featuredError } = await (supabase as any)
-          .rpc("compute_featured_task", { p_profile_id: activeProfileId });
-
-        const featuredTask = featuredData && featuredData.length > 0 ? featuredData[0] : null;
-
-        // 4. Map status & featured status to tasks
-        const mappedTasks = (fetchedTasks || []).map((task: any) => {
-          const submissions = todayHistory?.filter((h) => h.task_id === task.id) || [];
-          const isCompleted = submissions.some((h) => h.status === "approved");
-          const isPending = submissions.some((h) => h.status === "pending");
-          const isFeatured = featuredTask && featuredTask.task_id === task.id;
-
-          return {
-            ...task,
-            submissionsToday: submissions.length,
-            isCompletedToday: isCompleted,
-            isPendingToday: isPending,
-            isFeatured: !!isFeatured,
-            featuredMultiplierText: isFeatured ? featuredTask.multiplier_text : undefined,
-            featuredMultiplierValue: isFeatured ? Number(featuredTask.multiplier_value) : undefined,
-          };
-        });
-
-        setTasks(mappedTasks);
-      } catch (err: any) {
-        console.error("Error loading child missions details:", {
-          message: err?.message,
-          code: err?.code,
-          details: err?.details,
-          hint: err?.hint,
-          error: err,
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadMissions();
-  }, [profileId]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
-        <span className="text-xs font-semibold text-emerald-800">Menyiapkan Misi Kamu…</span>
-      </div>
-    );
+  if (!profileId || (isLoading && tasks.length === 0)) {
+    return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-fetching={isFetching ? "" : undefined}>
       {/* Page Header */}
       <div className="space-y-1">
         <h2 className="font-heading text-xl font-black text-slate-900 tracking-tight leading-none">

@@ -27,6 +27,16 @@ export type ParentDashboardData = {
   activeGoalsCount: number;
 };
 
+function sumPointsByProfile(
+  ledger: { profile_id: string; amount: number }[] | null,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const entry of ledger ?? []) {
+    map.set(entry.profile_id, (map.get(entry.profile_id) ?? 0) + entry.amount);
+  }
+  return map;
+}
+
 export async function fetchParentDashboard(
   familyId: string,
   account: Account,
@@ -40,60 +50,42 @@ export async function fetchParentDashboard(
     .eq("family_id", familyId)
     .order("created_at", { ascending: true });
 
-  const children = childrenRaw || [];
+  const children = childrenRaw ?? [];
   const childIds = children.map((c) => c.id);
 
-  const activeGoalsByProfile = new Map<string, Goal>();
-  let activeGoalsCount = 0;
-
-  if (childIds.length > 0) {
-    const { data: activeGoalsRaw } = await supabase
-      .from("goals")
-      .select("*")
-      .in("profile_id", childIds)
-      .eq("status", "active")
-      .order("created_at", { ascending: true });
-
-    for (const goal of activeGoalsRaw ?? []) {
-      activeGoalsCount += 1;
-      if (!activeGoalsByProfile.has(goal.profile_id)) {
-        activeGoalsByProfile.set(goal.profile_id, goal);
-      }
-    }
+  if (childIds.length === 0) {
+    return {
+      account,
+      family,
+      childrenWithData: [],
+      pendingCount: 0,
+      recentActivities: [],
+      familyEnergy: 0,
+      activeGoalsCount: 0,
+    };
   }
 
-  const childrenWithData: ParentDashboardChild[] = await Promise.all(
-    children.map(async (child) => {
-      const { data: ledger } = await supabase
+  const [activeGoalsResult, ledgerResult, pendingResult, activitiesResult] =
+    await Promise.all([
+      supabase
+        .from("goals")
+        .select("*")
+        .in("profile_id", childIds)
+        .eq("status", "active")
+        .order("created_at", { ascending: true }),
+      supabase
         .from("point_ledger")
-        .select("amount")
-        .eq("profile_id", child.id);
-
-      const points = ledger?.reduce((sum, entry) => sum + entry.amount, 0) || 0;
-
-      return {
-        child,
-        activeGoal: activeGoalsByProfile.get(child.id) ?? null,
-        points,
-      };
-    }),
-  );
-
-  let pendingCount = 0;
-  if (childIds.length > 0) {
-    const { count } = await supabase
-      .from("task_history")
-      .select("*", { count: "exact", head: true })
-      .in("profile_id", childIds)
-      .eq("status", "pending");
-    pendingCount = count || 0;
-  }
-
-  let recentActivities: ParentDashboardActivity[] = [];
-  if (childIds.length > 0) {
-    const { data } = await supabase
-      .from("task_history")
-      .select(`
+        .select("profile_id, amount")
+        .in("profile_id", childIds),
+      supabase
+        .from("task_history")
+        .select("*", { count: "exact", head: true })
+        .in("profile_id", childIds)
+        .eq("status", "pending"),
+      supabase
+        .from("task_history")
+        .select(
+          `
         id,
         status,
         completed_at,
@@ -101,42 +93,62 @@ export async function fetchParentDashboard(
         profile_id,
         tasks (title, reward_points, category),
         child_profiles (name)
-      `)
-      .in("profile_id", childIds)
-      .order("completed_at", { ascending: false })
-      .limit(6);
+      `,
+        )
+        .in("profile_id", childIds)
+        .order("completed_at", { ascending: false })
+        .limit(6),
+    ]);
 
-    type ActivityRow = {
-      id: string;
-      status: string;
-      completed_at: string;
-      notes: string | null;
-      profile_id: string;
-      tasks:
-        | { title: string; reward_points: number; category: string }
-        | { title: string; reward_points: number; category: string }[]
-        | null;
-      child_profiles: { name: string } | { name: string }[] | null;
-    };
+  const activeGoalsByProfile = new Map<string, Goal>();
+  let activeGoalsCount = 0;
 
-    recentActivities = ((data || []) as ActivityRow[]).map((row) => {
-      const taskRow = row.tasks;
-      const childRow = row.child_profiles;
-
-      const task = Array.isArray(taskRow) ? taskRow[0] ?? null : taskRow;
-      const child = Array.isArray(childRow) ? childRow[0] ?? null : childRow;
-
-      return {
-        id: row.id,
-        status: row.status,
-        completed_at: row.completed_at,
-        notes: row.notes,
-        profile_id: row.profile_id,
-        task,
-        child,
-      };
-    });
+  for (const goal of activeGoalsResult.data ?? []) {
+    activeGoalsCount += 1;
+    if (!activeGoalsByProfile.has(goal.profile_id)) {
+      activeGoalsByProfile.set(goal.profile_id, goal);
+    }
   }
+
+  const pointsByProfile = sumPointsByProfile(ledgerResult.data);
+
+  const childrenWithData: ParentDashboardChild[] = children.map((child) => ({
+    child,
+    activeGoal: activeGoalsByProfile.get(child.id) ?? null,
+    points: pointsByProfile.get(child.id) ?? 0,
+  }));
+
+  type ActivityRow = {
+    id: string;
+    status: string;
+    completed_at: string;
+    notes: string | null;
+    profile_id: string;
+    tasks:
+      | { title: string; reward_points: number; category: string }
+      | { title: string; reward_points: number; category: string }[]
+      | null;
+    child_profiles: { name: string } | { name: string }[] | null;
+  };
+
+  const recentActivities: ParentDashboardActivity[] = (
+    (activitiesResult.data || []) as ActivityRow[]
+  ).map((row) => {
+    const taskRow = row.tasks;
+    const childRow = row.child_profiles;
+    const task = Array.isArray(taskRow) ? (taskRow[0] ?? null) : taskRow;
+    const child = Array.isArray(childRow) ? (childRow[0] ?? null) : childRow;
+
+    return {
+      id: row.id,
+      status: row.status,
+      completed_at: row.completed_at,
+      notes: row.notes,
+      profile_id: row.profile_id,
+      task,
+      child,
+    };
+  });
 
   const familyEnergy = childrenWithData.reduce((sum, item) => sum + item.points, 0);
 
@@ -144,7 +156,7 @@ export async function fetchParentDashboard(
     account,
     family,
     childrenWithData,
-    pendingCount,
+    pendingCount: pendingResult.count ?? 0,
     recentActivities,
     familyEnergy,
     activeGoalsCount,
