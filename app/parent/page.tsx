@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
-import { fetchParentDashboard } from "@/lib/parent/fetch-parent-dashboard";
-import { ParentHomeView } from "@/components/parent/parent-home-view";
+import { getFamilyChildIds } from "@/lib/parent/parent-home-data";
+import { ParentHomeRealtime } from "@/components/parent/parent-home-realtime";
+import { ParentHomeGreeting } from "@/components/parent/parent-home/parent-home-greeting";
+import { ParentHomeMainSection } from "@/components/parent/parent-home/parent-home-main-section";
+import { ParentHomeActivitySection } from "@/components/parent/parent-home/parent-home-activity-section";
+import {
+  ParentHomeMainSkeleton,
+  ParentHomeActivitySkeleton,
+} from "@/components/parent/parent-home/parent-home-skeletons";
 
 export const metadata: Metadata = {
   title: "Beranda Orang Tua — Habiku",
@@ -18,7 +26,21 @@ export default async function ParentHomePage() {
   }
 
   const { account, family } = context;
-  const dashboard = await fetchParentDashboard(family.id, account, family);
+  const childProfileIds = await getFamilyChildIds(family.id);
 
-  return <ParentHomeView {...dashboard} />;
+  return (
+    <ParentHomeRealtime childProfileIds={childProfileIds} accountId={account.id}>
+      <div className="space-y-6 pb-2">
+        <ParentHomeGreeting account={account} family={family} />
+
+        <Suspense fallback={<ParentHomeMainSkeleton />}>
+          <ParentHomeMainSection familyId={family.id} account={account} family={family} />
+        </Suspense>
+
+        <Suspense fallback={<ParentHomeActivitySkeleton />}>
+          <ParentHomeActivitySection familyId={family.id} />
+        </Suspense>
+      </div>
+    </ParentHomeRealtime>
+  );
 }

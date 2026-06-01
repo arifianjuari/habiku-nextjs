@@ -1,10 +1,10 @@
 "use client";
 
 import { ChildCard } from "@/components/parent/child-card";
-import type { ParentDashboardData } from "@/lib/parent/fetch-parent-dashboard";
+import type { ParentDashboardChild } from "@/lib/parent/parent-home-data";
 import { cn } from "@/lib/utils";
 
-type ChildItem = ParentDashboardData["childrenWithData"][number];
+type ChildItem = ParentDashboardChild;
 
 type ChildrenCarouselProps = {
   items: ChildItem[];

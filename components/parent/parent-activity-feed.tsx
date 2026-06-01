@@ -13,7 +13,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { ParentDashboardActivity } from "@/lib/parent/fetch-parent-dashboard";
+import type { ParentDashboardActivity } from "@/lib/parent/parent-home-data";
 
 type ParentActivityFeedProps = {
   activities: ParentDashboardActivity[];
