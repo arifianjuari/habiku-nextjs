@@ -39,7 +39,7 @@ Rencana implementasi v1 web, selaras dengan [`prd-habiku-nextjs.md`](./prd-habik
 | Antrean /parent/queue | ✅ | Dashboard review persetujuan misi pending anak |
 | RPC Approval | ✅ | Pemicuan RPC `approve_task_history` (ledger append-only, update HP goal & streak) |
 | Realtime UI Hooks | ✅ | Custom hook `useFamilyRealtime` untuk update dashboard live |
-| Ledger Viewer | ✅ | `/parent/ledger` + filter per anak |
+| Ledger Viewer | ⬜ | Halaman riwayat audit transaksi poin anak |
 
 **Definition of Done W1:** Ortu login -> onboarding -> buat misi & target -> database sync RLS sukses -> data ter-update realtime secara visual.
 
@@ -87,6 +87,20 @@ Rencana implementasi v1 web, selaras dengan [`prd-habiku-nextjs.md`](./prd-habik
 
 ---
 
+## W5 — P1 Engagement Lanjutan ✅
+
+| Task | Status | Keterangan / Detail Teknis |
+|------|:------:|----------------------------|
+| Sticky note ortu + terima kasih | ✅ | Editor `/parent/profil-anak` + `thank_broadcast_message` |
+| Tips edukatif harian | ✅ | RPC `pick_daily_tip` + `ChildDailyTipStrip` |
+| Sorotan saudara | ✅ | RPC `pick_sibling_highlight` |
+| Goal countdown | ✅ | RPC `compute_goal_countdown` |
+| Misi insidental | ✅ | `/parent/incidental` + `give_incidental_reward` |
+| Kebun energi | ✅ | `/child/garden` galeri goal completed |
+| Animasi mikro | ✅ | `micro_anim_enabled` di beranda anak |
+
+---
+
 ## Urutan Dependensi
 
 ```mermaid
@@ -94,9 +108,10 @@ flowchart LR
   W0[W0 Bootstrap] --> W1[W1 Parent & DB]
   W1 --> W2[W2 Child & GCP AI]
   W2 --> W3[W3 PWA & BigQuery]
-  W3 --> W4[W4 FCM & Engagement]
+  W3 --> W4[W4 Engagement & Push]
+  W4 --> W5[W5 P1 Lanjutan]
 ```
 
 ---
 
-**Terakhir diperbarui:** 2026-05-28 (Edisi Hybrid Google Cloud)
+**Terakhir diperbarui:** 2026-06-03

@@ -387,6 +387,16 @@ export function ChildProfilesList({ initialChildren }: ChildProfilesListProps) {
                     </button>
                   </div>
                 </CardContent>
+                <div className="px-4 pb-4">
+                  <ChildStickyEditor
+                    profileId={child.id}
+                    childName={child.name}
+                    initialMessage={
+                      (child as ChildProfile & { parent_sticky_message?: string | null })
+                        .parent_sticky_message ?? null
+                    }
+                  />
+                </div>
               </Card>
             );
           })}
