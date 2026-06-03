@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListTodo, Target, Sprout } from "lucide-react";
+import { Home, ListTodo, Target, Sprout, PiggyBank } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [

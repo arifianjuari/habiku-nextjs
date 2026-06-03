@@ -52,6 +52,24 @@ export function getLedgerDisplayDetail(entry: LedgerEntryRow): LedgerDisplayDeta
       pointsColor: "text-amber-700",
     };
   }
+  if (entry.type === "savings_deposit") {
+    return {
+      title: "Setor ke Tabungan",
+      desc: "Energi dipindah ke kantong tabungan",
+      amountSign: "-",
+      color: "text-violet-600 bg-violet-50 border-violet-100",
+      pointsColor: "text-violet-700",
+    };
+  }
+  if (entry.type === "savings_withdraw") {
+    return {
+      title: "Tarik dari Tabungan",
+      desc: "Energi kembali ke dompet",
+      amountSign: "+",
+      color: "text-violet-600 bg-violet-50 border-violet-100",
+      pointsColor: "text-violet-700",
+    };
+  }
   return {
     title: "Penyesuaian Manual Ortu",
     desc: "Penyesuaian saldo poin",

@@ -24,6 +24,8 @@ export const LEDGER_TYPES = [
   "adjustment",
   "bonus_checkin",
   "mystery_bonus",
+  "savings_deposit",
+  "savings_withdraw",
 ] as const;
 export type LedgerType = (typeof LEDGER_TYPES)[number];
 
