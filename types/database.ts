@@ -288,6 +288,44 @@ export type Database = {
         >;
         Relationships: [];
       };
+      savings_pockets: {
+        Row: {
+          id: string;
+          profile_id: string;
+          name: string;
+          emoji: string;
+          accent_color: string;
+          target_amount: number | null;
+          is_active: boolean;
+          created_by_account_id: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["savings_pockets"]["Row"],
+          "id" | "created_at"
+        > & { id?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["savings_pockets"]["Insert"]>;
+        Relationships: [];
+      };
+      savings_transactions: {
+        Row: {
+          id: string;
+          pocket_id: string;
+          profile_id: string;
+          kind: "deposit" | "withdraw";
+          amount: number;
+          ledger_id: string | null;
+          withdraw_status: "pending" | "approved" | "rejected" | null;
+          note: string | null;
+          requested_by_account_id: string | null;
+          reviewed_by_account_id: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       family_settings: {
         Row: {
           family_id: string;
@@ -297,6 +335,7 @@ export type Database = {
           show_sibling_highlight: boolean;
           check_in_reminder_enabled: boolean;
           family_garden_enabled: boolean;
+          savings_enabled: boolean;
           daily_check_in_bonus: number;
           updated_at: string;
           updated_by: string | null;

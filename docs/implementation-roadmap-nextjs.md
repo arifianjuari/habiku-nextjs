@@ -87,17 +87,17 @@ Rencana implementasi v1 web, selaras dengan [`prd-habiku-nextjs.md`](./prd-habik
 
 ---
 
-## W5 — P1 Engagement Lanjutan ✅
+## W7 — Tabungan digital (Kantong) ✅
 
-| Task | Status | Keterangan / Detail Teknis |
-|------|:------:|----------------------------|
-| Sticky note ortu + terima kasih | ✅ | Editor `/parent/profil-anak` + `thank_broadcast_message` |
-| Tips edukatif harian | ✅ | RPC `pick_daily_tip` + `ChildDailyTipStrip` |
-| Sorotan saudara | ✅ | RPC `pick_sibling_highlight` |
-| Goal countdown | ✅ | RPC `compute_goal_countdown` |
-| Misi insidental | ✅ | `/parent/incidental` + `give_incidental_reward` |
-| Kebun energi | ✅ | `/child/garden` galeri goal completed |
-| Animasi mikro | ✅ | `micro_anim_enabled` di beranda anak |
+| Task | Status | Keterangan |
+|------|:------:|------------|
+| Skema & RPC tabungan | ✅ | `savings_pockets`, `savings_transactions`, ledger `savings_*` |
+| UI ortu `/parent/savings` | ✅ | Buat kantong, antrean approve/tolak penarikan |
+| UI anak `/child/savings` | ✅ | Nabung & ajukan penarikan |
+| Notifikasi in-app (RPC) | ✅ | Tipe `savings_*` di `notifications` |
+| Bell header (W6) | ⬜ | Tampilkan notifikasi tabungan di UI bell |
+
+Detail: [`w7-tabungan-digital.md`](./w7-tabungan-digital.md)
 
 ---
 
@@ -108,10 +108,10 @@ flowchart LR
   W0[W0 Bootstrap] --> W1[W1 Parent & DB]
   W1 --> W2[W2 Child & GCP AI]
   W2 --> W3[W3 PWA & BigQuery]
-  W3 --> W4[W4 Engagement & Push]
-  W4 --> W5[W5 P1 Lanjutan]
+  W3 --> W4[W4 FCM & Engagement]
+  W4 --> W7[W7 Tabungan digital]
 ```
 
 ---
 
-**Terakhir diperbarui:** 2026-06-03
+**Terakhir diperbarui:** 2026-06-03 (W7 tabungan digital)

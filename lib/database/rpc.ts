@@ -28,6 +28,13 @@ export const RPC = {
   updateChildProfile: "update_child_profile",
   createFamilyInvite: "create_family_invite",
   acceptFamilyInvite: "accept_family_invite",
+  createSavingsPocket: "create_savings_pocket",
+  depositToSavings: "deposit_to_savings",
+  requestSavingsWithdraw: "request_savings_withdraw",
+  approveSavingsWithdraw: "approve_savings_withdraw",
+  rejectSavingsWithdraw: "reject_savings_withdraw",
+  computeWalletBalance: "compute_wallet_balance",
+  computeSavingsPocketBalance: "compute_savings_pocket_balance",
 } as const;
 
 export type RpcName = (typeof RPC)[keyof typeof RPC];
