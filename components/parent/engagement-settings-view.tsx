@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { updateFamilySettingsAction } from "@/app/parent/settings/engagement/actions";
 import Link from "next/link";
 import { WebPushSubscriber } from "@/components/shared/web-push-subscriber";
+import { FsdAgreementCard } from "@/components/parent/fsd-agreement-card";
 
 interface EngagementSettingsViewProps {
   initialSettings: {

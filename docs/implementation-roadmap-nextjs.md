@@ -75,15 +75,15 @@ Rencana implementasi v1 web, selaras dengan [`prd-habiku-nextjs.md`](./prd-habik
 
 ---
 
-## W4 — P1 Engagement & Push FCM ⬜ (1 minggu)
+## W4 — P1 Engagement & Push ✅
 
 | Task | Status | Keterangan / Detail Teknis |
 |------|:------:|----------------------------|
-| **Web Push (PWA / VAPID)** | 🔄 | UI langganan + simpan endpoint; butuh `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY` di Vercel |
+| **Web Push (PWA / VAPID)** | ✅ | `sendTaskPendingWebPush` + `after()` saat submit misi; endpoint `/api/internal/push/task-pending` |
 | Misi Sorotan Harian | ✅ | Picker ortu + multiplier `family_settings.featured_multiplier` |
 | Lencana Karakter (Badges) | ✅ | RPC `award_eligible_badges` + `/child/badges` |
 | Refleksi Sore Anak | ✅ | Form mood `/child/reflection` + server action |
-| Perjanjian FSD | 🔄 | DB `visual_state` + tick missed; UI badge layu di target anak/ortu |
+| Perjanjian FSD | ✅ | Cron `mark_missed_tasks_tick` tiap jam + UI badge layu + kartu perjanjian ortu |
 
 ---
 

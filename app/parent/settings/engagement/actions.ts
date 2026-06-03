@@ -53,11 +53,7 @@ export async function updateFamilySettingsAction(
   return { success: true };
 }
 
-export async function savePushSubscriptionAction(
-  endpoint: string,
-  subscriptionJson?: string,
-) {
-  const token = endpoint?.trim() || subscriptionJson?.trim();
+export async function savePushSubscriptionAction(token: string) {
   if (!token) {
     return { error: "Token push wajib diisi." };
   }
