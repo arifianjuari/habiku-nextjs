@@ -35,6 +35,7 @@ export default async function ParentEngagementSettingsPage() {
     show_sibling_highlight: false,
     check_in_reminder_enabled: true,
     family_garden_enabled: true,
+    savings_enabled: true,
   };
 
   return (
