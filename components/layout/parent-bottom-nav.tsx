@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/parent", label: "Beranda", icon: Home, exact: true },
   { href: "/parent/tasks", label: "Misi", icon: ListTodo },
+  { href: "/parent/savings", label: "Tabungan", icon: PiggyBank },
   { href: "/parent/targets", label: "Target", icon: Target },
   { href: "/parent/profil-anak", label: "Anak", icon: Users },
 ] as const;
