@@ -1,4 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
+import { fetchChildEngagement } from "@/lib/child/fetch-child-engagement";
+import {
+  DEFAULT_CHILD_ENGAGEMENT_SETTINGS,
+  type ChildEngagementData,
+} from "@/lib/child/engagement-types";
 import { getJakartaTodayString } from "@/lib/child/jakarta-today";
 import type { ChildProfile, Goal, Task } from "@/types/database";
 
@@ -21,6 +26,7 @@ export type ChildHomeData = {
   totalPoints: number;
   checkInChain: number;
   isCheckedInToday: boolean;
+  engagement: ChildEngagementData;
 };
 
 export type TaskWithStatus = Task & {
@@ -77,12 +83,31 @@ export async function fetchChildHomeData(profileId: string): Promise<ChildHomeDa
   const checkInChain =
     !chainResult.error && typeof chainData === "number" ? chainData : 0;
 
+  const child = profileResult.data ?? null;
+  const emptyEngagement: ChildEngagementData = {
+    stickyMessage: null,
+    dailyTip: null,
+    siblingHighlight: null,
+    goalCountdowns: [],
+    settings: { ...DEFAULT_CHILD_ENGAGEMENT_SETTINGS },
+  };
+  const engagement =
+    child?.family_id != null
+      ? await fetchChildEngagement(
+          profileId,
+          child.family_id,
+          (child as ChildProfile & { parent_sticky_message?: string | null })
+            .parent_sticky_message,
+        )
+      : emptyEngagement;
+
   return {
-    child: profileResult.data ?? null,
+    child,
     activeGoal: goalResult.data ?? null,
     totalPoints,
     checkInChain,
     isCheckedInToday: !!checkInResult.data,
+    engagement,
   };
 }
 

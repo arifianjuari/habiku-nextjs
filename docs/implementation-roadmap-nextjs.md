@@ -39,7 +39,7 @@ Rencana implementasi v1 web, selaras dengan [`prd-habiku-nextjs.md`](./prd-habik
 | Antrean /parent/queue | ✅ | Dashboard review persetujuan misi pending anak |
 | RPC Approval | ✅ | Pemicuan RPC `approve_task_history` (ledger append-only, update HP goal & streak) |
 | Realtime UI Hooks | ✅ | Custom hook `useFamilyRealtime` untuk update dashboard live |
-| Ledger Viewer | ⬜ | Halaman riwayat audit transaksi poin anak |
+| Ledger Viewer | ✅ | `/parent/ledger` + filter per anak |
 
 **Definition of Done W1:** Ortu login -> onboarding -> buat misi & target -> database sync RLS sukses -> data ter-update realtime secara visual.
 

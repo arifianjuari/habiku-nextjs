@@ -15,9 +15,16 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { checkInChildAction } from "@/app/child/actions";
+import { ChildBroadcastSticky } from "@/components/child/child-broadcast-sticky";
+import { ChildDailyTipStrip } from "@/components/child/child-daily-tip-strip";
+import { ChildSiblingHighlight } from "@/components/child/child-sibling-highlight";
+import { ChildGoalCountdownRow } from "@/components/child/child-goal-countdown-row";
 import { ChildAvatar } from "@/components/shared/child-avatar";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   useChildHomeData,
   usePatchChildHomeCache,

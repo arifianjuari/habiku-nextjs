@@ -89,6 +89,26 @@ export default async function ParentSettingsPage() {
         </h3>
 
         <Link
+          href="/parent/incidental"
+          className="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-150 rounded-2xl shadow-sm transition-all text-left w-full cursor-pointer group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+              <Zap className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <span className="font-bold text-xs text-slate-900 block leading-none mb-1">
+                Reward insidental
+              </span>
+              <span className="text-[10px] text-slate-500">
+                Beri apresiasi kilat di luar misi rutin.
+              </span>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+
+        <Link
           href="/parent/settings/engagement"
           className="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-150 rounded-2xl shadow-sm transition-all text-left w-full cursor-pointer group"
         >

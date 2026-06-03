@@ -145,7 +145,8 @@ Status default: **`[ ]` belum** — diisi setelah verifikasi kode di repo ini.
 
 ### P2 — Roadmap jangka panjang
 
-- [ ] **Kebun energi, refleksi sore, usul misi** — paritas RN P2
+- [x] **Kebun energi, refleksi sore** — W4 refleksi; kebun W5
+- [ ] **Usul misi** — paritas RN P2
 - [ ] **Family Challenges, Community/Forum, donasi in-app**
 
 ### 3.4. Matriks paritas RN → Web (P0)

@@ -133,3 +133,21 @@ export async function submitChildReflectionAction(
   return { success: true, reflection: data };
 }
 
+export async function thankBroadcastAction(profileId: string) {
+  if (!profileId) {
+    return { error: "ID profil anak wajib disertakan." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await (supabase as any).rpc("thank_broadcast_message", {
+    p_profile_id: profileId,
+  });
+
+  if (error) {
+    console.error("thank_broadcast_message:", error);
+    return { error: error.message || "Gagal mengirim terima kasih." };
+  }
+
+  return { success: true };
+}
+
