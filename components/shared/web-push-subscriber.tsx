@@ -49,7 +49,7 @@ export function WebPushSubscriber() {
         const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
         if (!vapidPublicKey) {
           toast.error(
-            "VAPID belum dikonfigurasi. Tambahkan NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY di Vercel.",
+            "VAPID belum dikonfigurasi di server. Hubungi ortu utama untuk mengatur env Vercel.",
           );
           return;
         }
@@ -60,10 +60,7 @@ export function WebPushSubscriber() {
           applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
 
-        const res = await savePushSubscriptionAction(
-          subscription.endpoint,
-          JSON.stringify(subscription),
-        );
+        const res = await savePushSubscriptionAction(JSON.stringify(subscription));
 
         if (res?.error) {
           toast.error(res.error);
@@ -119,8 +116,8 @@ export function WebPushSubscriber() {
             </h4>
             <p className="text-[9px] text-slate-550 leading-relaxed font-semibold">
               {permission === "granted"
-                ? "Browser Anda siap menerima pemberitahuan instan tentang pengerjaan misi anak."
-                : "Dapatkan pemberitahuan langsung di layar saat anak menyerahkan misi harian mereka."}
+                ? "Anda akan mendapat pemberitahuan saat anak menyerahkan misi untuk ditinjau."
+                : "Izinkan notifikasi agar tidak melewatkan antrean review misi."}
             </p>
           </div>
         </div>
@@ -136,7 +133,7 @@ export function WebPushSubscriber() {
         ) : (
           <div className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-100 bg-emerald-50/30 p-2 text-[10px] text-emerald-800 font-extrabold text-center">
             <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Terhubung dengan sukses ke PWA Push Server!</span>
+            <span>Siap menerima notifikasi misi pending</span>
           </div>
         )}
       </CardContent>

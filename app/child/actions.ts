@@ -1,8 +1,10 @@
 "use server";
 
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { analyzeEvidenceImage } from "@/lib/services/ai";
+import { sendTaskPendingWebPush } from "@/lib/push/send-task-pending-web-push";
 
 export async function checkInChildAction(profileId: string) {
   if (!profileId) {
@@ -90,6 +92,15 @@ export async function submitTaskEvidenceAction(
   revalidatePath("/child/missions");
   revalidatePath("/parent");
   revalidatePath("/parent/queue");
+
+  after(async () => {
+    try {
+      await sendTaskPendingWebPush(data.id);
+    } catch (err) {
+      console.error("[web-push] task pending:", err);
+    }
+  });
+
   return { success: true, historyItem: data };
 }
 

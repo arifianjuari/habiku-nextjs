@@ -162,7 +162,31 @@ Deno.serve(async (req) => {
     }
 
     const { sent, expo } = await sendExpoPushForPendingTask(supabaseUrl, serviceKey, taskHistoryId);
-    return new Response(JSON.stringify({ ok: true, sent, expo }), {
+
+    let webPush: unknown = { skipped: 'app_url_or_secret_missing' };
+    const appUrl = Deno.env.get('APP_URL') ?? Deno.env.get('NEXT_PUBLIC_APP_URL');
+    const internalSecret =
+      Deno.env.get('TASK_PENDING_WEBHOOK_SECRET') ?? Deno.env.get('CRON_SECRET');
+    if (appUrl && internalSecret) {
+      try {
+        const webRes = await fetch(
+          `${appUrl.replace(/\/$/, '')}/api/internal/push/task-pending`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-task-webhook-secret': internalSecret,
+            },
+            body: JSON.stringify({ task_history_id: taskHistoryId }),
+          },
+        );
+        webPush = await webRes.json();
+      } catch (webErr) {
+        webPush = { error: String(webErr) };
+      }
+    }
+
+    return new Response(JSON.stringify({ ok: true, sent, expo, webPush }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
