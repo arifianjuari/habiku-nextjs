@@ -8,6 +8,8 @@ Aplikasi web **Habiku** (pembentukan karakter anak) — stack **Next.js + Supaba
 - [Arsitektur database](./docs/database-architecture.md) — skema PostgreSQL, RLS, RPC
 - [PRD referensi React Native](./docs/prd-habiku-react.md)
 - [Roadmap implementasi](./docs/implementation-roadmap-nextjs.md)
+- [**Checklist environment (ditunda)**](./docs/deployment-env-checklist.md) — Supabase, VAPID, `CRON_SECRET`
+- [Spesifikasi W7 — Tabungan digital](./docs/w7-tabungan-digital.md)
 
 ## Prasyarat
 
@@ -65,4 +67,3 @@ Deploy ke [Vercel](https://vercel.com) dengan environment variables dari `.env.e
 ## Lisensi
 
 Private — Habiku.
-

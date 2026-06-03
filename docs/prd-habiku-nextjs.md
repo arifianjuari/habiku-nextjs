@@ -145,8 +145,7 @@ Status default: **`[ ]` belum** — diisi setelah verifikasi kode di repo ini.
 
 ### P2 — Roadmap jangka panjang
 
-- [x] **Kebun energi, refleksi sore** — W4 refleksi; kebun W5
-- [ ] **Usul misi** — paritas RN P2
+- [ ] **Kebun energi, refleksi sore, usul misi** — paritas RN P2
 - [ ] **Family Challenges, Community/Forum, donasi in-app**
 
 ### 3.4. Matriks paritas RN → Web (P0)
@@ -421,7 +420,11 @@ Edge Functions yang **wajib** sama:
 
 Sama RN §7 PRD React — Trakteer/Saweria via link eksternal P2; Midtrans/Xendit di Route Handler dengan secret server-side.
 
-### 7.5. Development & Deploy
+### 7.5. Environment (pengingat)
+
+Pengisian production untuk **Supabase**, **VAPID Web Push**, dan **`CRON_SECRET`** dapat ditunda; daftar lengkap: [deployment-env-checklist.md](./deployment-env-checklist.md).
+
+### 7.6. Development & Deploy
 
 | Kebutuhan | Cara |
 |-----------|------|

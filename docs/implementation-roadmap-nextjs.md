@@ -89,15 +89,36 @@ Rencana implementasi v1 web, selaras dengan [`prd-habiku-nextjs.md`](./prd-habik
 
 ## W5 — P1 Engagement Lanjutan ✅
 
-| Task | Status | Keterangan / Detail Teknis |
-|------|:------:|----------------------------|
-| Sticky note ortu + terima kasih | ✅ | Editor `/parent/profil-anak` + `thank_broadcast_message` |
-| Tips edukatif harian | ✅ | RPC `pick_daily_tip` + `ChildDailyTipStrip` |
-| Sorotan saudara | ✅ | RPC `pick_sibling_highlight` |
-| Goal countdown | ✅ | RPC `compute_goal_countdown` |
-| Misi insidental | ✅ | `/parent/incidental` + `give_incidental_reward` |
-| Kebun energi | ✅ | `/child/garden` galeri goal completed |
-| Animasi mikro | ✅ | `micro_anim_enabled` di beranda anak |
+| Task | Status | Keterangan |
+|------|:------:|------------|
+| Sticky / broadcast ortu | ✅ | RPC + editor profil anak |
+| Tip harian, sorotan saudara, countdown target | ✅ | Beranda anak |
+| Misi insidental | ✅ | `/parent/incidental` |
+| Kebun energi | ✅ | `/child/garden` |
+
+---
+
+## W6 — P0 Pelengkap (berikutnya) 🔄
+
+| Task | Status | Keterangan |
+|------|:------:|------------|
+| UI notifikasi in-app | ⬜ | Bell + daftar; DB/trigger sudah ada |
+| Re-auth ortu (hapus misi/target) | ⬜ | Modal kata sandi |
+| Hapus Google OAuth dari scope | ✅ | Auth web = email/password saja (PRD) |
+| Sinkron checklist env ditunda | ✅ | [deployment-env-checklist.md](./deployment-env-checklist.md) |
+
+---
+
+## W7 — Tabungan digital (Kantong) ⬜ **prioritas produk**
+
+Spesifikasi lengkap: [w7-tabungan-digital.md](./w7-tabungan-digital.md)
+
+| Fase | Status | Ringkasan |
+|------|:------:|-----------|
+| A — Skema & RPC | ⬜ | `savings_pockets`, transaksi, ledger types, RLS |
+| B — UI ortu | ⬜ | Kelola kantong, approve penarikan |
+| C — UI anak | ⬜ | Setor energi, progress target kantong |
+| D — Notifikasi & e2e | ⬜ | Setelah W6 + env (opsional push) |
 
 ---
 
@@ -108,9 +129,17 @@ flowchart LR
   W0[W0 Bootstrap] --> W1[W1 Parent & DB]
   W1 --> W2[W2 Child & GCP AI]
   W2 --> W3[W3 PWA & BigQuery]
-  W3 --> W4[W4 Engagement & Push]
-  W4 --> W5[W5 P1 Lanjutan]
+  W3 --> W4[W4 Push & Engagement]
+  W4 --> W5[W5 Engagement+]
+  W5 --> W6[W6 Notif & reauth]
+  W6 --> W7[W7 Tabungan digital]
 ```
+
+---
+
+## Environment production
+
+Pengisian **Supabase**, **VAPID**, dan **`CRON_SECRET`** masih **ditunda** — lihat [deployment-env-checklist.md](./deployment-env-checklist.md).
 
 ---
 
