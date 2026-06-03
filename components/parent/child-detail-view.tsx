@@ -22,25 +22,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ChildProfile, Goal, Streak } from "@/types/database";
 import { ChildAvatar } from "@/components/shared/child-avatar";
-
-interface LedgerWithRelations {
-  id: string;
-  profile_id: string;
-  amount: number;
-  type: string;
-  created_at: string;
-  task_history?: {
-    notes: string | null;
-    task?: {
-      title: string;
-      category: string;
-    };
-  } | null;
-}
+import { PointLedgerList } from "@/components/parent/point-ledger-list";
+import { GoalVisualStateBadge } from "@/components/shared/goal-visual-state-badge";
+import type { LedgerEntryRow } from "@/lib/parent/ledger-display";
+import { getGoalVisualStateMeta } from "@/lib/goals/visual-state";
 
 interface ChildDetailViewProps {
   child: ChildProfile;
-  ledgerEntries: LedgerWithRelations[];
+  ledgerEntries: LedgerEntryRow[];
   streaks: Streak[];
   goals: Goal[];
   totalPoints: number;
@@ -62,57 +51,7 @@ export function ChildDetailView({
   totalPoints,
 }: ChildDetailViewProps) {
   const childAccent = child.home_card_accent || "#8B5CF6";
-
-  const getLedgerDetail = (entry: LedgerWithRelations) => {
-    if (entry.type === "earn") {
-      const taskTitle = entry.task_history?.task?.title || "Misi Selesai";
-      return {
-        title: taskTitle,
-        desc: "Misi disetujui orang tua",
-        amountSign: "+",
-        color: "text-emerald-600 bg-emerald-50 border-emerald-100",
-        pointsColor: "text-emerald-700",
-      };
-    } else if (entry.type === "spend") {
-      return {
-        title: "Penebusan Hadiah",
-        desc: "Poin energi dibelanjakan untuk target",
-        amountSign: "-",
-        color: "text-rose-600 bg-rose-50 border-rose-100",
-        pointsColor: "text-rose-700",
-      };
-    } else if (entry.type === "bonus_checkin" as any) {
-      return {
-        title: "Bonus Check-in Harian",
-        desc: "Kehadiran harian anak",
-        amountSign: "+",
-        color: "text-amber-600 bg-amber-50 border-amber-100",
-        pointsColor: "text-amber-700",
-      };
-    } else {
-      return {
-        title: "Penyesuaian Manual Ortu",
-        desc: "Penyesuaian saldo poin",
-        amountSign: entry.amount >= 0 ? "+" : "-",
-        color: "text-slate-600 bg-slate-50 border-slate-200",
-        pointsColor: entry.amount >= 0 ? "text-slate-700" : "text-rose-700",
-      };
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      }) + " WIB";
-    } catch {
-      return "Tanggal tidak valid";
-    }
-  };
+  const ledgerPreview = ledgerEntries.slice(0, 8);
 
   return (
     <div className="space-y-6 pb-8">
@@ -245,9 +184,17 @@ export function ChildDetailView({
                   const progress = Math.min(100, (g.current_hp / g.target_hp) * 100);
                   return (
                     <div key={g.id} className="space-y-2">
-                      <span className="font-bold text-slate-800 block text-xs truncate leading-none">
-                        {g.title}
-                      </span>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-bold text-slate-800 block text-xs truncate leading-none">
+                          {g.title}
+                        </span>
+                        <GoalVisualStateBadge state={g.visual_state} />
+                      </div>
+                      {g.visual_state && g.visual_state !== "fresh" ? (
+                        <p className="text-[9px] text-muted-foreground leading-snug">
+                          {getGoalVisualStateMeta(g.visual_state).shortHint}
+                        </p>
+                      ) : null}
                       <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-500"
@@ -265,53 +212,26 @@ export function ChildDetailView({
         </Card>
       </div>
 
-      {/* 4. Point Ledger (Buku Besar Poin) */}
+      {/* 4. Point Ledger (pratinjau) */}
       <div className="space-y-3">
-        <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
-          Buku Besar Poin (Append-Only Audit)
-        </h4>
-
-        {ledgerEntries.length === 0 ? (
-          <div className="text-center py-10 rounded-3xl border-2 border-dashed border-slate-200 bg-white/40 backdrop-blur-sm text-slate-400 text-xs">
-            Belum ada transaksi poin ledger yang tercatat.
-          </div>
-        ) : (
-          <div className="grid gap-2">
-            {ledgerEntries.map((entry) => {
-              const detail = getLedgerDetail(entry);
-              return (
-                <Card key={entry.id} className="border border-slate-150 bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                  <CardContent className="p-3.5 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-sm font-black", detail.color)}>
-                        {detail.amountSign}
-                      </div>
-                      <div className="space-y-0.5">
-                        <h5 className="font-bold text-xs text-slate-900 leading-snug">
-                          {detail.title}
-                        </h5>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] text-muted-foreground font-semibold">
-                          <span>{detail.desc}</span>
-                          <span>•</span>
-                          <span className="flex items-center gap-0.5">
-                            <Calendar className="h-2.5 w-2.5" />
-                            {formatDate(entry.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Jumlah Energi Mutasi */}
-                    <div className={cn("text-xs font-black shrink-0", detail.pointsColor)}>
-                      {detail.amountSign}
-                      {Math.abs(entry.amount)} E
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+        <div className="flex items-center justify-between px-1">
+          <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Buku Besar Poin (Append-Only Audit)
+          </h4>
+          <Link
+            href="/parent/ledger"
+            className="text-[10px] font-bold text-emerald-700 hover:underline flex items-center gap-0.5"
+          >
+            Lihat semua
+            <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        </div>
+        <PointLedgerList entries={ledgerPreview} />
+        {ledgerEntries.length > ledgerPreview.length ? (
+          <p className="text-center text-[10px] text-muted-foreground">
+            +{ledgerEntries.length - ledgerPreview.length} transaksi lainnya di halaman buku besar.
+          </p>
+        ) : null}
       </div>
     </div>
   );

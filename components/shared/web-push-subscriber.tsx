@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { savePushSubscriptionAction } from "@/app/parent/settings/engagement/actions";
 
-// Helper helper to convert base64 VAPID key to Uint8Array
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -18,10 +17,6 @@ function urlBase64ToUint8Array(base64String: string) {
   }
   return outputArray;
 }
-
-// Generate a default mock client-side VAPID public key if env is not defined
-// (User can configure it in env under process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY)
-const DEFAULT_VAPID_PUBLIC_KEY = "BIlG2wA1uC0J4w_q5oWJpM6zK9Fk8m0B1y5U2o3a4t5e6r7i8o9n1m2a3r4s5e6t7i8o9n1m2a3r4s5e6t7i8o";
 
 export function WebPushSubscriber() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
@@ -51,20 +46,24 @@ export function WebPushSubscriber() {
           return;
         }
 
-        const registration = await navigator.serviceWorker.ready;
-        
-        // Load VAPID public key from env or default mock
-        const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY || DEFAULT_VAPID_PUBLIC_KEY;
-        const convertedKey = urlBase64ToUint8Array(vapidPublicKey);
+        const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
+        if (!vapidPublicKey) {
+          toast.error(
+            "VAPID belum dikonfigurasi. Tambahkan NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY di Vercel.",
+          );
+          return;
+        }
 
+        const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: convertedKey,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
 
-        // The endpoint URL represents the unique registration token in Web Push
-        const token = JSON.stringify(subscription);
-        const res = await savePushSubscriptionAction(token);
+        const res = await savePushSubscriptionAction(
+          subscription.endpoint,
+          JSON.stringify(subscription),
+        );
 
         if (res?.error) {
           toast.error(res.error);
@@ -92,15 +91,27 @@ export function WebPushSubscriber() {
   }
 
   return (
-    <Card className={`border rounded-2xl overflow-hidden ${
-      permission === "granted" ? "border-emerald-100 bg-emerald-50/10" : "border-violet-100 bg-violet-50/10"
-    }`}>
+    <Card
+      className={`border rounded-2xl overflow-hidden ${
+        permission === "granted"
+          ? "border-emerald-100 bg-emerald-50/10"
+          : "border-violet-100 bg-violet-50/10"
+      }`}
+    >
       <CardContent className="p-4 space-y-3.5">
         <div className="flex gap-3 items-start">
-          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-inner ${
-            permission === "granted" ? "bg-emerald-50 text-emerald-700" : "bg-violet-50 text-violet-700"
-          }`}>
-            {permission === "granted" ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+          <div
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-inner ${
+              permission === "granted"
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-violet-50 text-violet-700"
+            }`}
+          >
+            {permission === "granted" ? (
+              <Bell className="h-5 w-5" />
+            ) : (
+              <BellOff className="h-5 w-5" />
+            )}
           </div>
           <div className="space-y-0.5">
             <h4 className="text-xs font-bold text-slate-900 leading-none">

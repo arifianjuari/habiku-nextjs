@@ -31,6 +31,9 @@ import {
 } from "@/components/ui/dialog";
 import { createGoal, toggleGoalStatus, deleteGoal } from "@/app/parent/targets/actions";
 import type { ChildProfile, Goal } from "@/types/database";
+import { GoalVisualStateBadge } from "@/components/shared/goal-visual-state-badge";
+import { getGoalVisualStateMeta } from "@/lib/goals/visual-state";
+import { cn } from "@/lib/utils";
 
 interface TargetsClientViewProps {
   children: ChildProfile[];
@@ -294,8 +297,15 @@ export function TargetsClientView({ children, initialGoals }: TargetsClientViewP
           <div className="grid gap-3">
             {activeGoals.map((goal) => {
               const progress = Math.min(100, (goal.current_hp / goal.target_hp) * 100);
+              const visualMeta = getGoalVisualStateMeta(goal.visual_state);
               return (
-                <Card key={goal.id} className="overflow-hidden border border-violet-100 bg-white shadow-sm hover:shadow-md transition-all rounded-2xl">
+                <Card
+                  key={goal.id}
+                  className={cn(
+                    "overflow-hidden border bg-white shadow-sm hover:shadow-md transition-all rounded-2xl",
+                    visualMeta.cardClass || "border-violet-100",
+                  )}
+                >
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5">
@@ -304,9 +314,12 @@ export function TargetsClientView({ children, initialGoals }: TargetsClientViewP
                         </div>
                         <div>
                           <h4 className="font-bold text-sm text-slate-900 leading-snug">{goal.title}</h4>
-                          <span className="text-[10px] bg-violet-50 text-violet-700 font-semibold px-2 py-0.5 rounded-full border border-violet-100">
-                            Aktif
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] bg-violet-50 text-violet-700 font-semibold px-2 py-0.5 rounded-full border border-violet-100">
+                              Aktif
+                            </span>
+                            <GoalVisualStateBadge state={goal.visual_state} />
+                          </div>
                         </div>
                       </div>
 

@@ -53,7 +53,11 @@ export async function updateFamilySettingsAction(
   return { success: true };
 }
 
-export async function savePushSubscriptionAction(token: string) {
+export async function savePushSubscriptionAction(
+  endpoint: string,
+  subscriptionJson?: string,
+) {
+  const token = endpoint?.trim() || subscriptionJson?.trim();
   if (!token) {
     return { error: "Token push wajib diisi." };
   }
@@ -67,12 +71,15 @@ export async function savePushSubscriptionAction(token: string) {
 
   const { error } = await supabase
     .from("account_push_tokens")
-    .upsert({
-      account_id: user.id,
-      expo_push_token: token,
-      platform: "web_pwa",
-      updated_at: new Date().toISOString(),
-    });
+    .upsert(
+      {
+        account_id: user.id,
+        expo_push_token: token,
+        platform: "web_pwa",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "account_id" },
+    );
 
   if (error) {
     console.error("Error saving push subscription token:", error);

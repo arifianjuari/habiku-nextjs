@@ -91,7 +91,7 @@ export default async function InvitePage({ params }: PageProps) {
                 </Link>
                 
                 <Link
-                  href={`/login?next=/invite/${token}`}
+                  href={`/sign-up?next=/invite/${token}`}
                   className={cn(
                     buttonVariants({ variant: "outline" }),
                     "w-full border-slate-200 hover:bg-slate-50 text-slate-700 font-bold h-11 rounded-xl cursor-pointer"

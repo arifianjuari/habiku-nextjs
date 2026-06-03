@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { BookOpen } from "lucide-react";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { fetchFamilyChildren } from "@/lib/parent/fetch-family-page-data";
 import { ChildProfilesList } from "@/components/parent/child-profiles-list";
@@ -31,8 +32,22 @@ export default async function ParentChildProfilesPage() {
       </div>
 
       <Link
+        href="/parent/ledger"
+        className={cn(
+          buttonVariants({ variant: "outline" }),
+          "flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-emerald-200 bg-emerald-50/30 font-bold text-emerald-800",
+        )}
+      >
+        <BookOpen className="h-4 w-4" />
+        Buku Besar Poin Keluarga
+      </Link>
+
+      <Link
         href="/parent"
-        className={cn(buttonVariants({ variant: "outline" }), "w-full rounded-xl cursor-pointer h-10 font-bold border-slate-200 text-slate-700")}
+        className={cn(
+          buttonVariants({ variant: "outline" }),
+          "h-10 w-full cursor-pointer rounded-xl font-bold border-slate-200 text-slate-700",
+        )}
       >
         Kembali ke Beranda Ortu
       </Link>

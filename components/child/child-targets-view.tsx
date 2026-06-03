@@ -20,6 +20,9 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Goal } from "@/types/database";
+import { GoalVisualStateBadge } from "@/components/shared/goal-visual-state-badge";
+import { getGoalVisualStateMeta } from "@/lib/goals/visual-state";
+import { cn } from "@/lib/utils";
 
 export function ChildTargetsView() {
   const { profileId } = useChildModeStore();
@@ -82,6 +85,7 @@ export function ChildTargetsView() {
             {activeGoals.map((goal) => {
               const progress = Math.min(100, (goal.current_hp / goal.target_hp) * 100);
               const isReady = goal.current_hp >= goal.target_hp;
+              const visualMeta = getGoalVisualStateMeta(goal.visual_state);
 
               return (
                 <motion.div
@@ -89,7 +93,12 @@ export function ChildTargetsView() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <Card className="overflow-hidden border border-rose-100 bg-gradient-to-br from-white to-rose-50/10 shadow-md rounded-3xl relative">
+                  <Card
+                    className={cn(
+                      "overflow-hidden border bg-gradient-to-br from-white to-rose-50/10 shadow-md rounded-3xl relative",
+                      visualMeta.cardClass,
+                    )}
+                  >
                     {isReady && (
                       <div className="absolute top-2 right-2">
                         <motion.div
@@ -114,6 +123,10 @@ export function ChildTargetsView() {
                           <h4 className="text-sm font-black text-slate-900 leading-snug truncate">
                             {goal.title}
                           </h4>
+                          <GoalVisualStateBadge
+                            state={goal.visual_state}
+                            showHint={goal.visual_state !== "fresh"}
+                          />
                           <div className="flex items-center gap-1.5">
                             <span className="text-[10px] text-muted-foreground font-semibold">
                               Target Hadiah

@@ -79,11 +79,11 @@ Rencana implementasi v1 web, selaras dengan [`prd-habiku-nextjs.md`](./prd-habik
 
 | Task | Status | Keterangan / Detail Teknis |
 |------|:------:|----------------------------|
-| **Web Push (FCM)** | ⬜ | Integrasi **Firebase Cloud Messaging (FCM)** dengan browser push token (VAPID) untuk pengingat live |
-| Misi Sorotan Harian | ⬜ | Fitur pick featured task harian dengan multiplier poin |
-| Lencana Karakter (Badges) | ⬜ | Implementasi trigger `trg_task_history_award_badges` di database |
-| Refleksi Sore Anak | ⬜ | Form mood & catatan harian `/child/reflection` di penghujung hari |
-| Perjanjian FSD | ⬜ | Sistem konsekuensi layu/wilted target jika anak melewati misi berturut-turut |
+| **Web Push (PWA / VAPID)** | 🔄 | UI langganan + simpan endpoint; butuh `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY` di Vercel |
+| Misi Sorotan Harian | ✅ | Picker ortu + multiplier `family_settings.featured_multiplier` |
+| Lencana Karakter (Badges) | ✅ | RPC `award_eligible_badges` + `/child/badges` |
+| Refleksi Sore Anak | ✅ | Form mood `/child/reflection` + server action |
+| Perjanjian FSD | 🔄 | DB `visual_state` + tick missed; UI badge layu di target anak/ortu |
 
 ---
 
