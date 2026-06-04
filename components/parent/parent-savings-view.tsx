@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { PiggyBank, Plus, Check, X } from "lucide-react";
+import Link from "next/link";
+import { PiggyBank, Plus, Check, X, BookOpen, Settings2 } from "lucide-react";
 import type { ParentSavingsData } from "@/lib/savings/types";
 import { ChildAvatar } from "@/components/shared/child-avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,9 +76,19 @@ export function ParentSavingsView({
 
   if (!savingsEnabled) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Fitur tabungan digital dinonaktifkan di pengaturan keluarga.
+      <Card className="border-violet-100">
+        <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
+          <PiggyBank className="size-10 text-violet-300" aria-hidden />
+          <p className="text-sm text-muted-foreground">
+            Tabungan digital dinonaktifkan untuk keluarga ini.
+          </p>
+          <Link
+            href="/parent/settings/engagement"
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground"
+          >
+            <Settings2 className="size-4" aria-hidden />
+            Aktifkan di Pengaturan Engagement
+          </Link>
         </CardContent>
       </Card>
     );
@@ -95,6 +106,16 @@ export function ParentSavingsView({
 
   return (
     <div className="space-y-6 pb-4">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Link
+          href="/parent/ledger"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <BookOpen className="size-3.5" aria-hidden />
+          Buku besar
+        </Link>
+      </div>
+
       {pendingWithdrawals.length > 0 ? (
         <Card className="border-amber-200 bg-amber-50/80">
           <CardHeader className="pb-2">

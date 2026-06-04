@@ -14,8 +14,8 @@ import {
   ChevronRight,
   Shield,
   LogOut,
-  Mail,
-  Zap,
+  PiggyBank,
+  BookOpen,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -82,31 +82,58 @@ export default async function ParentSettingsPage() {
       {/* 3. Undang Pasangan / Ortu Kedua (InviteCreator) */}
       <InviteCreator isPrimary={isPrimary} />
 
-      {/* 4. Link Menu Lainnya */}
+      {/* 4. Dompet & tabungan */}
       <div className="space-y-2">
         <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
-          Aplikasi & Gamifikasi
+          Dompet & energi
         </h3>
 
         <Link
-          href="/parent/incidental"
+          href="/parent/savings"
           className="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-150 rounded-2xl shadow-sm transition-all text-left w-full cursor-pointer group"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
-              <Zap className="h-4.5 w-4.5" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
+              <PiggyBank className="h-4.5 w-4.5" aria-hidden />
             </div>
             <div>
               <span className="font-bold text-xs text-slate-900 block leading-none mb-1">
-                Reward insidental
+                Tabungan digital
               </span>
               <span className="text-[10px] text-slate-500">
-                Beri apresiasi kilat di luar misi rutin.
+                Kantong tabungan per anak dan persetujuan penarikan.
               </span>
             </div>
           </div>
           <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
         </Link>
+
+        <Link
+          href="/parent/ledger"
+          className="flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-slate-150 rounded-2xl shadow-sm transition-all text-left w-full cursor-pointer group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-800">
+              <BookOpen className="h-4.5 w-4.5" aria-hidden />
+            </div>
+            <div>
+              <span className="font-bold text-xs text-slate-900 block leading-none mb-1">
+                Buku besar poin
+              </span>
+              <span className="text-[10px] text-slate-500">
+                Riwayat earn, spend, tabungan, dan penyesuaian energi.
+              </span>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      </div>
+
+      {/* 5. Engagement */}
+      <div className="space-y-2">
+        <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
+          Aplikasi & gamifikasi
+        </h3>
 
         <Link
           href="/parent/settings/engagement"
@@ -129,7 +156,7 @@ export default async function ParentSettingsPage() {
         </Link>
       </div>
 
-      {/* 5. Logout Button */}
+      {/* 6. Logout Button */}
       <div className="pt-2">
         <form action="/auth/sign-out" method="POST" className="w-full">
           <button

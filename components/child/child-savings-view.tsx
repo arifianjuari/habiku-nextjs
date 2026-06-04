@@ -94,9 +94,15 @@ export function ChildSavingsView() {
 
   if (!data.savingsEnabled) {
     return (
-      <Card className="border-emerald-200 bg-white/80">
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Tabungan digital belum diaktifkan untuk keluargamu.
+      <Card className="border-violet-100 bg-white/80">
+        <CardContent className="flex flex-col items-center gap-2 py-8 text-center">
+          <PiggyBank className="size-10 text-violet-300" aria-hidden />
+          <p className="text-sm text-muted-foreground">
+            Tabungan digital belum diaktifkan untuk keluargamu.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Minta Papa/Mama mengaktifkannya di Pengaturan → Fitur Engagement.
+          </p>
         </CardContent>
       </Card>
     );

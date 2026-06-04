@@ -45,3 +45,9 @@ Atau lewat dashboard SQL / MCP `apply_migration` dengan nama `w7_savings_pockets
 ## Env production
 
 Lihat [`deployment-env-checklist.md`](./deployment-env-checklist.md) — `CRON_SECRET`, VAPID, dll. **ditunda** sampai siap; tabungan tidak bergantung env tambahan.
+
+## Polish (pengaturan & navigasi)
+
+- **Pengaturan → Dompet & energi:** pintasan Tabungan digital dan Buku besar poin.
+- **Pengaturan → Fitur Engagement:** toggle **Tabungan digital (Kantong)** (`family_settings.savings_enabled`).
+- Halaman tabungan saat nonaktif menampilkan link ke pengaturan; tombol **Buku besar** di `/parent/savings`.
