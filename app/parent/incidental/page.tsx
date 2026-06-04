@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { getSessionContext } from "@/lib/auth/get-session-context";
+import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { fetchFamilyChildren } from "@/lib/parent/fetch-family-page-data";
 import { createClient } from "@/lib/supabase/server";
 import { IncidentalRewardForm } from "@/components/parent/incidental-reward-form";
@@ -32,25 +31,13 @@ export default async function ParentIncidentalPage() {
   }, {});
 
   return (
-    <div className="space-y-6 pb-8">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/parent/settings"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 bg-white text-slate-600"
-          aria-label="Kembali ke pengaturan"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 leading-none mb-1">
-            Reward insidental
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Beri apresiasi kilat di luar misi rutin harian.
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-4 pb-8">
+      <ParentPageHeaderSync
+        title="Reward insidental"
+        description="Beri apresiasi kilat di luar misi rutin harian."
+        backHref="/parent/settings"
+        backLabel="Kembali ke pengaturan"
+      />
       <IncidentalRewardForm children={children} goalsByProfile={goalsByProfile} />
     </div>
   );

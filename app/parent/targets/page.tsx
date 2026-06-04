@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { fetchFamilyChildrenAndGoals } from "@/lib/parent/fetch-family-page-data";
-import { TargetsClientView } from "@/components/parent/targets-client-view";
+import { TargetsPageRoot } from "@/components/parent/targets-page-root";
 
 export const metadata: Metadata = {
   title: "Kelola Target — Habiku",
@@ -26,7 +26,7 @@ export default async function ParentTargetsPage() {
           <p className="text-xs text-muted-foreground">Silakan tambahkan profil anak di menu Onboarding atau Pengaturan terlebih dahulu.</p>
         </div>
       ) : (
-        <TargetsClientView children={children} initialGoals={goals} />
+        <TargetsPageRoot children={children} initialGoals={goals} />
       )}
     </div>
   );

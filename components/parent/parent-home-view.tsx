@@ -41,8 +41,6 @@ export function ParentHomeView({
   return (
     <div className="space-y-6 pb-2">
       <ParentHomeHero
-        account={account}
-        family={family}
         familyEnergy={familyEnergy}
         childrenCount={childrenWithData.length}
         activeGoalsCount={activeGoalsCount}

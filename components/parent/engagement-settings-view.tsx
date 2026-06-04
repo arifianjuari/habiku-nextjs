@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles, PiggyBank } from "lucide-react";
+import { Sparkles, PiggyBank } from "lucide-react";
+import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { updateFamilySettingsAction } from "@/app/parent/settings/engagement/actions";
-import Link from "next/link";
 import { WebPushSubscriber } from "@/components/shared/web-push-subscriber";
 
 interface EngagementSettingsViewProps {
@@ -95,23 +95,13 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/parent/settings"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 bg-white text-slate-600 transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 leading-none mb-1">
-            Fitur Engagement
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Sesuaikan intensitas gamifikasi, tabungan, dan notifikasi keluarga.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <ParentPageHeaderSync
+        title="Fitur Engagement"
+        description="Sesuaikan intensitas gamifikasi, tabungan, dan notifikasi keluarga."
+        backHref="/parent/settings"
+        backLabel="Kembali ke pengaturan"
+      />
 
       <Card className="border border-slate-150 shadow-sm rounded-3xl bg-white overflow-hidden">
         <div className="h-2 w-full bg-gradient-to-r from-emerald-600 to-teal-500" />

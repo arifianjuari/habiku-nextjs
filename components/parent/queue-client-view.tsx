@@ -36,6 +36,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { approveTaskHistoryAction, rejectTaskHistoryAction } from "@/app/parent/queue/actions";
+import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import type { ChildProfile, Goal, Task } from "@/types/database";
 
 interface QueueItem {
@@ -240,16 +241,10 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">
-            Persetujuan Misi ({items.length})
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Tinjau hasil misi anak dan berikan poin energi (E).
-          </p>
-        </div>
-      </div>
+      <ParentPageHeaderSync
+        title={`Persetujuan Misi (${items.length})`}
+        description="Tinjau hasil misi anak dan berikan poin energi (E)."
+      />
 
       <AnimatePresence mode="popLayout">
         {items.length === 0 ? (
@@ -270,13 +265,14 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
             </div>
           </motion.div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-2.5">
             {items.map((item) => {
               const style = CATEGORY_STYLES[item.task.category] || CATEGORY_STYLES.lainnya;
               const Icon = style.icon;
               const activeChildGoals = item.childGoals.filter((g) => g.status === "active");
               const hasActiveGoals = activeChildGoals.length > 0;
               const childAccent = item.child.home_card_accent || "#8B5CF6";
+              const { childNotes, aiData } = parseAINotes(item.notes);
 
               return (
                 <motion.div
@@ -287,146 +283,120 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
                   exit={{ opacity: 0, x: -100 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Card className="overflow-hidden border border-slate-150 bg-white shadow-md hover:shadow-lg transition-all rounded-3xl">
-                    {/* Header: Child name and accent strip */}
-                    <div className="h-1.5 w-full" style={{ backgroundColor: childAccent }} />
-                    
-                    <CardContent className="p-4 space-y-4">
-                      {/* Section 1: Anak & Waktu */}
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div className="flex items-center gap-2">
-                          <ChildAvatar
-                            name={item.child.name}
-                            avatarUrl={item.child.avatar_url}
-                            avatarPreference={item.child.avatar_preference}
-                            avatarEmoji={item.child.avatar_emoji}
-                            accentColor={childAccent}
-                            className="h-8 w-8 shrink-0 rounded-full shadow-sm"
-                            fallbackSizeClass="text-[11px]"
-                          />
-                          <div>
-                            <span className="font-bold text-sm text-slate-900 block leading-tight">
-                              {item.child.name}
-                            </span>
-                            <span className="text-[9px] text-slate-400 flex items-center gap-1">
-                              <Clock className="h-2.5 w-2.5" />
-                              Selesai pukul {formatTime(item.completed_at)}
-                            </span>
-                          </div>
-                        </div>
+                  <Card
+                    size="sm"
+                    className="gap-0 overflow-hidden rounded-2xl border border-slate-150 bg-white !py-0 shadow-sm transition-shadow hover:shadow-md"
+                  >
+                    <div className="h-0.5 w-full" style={{ backgroundColor: childAccent }} />
 
-                        {/* Poin Reward */}
-                        <div className="flex items-center gap-1 rounded-xl bg-amber-50 border border-amber-200/50 px-2 py-0.5 shadow-sm">
-                          <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
-                          <span className="text-xs font-extrabold text-amber-950">+{item.task.reward_points} E</span>
-                        </div>
-                      </div>
-
-                      {/* Section 2: Detail Misi */}
-                      <div className="space-y-2">
-                        <div className="flex gap-2.5 items-start">
-                          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white ${style.iconBg} shadow-sm`}>
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          <div className="space-y-0.5">
-                            <span className="text-xs font-semibold text-slate-500 capitalize">
-                              Misi {style.label}
-                            </span>
-                            <h4 className="font-bold text-sm text-slate-950 leading-snug">
-                              {item.task.title}
-                            </h4>
-                          </div>
-                        </div>
-
-                        {/* Child notes & AI Verification */}
-                        {(() => {
-                          const { childNotes, aiData } = parseAINotes(item.notes);
-                          return (
-                            <div className="space-y-3">
-                              {/* AI Verification Section */}
-                              {aiData && (
-                                <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-500/5 to-indigo-500/5 p-4 space-y-3 backdrop-blur-sm relative overflow-hidden">
-                                  {/* Decorative shine */}
-                                  <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-violet-400/10 blur-xl pointer-events-none" />
-                                  
-                                  <div className="flex items-center justify-between border-b border-violet-100/55 pb-2">
-                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-violet-800 uppercase tracking-wider">
-                                      <Sparkles className="h-3.5 w-3.5 text-violet-600 fill-violet-600 animate-pulse" />
-                                      <span>🤖 Verifikasi AI Gemini</span>
-                                    </div>
-                                    
-                                    {/* Status indicator */}
-                                    <span className={`text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5 ${
-                                      aiData.status === "matched"
-                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                        : "bg-amber-50 text-amber-700 border border-amber-100"
-                                    }`}>
-                                      {aiData.status === "matched" ? "Sesuai ✨" : "Butuh Perhatian ⚠️"}
-                                    </span>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <p className="text-xs text-slate-700 font-semibold leading-relaxed">
-                                      {aiData.analysis}
-                                    </p>
-
-                                    {/* Confidence Bar */}
-                                    <div className="space-y-1">
-                                      <div className="flex items-center justify-between text-[9px] font-bold text-slate-500">
-                                        <span>Tingkat Kecocokan Visual</span>
-                                        <span className="text-violet-700 font-extrabold">{aiData.confidence}%</span>
-                                      </div>
-                                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                        <div
-                                          className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 transition-all duration-500"
-                                          style={{ width: `${aiData.confidence}%` }}
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Child notes */}
-                              {childNotes && (
-                                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-3 text-xs italic text-slate-700 flex gap-2">
-                                  <FileText className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                                  <span>&ldquo;{childNotes}&rdquo;</span>
-                                </div>
-                              )}
+                    <CardContent className="space-y-1.5 !px-2.5 !py-1.5">
+                      {/* Header: anak, misi, dan reward dalam satu baris kompak */}
+                      <div className="flex items-start gap-2">
+                        <ChildAvatar
+                          name={item.child.name}
+                          avatarUrl={item.child.avatar_url}
+                          avatarPreference={item.child.avatar_preference}
+                          avatarEmoji={item.child.avatar_emoji}
+                          accentColor={childAccent}
+                          className="h-7 w-7 shrink-0 rounded-full shadow-sm"
+                          fallbackSizeClass="text-[10px]"
+                        />
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-bold leading-tight text-slate-900">
+                                {item.child.name}
+                              </p>
+                              <p className="flex items-center gap-1 text-[9px] text-slate-400">
+                                <Clock className="h-2.5 w-2.5 shrink-0" />
+                                {formatTime(item.completed_at)}
+                              </p>
                             </div>
-                          );
-                        })()}
-
-                        {/* Evidence image preview */}
-                        {item.evidence_url && (
-                          <div className="relative rounded-2xl overflow-hidden border border-slate-100 max-h-36 w-full bg-slate-100 flex items-center justify-center">
-                            <img
-                              src={item.evidence_url}
-                              alt="Bukti Misi"
-                              className="w-full h-full max-h-36 object-cover"
-                            />
-                            {/* Hover click mask to view fullscreen */}
-                            <button
-                              onClick={() => setPreviewImageUrl(item.evidence_url)}
-                              className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center text-white transition-opacity duration-200 cursor-pointer font-semibold text-xs gap-1.5"
-                            >
-                              <Eye className="h-4 w-4" />
-                              Lihat Bukti Foto
-                            </button>
+                            <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-amber-200/50 bg-amber-50 px-1.5 py-0.5">
+                              <Zap className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                              <span className="text-[10px] font-extrabold text-amber-950">
+                                +{item.task.reward_points} E
+                              </span>
+                            </div>
                           </div>
-                        )}
+                          <div className="flex items-center gap-1.5">
+                            <div
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white ${style.iconBg}`}
+                            >
+                              <Icon className="h-3 w-3" />
+                            </div>
+                            <p className="min-w-0 truncate text-xs font-semibold text-slate-800">
+                              <span className="font-medium text-slate-500">{style.label} · </span>
+                              {item.task.title}
+                            </p>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Section 3: Point Destination (Target) */}
+                      {/* Bukti, catatan, dan AI — baris horizontal kompak */}
+                      {(aiData || childNotes || item.evidence_url) && (
+                        <div className="flex gap-2">
+                          {item.evidence_url && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewImageUrl(item.evidence_url)}
+                              className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-100"
+                              aria-label="Lihat bukti foto"
+                            >
+                              <img
+                                src={item.evidence_url}
+                                alt="Bukti Misi"
+                                className="h-full w-full object-cover"
+                              />
+                              <span className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity hover:opacity-100">
+                                <Eye className="h-3.5 w-3.5 text-white" />
+                              </span>
+                            </button>
+                          )}
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            {aiData && (
+                              <div className="rounded-lg border border-violet-100 bg-violet-50/40 px-2 py-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-violet-800">
+                                    <Sparkles className="h-3 w-3 text-violet-600" />
+                                    AI {aiData.confidence}%
+                                  </span>
+                                  <span
+                                    className={`shrink-0 rounded-full px-1.5 py-px text-[8px] font-bold uppercase ${
+                                      aiData.status === "matched"
+                                        ? "bg-emerald-50 text-emerald-700"
+                                        : "bg-amber-50 text-amber-700"
+                                    }`}
+                                  >
+                                    {aiData.status === "matched" ? "Sesuai" : "Perlu cek"}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-slate-600">
+                                  {aiData.analysis}
+                                </p>
+                              </div>
+                            )}
+                            {childNotes && (
+                              <div className="flex gap-1.5 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1">
+                                <FileText className="mt-px h-3 w-3 shrink-0 text-slate-400" />
+                                <p className="line-clamp-2 text-[10px] italic leading-snug text-slate-600">
+                                  &ldquo;{childNotes}&rdquo;
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Target hadiah */}
                       {hasActiveGoals ? (
-                        <div className="space-y-1.5 rounded-2xl bg-violet-50/30 border border-violet-100/50 p-3">
+                        <div className="rounded-lg border border-violet-100/60 bg-violet-50/25 px-2 py-1">
                           <Label
                             htmlFor={`goal-${item.id}`}
-                            className="text-[10px] font-bold text-violet-950 flex items-center gap-1"
+                            className="mb-0.5 flex items-center gap-1 text-[9px] font-bold text-violet-900"
                           >
-                            <Target className="h-3.5 w-3.5 text-violet-700" />
-                            Salurkan Energi ke Target Hadiah:
+                            <Target className="h-3 w-3 text-violet-700" />
+                            Target hadiah
                           </Label>
                           <select
                             id={`goal-${item.id}`}
@@ -437,7 +407,7 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
                                 [item.id]: e.target.value,
                               }))
                             }
-                            className="flex w-full rounded-xl border border-violet-100 bg-white px-2.5 h-9 text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-700 focus:border-transparent font-medium"
+                            className="flex h-8 w-full rounded-lg border border-violet-100 bg-white px-2 text-[11px] font-medium ring-offset-background placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-violet-700"
                           >
                             {activeChildGoals.map((goal) => (
                               <option key={goal.id} value={goal.id}>
@@ -447,40 +417,37 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
                           </select>
                         </div>
                       ) : (
-                        <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50/20 p-2.5 flex gap-2 items-start text-[10px] text-amber-800">
-                          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                          <div className="space-y-0.5">
-                            <span className="font-bold">Anak tidak memiliki target aktif!</span>
-                            <span className="block">
-                              Poin hanya akan disimpan di saldo ledger anak. Silakan buat target aktif di menu Target.
-                            </span>
-                          </div>
+                        <div className="flex items-start gap-1.5 rounded-lg border border-dashed border-amber-200 bg-amber-50/20 px-2 py-1 text-[9px] leading-snug text-amber-800">
+                          <AlertTriangle className="mt-px h-3 w-3 shrink-0 text-amber-500" />
+                          <p>
+                            <span className="font-bold">Belum ada target aktif.</span>{" "}
+                            Poin masuk ke saldo ledger anak.
+                          </p>
                         </div>
                       )}
 
-                      {/* Section 4: Aksi Peninjauan */}
-                      <div className="flex gap-2">
-                        {/* Reject Trigger */}
+                      {/* Aksi */}
+                      <div className="flex gap-1.5">
                         <Button
                           variant="destructive"
+                          size="sm"
                           onClick={() => {
                             setRejectingItemId(item.id);
                             setRejectionReason("");
                             setRejectionError(null);
                           }}
-                          className="flex-1 rounded-xl h-10 border border-red-200 hover:bg-red-50"
+                          className="h-8 flex-1 rounded-lg border border-red-200 text-xs hover:bg-red-50"
                         >
-                          <X className="h-3.5 w-3.5 mr-1" />
+                          <X className="mr-0.5 h-3 w-3" />
                           Tolak
                         </Button>
-
-                        {/* Approve Button */}
                         <Button
+                          size="sm"
                           onClick={() => handleApprove(item.id, item.childGoals)}
-                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 rounded-xl shadow-md"
+                          className="h-8 flex-1 rounded-lg bg-emerald-600 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
                         >
-                          <Check className="h-3.5 w-3.5 mr-1" />
-                          Setujui Misi
+                          <Check className="mr-0.5 h-3 w-3" />
+                          Setujui
                         </Button>
                       </div>
                     </CardContent>

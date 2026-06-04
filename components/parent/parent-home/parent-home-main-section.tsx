@@ -7,18 +7,13 @@ import { ChildrenCarousel } from "@/components/parent/children-carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Account, Family } from "@/types/database";
 
 type ParentHomeMainSectionProps = {
   familyId: string;
-  account: Account;
-  family: Family;
 };
 
 export async function ParentHomeMainSection({
   familyId,
-  account,
-  family,
 }: ParentHomeMainSectionProps) {
   const { familyEnergy, activeGoalsCount, pendingCount, childrenWithData } =
     await getFamilyAggregates(familyId);
@@ -27,8 +22,6 @@ export async function ParentHomeMainSection({
     <>
       <div className="space-y-4">
         <ParentHomeHero
-          account={account}
-          family={family}
           familyEnergy={familyEnergy}
           childrenCount={childrenWithData.length}
           activeGoalsCount={activeGoalsCount}

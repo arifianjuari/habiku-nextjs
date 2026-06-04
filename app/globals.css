@@ -104,9 +104,14 @@
   }
 
   /* WCAG 2.1 AA: Target sentuhan minimum 44px untuk tombol dan tautan di seluler */
-  button, 
+  button:not([role="switch"]):not([data-compact]),
   a.btn,
   .button-touch {
     min-height: 2.75rem; /* 44px */
+  }
+
+  button[role="switch"],
+  button[data-compact] {
+    min-height: auto;
   }
 }

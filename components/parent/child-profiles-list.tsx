@@ -38,6 +38,7 @@ import {
   updateChildProfileAction,
   deleteChildProfileAction,
 } from "@/app/parent/profil-anak/actions";
+import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import type { ChildProfile } from "@/types/database";
 
 const EMOJI_OPTIONS = ["🦁", "🐼", "🦊", "🐯", "🐨", "🐸", "🐙", "🦄", "🐉", "🧙", "🥷", "🧑‍🚀", "🦸", "🧚"];
@@ -201,18 +202,13 @@ export function ChildProfilesList({ initialChildren }: ChildProfilesListProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header and Add Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 leading-none mb-1">
-            Kemajuan & Profil Anak 🧒
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Kelola profil anak, setel PIN child-lock harian, dan sesuaikan profil petualang mereka.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <ParentPageHeaderSync
+        title="Kemajuan & Profil Anak"
+        description="Kelola profil anak, setel PIN child-lock harian, dan sesuaikan profil petualang mereka."
+      />
 
+      <div className="flex justify-end">
         <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); setCreateError(null); }}>
           <DialogTrigger
             className="group/button inline-flex shrink-0 items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold h-9 px-3.5 shadow-md shadow-emerald-950/10 cursor-pointer select-none outline-none text-xs"

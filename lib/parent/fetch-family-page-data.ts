@@ -12,54 +12,82 @@ export async function fetchFamilyChildren(familyId: string): Promise<ChildProfil
   return data ?? [];
 }
 
-/** Ambil anak + misi keluarga secara paralel (satu round-trip DB per resource). */
+/** Ambil anak + misi keluarga (misi difilter via profile_id anak di keluarga). */
 export async function fetchFamilyChildrenAndTasks(familyId: string): Promise<{
   children: ChildProfile[];
   tasks: Task[];
 }> {
   const supabase = await createClient();
 
-  const [childrenResult, tasksResult] = await Promise.all([
-    supabase
-      .from("child_profiles")
-      .select("*")
-      .eq("family_id", familyId)
-      .order("name", { ascending: true }),
-    supabase
-      .from("tasks")
-      .select("*, child_profiles!inner(family_id)")
-      .eq("child_profiles.family_id", familyId)
-      .order("created_at", { ascending: false }),
-  ]);
+  const { data: children, error: childrenError } = await supabase
+    .from("child_profiles")
+    .select("*")
+    .eq("family_id", familyId)
+    .order("name", { ascending: true });
+
+  if (childrenError) {
+    console.error("Error fetching family children:", childrenError);
+  }
+
+  const childList = children ?? [];
+  const childIds = childList.map((c) => c.id);
+
+  if (childIds.length === 0) {
+    return { children: childList, tasks: [] };
+  }
+
+  const { data: tasks, error: tasksError } = await supabase
+    .from("tasks")
+    .select("*")
+    .in("profile_id", childIds)
+    .order("created_at", { ascending: false });
+
+  if (tasksError) {
+    console.error("Error fetching family tasks:", tasksError);
+  }
 
   return {
-    children: childrenResult.data ?? [],
-    tasks: (tasksResult.data ?? []) as Task[],
+    children: childList,
+    tasks: (tasks ?? []) as Task[],
   };
 }
 
-/** Ambil anak + target keluarga secara paralel. */
+/** Ambil anak + target keluarga (target difilter via profile_id anak di keluarga). */
 export async function fetchFamilyChildrenAndGoals(familyId: string): Promise<{
   children: ChildProfile[];
   goals: Goal[];
 }> {
   const supabase = await createClient();
 
-  const [childrenResult, goalsResult] = await Promise.all([
-    supabase
-      .from("child_profiles")
-      .select("*")
-      .eq("family_id", familyId)
-      .order("name", { ascending: true }),
-    supabase
-      .from("goals")
-      .select("*, child_profiles!inner(family_id)")
-      .eq("child_profiles.family_id", familyId)
-      .order("created_at", { ascending: false }),
-  ]);
+  const { data: children, error: childrenError } = await supabase
+    .from("child_profiles")
+    .select("*")
+    .eq("family_id", familyId)
+    .order("name", { ascending: true });
+
+  if (childrenError) {
+    console.error("Error fetching family children:", childrenError);
+  }
+
+  const childList = children ?? [];
+  const childIds = childList.map((c) => c.id);
+
+  if (childIds.length === 0) {
+    return { children: childList, goals: [] };
+  }
+
+  const { data: goals, error: goalsError } = await supabase
+    .from("goals")
+    .select("*")
+    .in("profile_id", childIds)
+    .order("created_at", { ascending: false });
+
+  if (goalsError) {
+    console.error("Error fetching family goals:", goalsError);
+  }
 
   return {
-    children: childrenResult.data ?? [],
-    goals: goalsResult.data ?? [],
+    children: childList,
+    goals: goals ?? [],
   };
 }

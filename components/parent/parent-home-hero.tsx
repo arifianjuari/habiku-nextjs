@@ -2,45 +2,28 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Users, Zap, Target, ClipboardList, Sparkles, Radio } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import type { Account, Family } from "@/types/database";
+import { Users, Zap, Target, ClipboardList, Sparkles } from "lucide-react";
 
 type ParentHomeHeroProps = {
-  account: Account;
-  family: Family;
   familyEnergy: number;
   childrenCount: number;
   activeGoalsCount: number;
   pendingCount: number;
 };
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 11) return "Selamat pagi";
-  if (hour < 15) return "Selamat siang";
-  if (hour < 18) return "Selamat sore";
-  return "Selamat malam";
-}
-
 export function ParentHomeHero({
-  account,
-  family,
   familyEnergy,
   childrenCount,
   activeGoalsCount,
   pendingCount,
 }: ParentHomeHeroProps) {
-  const displayName = account.display_name || "Orang Tua";
-  const isPrimary = account.role === "primary_parent";
-
   return (
     <motion.section
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
       className="relative overflow-hidden rounded-3xl bg-linear-to-br from-emerald-700 via-emerald-800 to-teal-900 p-5 text-white shadow-lg shadow-emerald-900/20"
-      aria-labelledby="parent-home-greeting"
+      aria-label="Ringkasan energi dan statistik keluarga"
     >
       <div className="pointer-events-none absolute -right-6 -top-8 h-32 w-32 rounded-full bg-emerald-400/20 blur-2xl" />
       <div className="pointer-events-none absolute -bottom-10 -left-6 h-28 w-28 rounded-full bg-teal-300/15 blur-xl" />
@@ -50,33 +33,6 @@ export function ParentHomeHero({
       />
 
       <div className="relative space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-100/80">
-              {getGreeting()}
-            </p>
-            <h1
-              id="parent-home-greeting"
-              className="font-heading text-xl font-black tracking-tight leading-tight sm:text-2xl"
-            >
-              {displayName} 👋
-            </h1>
-            <p className="text-xs text-emerald-100/90 text-pretty">
-              Pantau energi, misi, dan target keluarga{" "}
-              <span className="font-semibold text-white">{family.name || "Anda"}</span> hari ini.
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <Badge className="border-emerald-500/30 bg-emerald-950/40 text-emerald-50 font-bold text-[10px]">
-              {isPrimary ? "Ortu Utama" : "Ortu Pendamping"}
-            </Badge>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950/30 px-2 py-0.5 text-[9px] font-semibold text-emerald-100/90">
-              <Radio className="h-2.5 w-2.5 animate-pulse" aria-hidden />
-              Live sync
-            </span>
-          </div>
-        </div>
-
         <div className="rounded-2xl border border-emerald-500/25 bg-emerald-950/30 p-4 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-emerald-100/90">
             <Users className="h-3.5 w-3.5" aria-hidden />

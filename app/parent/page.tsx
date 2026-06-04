@@ -34,7 +34,7 @@ export default async function ParentHomePage() {
         <ParentHomeGreeting account={account} family={family} />
 
         <Suspense fallback={<ParentHomeMainSkeleton />}>
-          <ParentHomeMainSection familyId={family.id} account={account} family={family} />
+          <ParentHomeMainSection familyId={family.id} />
         </Suspense>
 
         <Suspense fallback={<ParentHomeActivitySkeleton />}>

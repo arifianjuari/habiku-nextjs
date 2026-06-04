@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, type ChangeEvent, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -13,12 +13,10 @@ import {
   HelpCircle,
   Calendar,
   Clock,
-  CheckCircle,
-  AlertCircle,
   Plus,
   Star,
+  Zap,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +31,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { createTask, toggleTaskStatus, deleteTask, setChildFeaturedTaskAction } from "@/app/parent/tasks/actions";
+import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
+import { cn } from "@/lib/utils";
 import type { ChildProfile, Task } from "@/types/database";
 
 interface TasksClientViewProps {
@@ -83,6 +83,37 @@ const FREQUENCY_LABELS = {
   weekly: "Setiap Minggu",
   custom: "Kustom",
 };
+
+function TaskActiveSwitch({
+  active,
+  onToggle,
+}: {
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      data-compact
+      onClick={onToggle}
+      className={cn(
+        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+        active ? "bg-emerald-500" : "bg-slate-300",
+      )}
+      aria-label={active ? "Nonaktifkan misi" : "Aktifkan misi"}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-0.5 left-0.5 block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out",
+          active ? "translate-x-4" : "translate-x-0",
+        )}
+      />
+    </button>
+  );
+}
 
 export function TasksClientView({ children, initialTasks }: TasksClientViewProps) {
   const [activeChildId, setActiveChildId] = useState<string>(
@@ -135,7 +166,7 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
     });
   };
 
-  const handleCreateTask = async (e: React.FormEvent) => {
+  const handleCreateTask = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
@@ -211,10 +242,15 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
+      <ParentPageHeaderSync
+        title={`Daftar Misi ${activeChild?.name ?? ""}`.trim()}
+        description="Kelola misi rutin, poin, dan frekuensi tugas harian."
+      />
+
       {/* 1. Tab Selector Anak */}
       {profiles.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {profiles.map((child) => {
             const isSelected = child.id === activeChildId;
             const accentColor = child.home_card_accent || "#8B5CF6";
@@ -222,11 +258,12 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
               <button
                 key={child.id}
                 onClick={() => setActiveChildId(child.id)}
-                className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition-all border shrink-0 cursor-pointer ${
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
                   isSelected
-                    ? "bg-white text-slate-900 shadow-md font-bold"
-                    : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
-                }`}
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100",
+                )}
                 style={isSelected ? { borderColor: `${accentColor}50` } : {}}
               >
                 <ChildAvatar
@@ -245,23 +282,14 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
         </div>
       )}
 
-      {/* 2. Header Dashboard Misi */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">
-            Daftar Misi {activeChild?.name}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Kelola misi rutin, poin, dan frekuensi tugas harian.
-          </p>
-        </div>
-
-        {/* Dialog untuk Tambah Misi Baru */}
+      {/* 2. Tambah misi */}
+      <div className="flex justify-end">
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); setFormError(null); }}>
           <DialogTrigger
-            className="group/button inline-flex shrink-0 items-center justify-center rounded-xl bg-violet-700 hover:bg-violet-800 text-white font-bold h-9 px-3.5 shadow-md shadow-violet-950/10 cursor-pointer select-none outline-none text-xs"
+            data-compact
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl bg-violet-700 px-3 text-xs font-bold text-white shadow-sm shadow-violet-950/10 transition-colors hover:bg-violet-800 cursor-pointer select-none outline-none"
           >
-            <Plus className="h-3.5 w-3.5 mr-1" />
+            <Plus className="h-3.5 w-3.5" aria-hidden />
             Tambah Misi
           </DialogTrigger>
           <DialogContent className="max-w-sm rounded-3xl border border-violet-100 bg-white/95 backdrop-blur-md">
@@ -283,7 +311,7 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
                   placeholder="Misal: Merapikan Kasur, Shalat Subuh"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="border-violet-100 focus-visible:ring-violet-700 h-10 rounded-xl bg-white"
+                  className="h-9 rounded-xl border-violet-100 bg-white text-sm focus-visible:ring-violet-700"
                   required
                 />
               </div>
@@ -297,7 +325,7 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
                     min="1"
                     value={rewardPoints}
                     onChange={(e) => setRewardPoints(e.target.value)}
-                    className="border-violet-100 focus-visible:ring-violet-700 h-10 rounded-xl bg-white"
+                    className="h-9 rounded-xl border-violet-100 bg-white text-sm focus-visible:ring-violet-700"
                     required
                   />
                 </div>
@@ -307,8 +335,8 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
                   <select
                     id="frequencyType"
                     value={frequencyType}
-                    onChange={(e: any) => setFrequencyType(e.target.value)}
-                    className="flex w-full rounded-xl border border-violet-100 bg-white px-3 h-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-700 focus:border-transparent"
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFrequencyType(e.target.value as "daily" | "weekly" | "custom")}
+                    className="flex h-9 w-full rounded-xl border border-violet-100 bg-white px-3 text-sm ring-offset-background focus:border-transparent focus:outline-none focus:ring-2 focus:ring-violet-700"
                   >
                     <option value="daily">Setiap Hari</option>
                     <option value="weekly">Setiap Minggu</option>
@@ -319,7 +347,7 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-800">Kategori Misi</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   {(Object.keys(CATEGORY_STYLES) as Array<keyof typeof CATEGORY_STYLES>).map((cat) => {
                     const style = CATEGORY_STYLES[cat];
                     const isSelected = category === cat;
@@ -328,14 +356,16 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
                       <button
                         key={cat}
                         type="button"
+                        data-compact
                         onClick={() => setCategory(cat)}
-                        className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
+                        className={cn(
+                          "flex flex-col items-center justify-center rounded-lg border p-2 transition-all cursor-pointer",
                           isSelected
-                            ? `${style.bg} border-violet-500 font-bold ring-2 ring-violet-500/20`
-                            : "border-slate-100 bg-slate-50 hover:bg-slate-100 text-slate-600"
-                        }`}
+                            ? `${style.bg} border-violet-500 font-bold ring-1 ring-violet-500/20`
+                            : "border-slate-100 bg-slate-50 text-slate-600 hover:bg-slate-100",
+                        )}
                       >
-                        <Icon className={`h-4.5 w-4.5 mb-1 ${isSelected ? style.text : "text-slate-400"}`} />
+                        <Icon className={cn("mb-0.5 h-4 w-4", isSelected ? style.text : "text-slate-400")} />
                         <span className="text-[10px] capitalize leading-none">{style.label}</span>
                       </button>
                     );
@@ -353,7 +383,7 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="w-full bg-violet-700 hover:bg-violet-800 text-white font-bold h-11 rounded-xl shadow-md"
+                  className="h-10 w-full rounded-xl bg-violet-700 text-sm font-bold text-white shadow-sm hover:bg-violet-800"
                 >
                   {isPending ? "Menyimpan Misi..." : "Simpan Misi Baru"}
                 </Button>
@@ -370,14 +400,14 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex flex-col items-center justify-center p-8 text-center rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 backdrop-blur-sm space-y-4"
+            className="flex flex-col items-center justify-center space-y-3 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 p-8 text-center backdrop-blur-sm"
           >
-            <div className="rounded-full bg-slate-100 p-4">
-              <Calendar className="h-8 w-8 text-slate-400" />
+            <div className="rounded-full bg-slate-100 p-3">
+              <Calendar className="h-7 w-7 text-slate-400" />
             </div>
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-slate-800">Belum Ada Misi Terdaftar</h3>
-              <p className="text-xs text-slate-500 max-w-[240px]">
+              <p className="max-w-[220px] text-xs leading-relaxed text-slate-500">
                 Buat misi pertama untuk {activeChild?.name} agar dapat mengumpulkan energi dan menukarkan hadiah!
               </p>
             </div>
@@ -386,115 +416,119 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="grid gap-3"
+            className="grid gap-2"
           >
             {childTasks.map((task) => {
               const style = CATEGORY_STYLES[task.category] || CATEGORY_STYLES.lainnya;
               const Icon = style.icon;
+              const isFeatured =
+                activeChild?.featured_task_id === task.id && task.is_active;
+
               return (
                 <motion.div
                   key={task.id}
                   layout
-                  className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-300 ${
-                    task.is_active ? "opacity-100" : "opacity-60 bg-slate-50"
-                  } ${
-                    activeChild?.featured_task_id === task.id && task.is_active
-                      ? "border-amber-400 ring-2 ring-amber-400/20 shadow-md shadow-amber-100 bg-gradient-to-r from-amber-50/20 via-white to-white"
-                      : ""
-                  }`}
-                  style={{ borderColor: task.is_active && activeChild?.featured_task_id !== task.id ? undefined : activeChild?.featured_task_id === task.id && task.is_active ? "#FBBF24" : "#E2E8F0" }}
+                  className={cn(
+                    "overflow-hidden rounded-xl border bg-white shadow-sm transition-all duration-300",
+                    task.is_active ? "opacity-100" : "opacity-65 bg-slate-50",
+                    isFeatured && "border-amber-300 ring-1 ring-amber-400/25",
+                  )}
                 >
-                  <CardContent className="p-4 flex items-center justify-between gap-3">
-                    {/* Category Icon & Info */}
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white ${style.iconBg} shadow-sm`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <h4 className={`font-semibold text-sm ${task.is_active ? "text-slate-900" : "text-slate-500 line-through"}`}>
+                  <div className="flex items-center gap-2.5 p-2.5">
+                    <div
+                      className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-sm",
+                        style.iconBg,
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden />
+                    </div>
+
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4
+                          className={cn(
+                            "truncate text-xs font-semibold leading-tight",
+                            task.is_active
+                              ? "text-slate-900"
+                              : "text-slate-500 line-through",
+                          )}
+                        >
                           {task.title}
                         </h4>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-                          <span className={`font-semibold capitalize ${style.text}`}>
-                            {style.label}
-                          </span>
-                          {activeChild?.featured_task_id === task.id && task.is_active && (
-                            <>
-                              <span>•</span>
-                              <span className="inline-flex items-center gap-0.5 font-extrabold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded-md border border-amber-200/50">
-                                ⭐ Sorotan
-                              </span>
-                            </>
-                          )}
-                          <span>•</span>
-                          <span className="flex items-center gap-0.5">
-                            <Clock className="h-2.5 w-2.5" />
-                            {FREQUENCY_LABELS[task.frequency_type as keyof typeof FREQUENCY_LABELS] || "Rutin"}
+                        <div className="flex shrink-0 items-center gap-0.5 rounded-md border border-amber-200/50 bg-amber-50 px-1.5 py-0.5">
+                          <Zap
+                            className="h-2.5 w-2.5 fill-amber-400 text-amber-500"
+                            aria-hidden
+                          />
+                          <span className="text-[10px] font-extrabold tabular-nums text-amber-950">
+                            +{task.reward_points}
                           </span>
                         </div>
                       </div>
+
+                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-muted-foreground">
+                        <span className={cn("font-semibold", style.text)}>
+                          {style.label}
+                        </span>
+                        <span aria-hidden>·</span>
+                        <span className="flex items-center gap-0.5 text-slate-500">
+                          <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                          {FREQUENCY_LABELS[
+                            task.frequency_type as keyof typeof FREQUENCY_LABELS
+                          ] || "Rutin"}
+                        </span>
+                        {isFeatured && (
+                          <>
+                            <span aria-hidden>·</span>
+                            <span className="inline-flex items-center gap-0.5 font-bold text-amber-600">
+                              <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" aria-hidden />
+                              Sorotan
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Controls & Points */}
-                    <div className="flex items-center gap-3 shrink-0">
-                      {/* Tombol Misi Sorotan (Hanya jika misi aktif) */}
+                    <div className="flex shrink-0 items-center gap-1">
                       {task.is_active && (
                         <button
                           type="button"
-                          onClick={() => handleToggleFeatured(task.id, activeChild?.featured_task_id === task.id)}
-                          className={`h-8 w-8 flex items-center justify-center rounded-xl transition-all border cursor-pointer ${
-                            activeChild?.featured_task_id === task.id
-                              ? "bg-amber-500 text-white border-amber-400 shadow-md shadow-amber-500/20 hover:bg-amber-600 scale-105"
-                              : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200"
-                          }`}
-                          title={
-                            activeChild?.featured_task_id === task.id
-                              ? "Lepas Misi Sorotan"
-                              : "Jadikan Misi Sorotan Utama (2x Energi)"
-                          }
+                          data-compact
+                          onClick={() => handleToggleFeatured(task.id, isFeatured)}
+                          className={cn(
+                            "flex h-7 w-7 items-center justify-center rounded-lg border transition-colors cursor-pointer",
+                            isFeatured
+                              ? "border-amber-300 bg-amber-50 text-amber-600"
+                              : "border-slate-200 bg-slate-50 text-slate-400 hover:border-amber-200 hover:text-amber-500",
+                          )}
+                          title={isFeatured ? "Lepas Sorotan" : "Jadikan Sorotan"}
+                          aria-label={isFeatured ? "Lepas sorotan" : "Jadikan sorotan"}
                         >
                           <Star
-                            className={`h-4.5 w-4.5 ${
-                              activeChild?.featured_task_id === task.id ? "fill-white" : ""
-                            }`}
+                            className={cn("h-3.5 w-3.5", isFeatured && "fill-amber-500 text-amber-500")}
+                            aria-hidden
                           />
                         </button>
                       )}
 
-                      {/* Poin Reward */}
-                      <div className="flex items-center gap-1 rounded-xl bg-amber-50 border border-amber-200/50 px-2 py-1 shadow-sm">
-                        <span className="text-xs font-extrabold text-amber-950">+{task.reward_points} E</span>
-                      </div>
+                      <TaskActiveSwitch
+                        active={task.is_active}
+                        onToggle={() => handleToggleActive(task.id, task.is_active)}
+                      />
 
-                      {/* Action Menu (Toggle & Delete) */}
-                      <div className="flex items-center gap-1.5">
-                        {/* Switch Aktif / Nonaktif */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActive(task.id, task.is_active)}
-                          className={`relative inline-flex h-5.5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            task.is_active ? "bg-emerald-500" : "bg-slate-300"
-                          }`}
-                          aria-label="Aktifkan Misi"
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-4.5 w-4.5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                              task.is_active ? "translate-x-4.5" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
-
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => handleDelete(task.id)}
-                          className="h-7 w-7 flex items-center justify-center rounded-lg border border-red-100 hover:bg-red-50 text-red-500 transition-colors cursor-pointer"
-                          title="Hapus Misi"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        data-compact
+                        onClick={() => handleDelete(task.id)}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-100 text-red-500 transition-colors hover:bg-red-50 cursor-pointer"
+                        title="Hapus Misi"
+                        aria-label="Hapus misi"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      </button>
                     </div>
-                  </CardContent>
+                  </div>
                 </motion.div>
               );
             })}

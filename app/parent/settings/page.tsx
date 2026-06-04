@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
+import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { InviteCreator } from "@/components/parent/invite-creator";
@@ -35,17 +36,12 @@ export default async function ParentSettingsPage() {
 
   return (
     <div className="space-y-4">
-      {/* 1. Header Pengaturan */}
-      <div className="mb-2">
-        <h2 className="text-xl font-bold tracking-tight text-slate-900">
-          Pengaturan Ortu
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Kelola profil akun, anggota keluarga, dan preferensi aplikasi.
-        </p>
-      </div>
+      <ParentPageHeaderSync
+        title="Pengaturan Ortu"
+        description="Kelola profil akun, anggota keluarga, dan preferensi aplikasi."
+      />
 
-      {/* 2. Ringkasan Profil & Keluarga */}
+      {/* Ringkasan Profil & Keluarga */}
       <Card className="border border-slate-150 shadow-sm rounded-2xl bg-white overflow-hidden">
         <CardContent className="p-5 space-y-4">
           {/* Ortu Profile */}

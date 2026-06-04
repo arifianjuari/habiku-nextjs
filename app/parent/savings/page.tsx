@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { fetchParentSavingsData } from "@/lib/savings/fetch-savings";
+import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { ParentSavingsView } from "@/components/parent/parent-savings-view";
 
 export const metadata: Metadata = {
@@ -17,14 +18,10 @@ export default async function ParentSavingsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight">
-          Tabungan digital
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Kantong tabungan per anak — setor energi dan setujui penarikan.
-        </p>
-      </div>
+      <ParentPageHeaderSync
+        title="Tabungan digital"
+        description="Kantong tabungan per anak — setor energi dan setujui penarikan."
+      />
       <ParentSavingsView {...data} />
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, BookOpen, Zap } from "lucide-react";
+import { BookOpen, Zap } from "lucide-react";
+import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PointLedgerList } from "@/components/parent/point-ledger-list";
@@ -39,23 +39,12 @@ export function ParentLedgerView({ children, entriesByProfile }: ParentLedgerVie
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/parent/profil-anak"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 bg-white text-slate-600 transition-colors cursor-pointer"
-          aria-label="Kembali ke profil anak"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 leading-none mb-1">
-            Buku Besar Poin
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Riwayat audit transaksi energi (append-only) per anak.
-          </p>
-        </div>
-      </div>
+      <ParentPageHeaderSync
+        title="Buku Besar Poin"
+        description="Riwayat audit transaksi energi (append-only) per anak."
+        backHref="/parent/profil-anak"
+        backLabel="Kembali ke profil anak"
+      />
 
       {children.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-6 text-center text-xs text-muted-foreground">

@@ -38,12 +38,16 @@ import { cn } from "@/lib/utils";
 interface TargetsClientViewProps {
   children: ChildProfile[];
   initialGoals: Goal[];
+  activeChildId: string;
+  onActiveChildIdChange: (childId: string) => void;
 }
 
-export function TargetsClientView({ children, initialGoals }: TargetsClientViewProps) {
-  const [activeChildId, setActiveChildId] = useState<string>(
-    children[0]?.id || ""
-  );
+export function TargetsClientView({
+  children,
+  initialGoals,
+  activeChildId,
+  onActiveChildIdChange,
+}: TargetsClientViewProps) {
   const [goals, setGoals] = useState<Goal[]>(initialGoals);
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -143,8 +147,8 @@ export function TargetsClientView({ children, initialGoals }: TargetsClientViewP
   };
 
   return (
-    <div className="space-y-6">
-      {/* 1. Tab Selector Anak */}
+    <div className="space-y-4">
+      {/* Tab Selector Anak */}
       {children.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
           {children.map((child) => {
@@ -153,7 +157,7 @@ export function TargetsClientView({ children, initialGoals }: TargetsClientViewP
             return (
               <button
                 key={child.id}
-                onClick={() => setActiveChildId(child.id)}
+                onClick={() => onActiveChildIdChange(child.id)}
                 className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition-all border shrink-0 cursor-pointer ${
                   isSelected
                     ? "bg-white text-slate-900 shadow-md font-bold"
@@ -177,17 +181,7 @@ export function TargetsClientView({ children, initialGoals }: TargetsClientViewP
         </div>
       )}
 
-      {/* 2. Header & Action */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">
-            Target Hadiah {activeChild?.name}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Atur hadiah impian anak yang ditebus menggunakan poin energi.
-          </p>
-        </div>
-
+      <div className="flex justify-end">
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); setFormError(null); }}>
           <DialogTrigger
             className="group/button inline-flex shrink-0 items-center justify-center rounded-xl bg-violet-700 hover:bg-violet-800 text-white font-bold h-9 px-3.5 shadow-md shadow-violet-950/10 cursor-pointer select-none outline-none text-xs"

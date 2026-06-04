@@ -7,7 +7,6 @@ import {
   Target,
   TrendingUp,
   Award,
-  ChevronLeft,
   Flame,
   Calendar,
   Shield,
@@ -26,6 +25,7 @@ import { PointLedgerList } from "@/components/parent/point-ledger-list";
 import { GoalVisualStateBadge } from "@/components/shared/goal-visual-state-badge";
 import type { LedgerEntryRow } from "@/lib/parent/ledger-display";
 import { getGoalVisualStateMeta } from "@/lib/goals/visual-state";
+import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 
 interface ChildDetailViewProps {
   child: ChildProfile;
@@ -54,26 +54,15 @@ export function ChildDetailView({
   const ledgerPreview = ledgerEntries.slice(0, 8);
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* 1. Header Back Navigation */}
-      <div className="flex items-center gap-3">
-        <Link
-          href="/parent"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 bg-white text-slate-600 transition-colors"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 leading-none mb-1">
-            Kemajuan RPG {child.name}
-          </h2>
-          <p className="text-[10px] text-muted-foreground">
-            Laporan lengkap audit poin, atribut RPG, dan rekam jejak misi anak.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-4 pb-8">
+      <ParentPageHeaderSync
+        title={`Kemajuan RPG ${child.name}`}
+        description="Laporan lengkap audit poin, atribut RPG, dan rekam jejak misi anak."
+        backHref="/parent"
+        backLabel="Kembali ke beranda"
+      />
 
-      {/* 2. Profil RPG Card */}
+      {/* Profil RPG Card */}
       <Card className="border border-slate-150 shadow-sm bg-white rounded-3xl overflow-hidden">
         {/* Accent Strip */}
         <div className="h-2 w-full" style={{ backgroundColor: childAccent }} />
