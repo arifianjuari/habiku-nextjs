@@ -1,4 +1,4 @@
-const CACHE_NAME = "habiku-pwa-cache-v2";
+const CACHE_NAME = "habiku-pwa-cache-v3";
 const OFFLINE_URL = "/offline";
 
 const PRE_CACHE_RESOURCES = [
@@ -7,8 +7,9 @@ const PRE_CACHE_RESOURCES = [
   "/globe.svg",
   "/window.svg",
   "/file.svg",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
+  "/icons/192",
+  "/icons/512",
+  "/icons/maskable",
 ];
 
 // Install Event: Pre-cache shell and offline assets (jangan gagal total jika satu aset 404)
@@ -143,8 +144,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Habiku";
   const options = {
     body: data.body || "Ada pembaruan penting di Habiku! ⚡",
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    icon: "/icons/192",
+    badge: "/icons/192",
     vibrate: [100, 50, 100],
     data: {
       url: data.url || "/parent",

@@ -60,6 +60,48 @@ export async function createTask(prevState: any, formData: FormData) {
   return { success: true, task: data };
 }
 
+export async function updateTask(prevState: unknown, formData: FormData) {
+  const taskId = String(formData.get("taskId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const category = String(formData.get("category") ?? "lainnya") as TaskCategory;
+  const rewardPointsRaw = Number(formData.get("rewardPoints") ?? "10");
+  const frequencyType = String(formData.get("frequencyType") ?? "daily") as FrequencyType;
+
+  if (!taskId) {
+    return { error: "ID misi wajib disertakan." };
+  }
+  if (!title) {
+    return { error: "Nama misi wajib diisi." };
+  }
+  if (rewardPointsRaw <= 0 || isNaN(rewardPointsRaw)) {
+    return { error: "Poin reward harus berupa angka lebih dari 0." };
+  }
+
+  const linkedAttribute = CATEGORY_ATTRIBUTE_MAP[category] || "attr_honesty";
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({
+      title,
+      category,
+      reward_points: rewardPointsRaw,
+      frequency_type: frequencyType,
+      linked_attribute: linkedAttribute,
+    })
+    .eq("id", taskId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating task:", error);
+    return { error: error.message || "Gagal memperbarui misi." };
+  }
+
+  revalidatePath("/parent/tasks");
+  return { success: true, task: data };
+}
+
 export async function toggleTaskStatus(taskId: string, currentStatus: boolean) {
   if (!taskId) {
     return { error: "Task ID wajib disertakan." };

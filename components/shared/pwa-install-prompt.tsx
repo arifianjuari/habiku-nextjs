@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HabikuLogo } from "@/components/shared/habiku-logo";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -84,9 +85,7 @@ export function PwaInstallPrompt() {
         className="fixed bottom-20 left-4 right-4 z-50 mx-auto max-w-md rounded-2xl border border-emerald-200 bg-white p-4 shadow-lg sm:bottom-6"
       >
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-            <Download className="h-5 w-5" aria-hidden />
-          </div>
+          <HabikuLogo showWordmark={false} className="shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-slate-900">Pasang Habiku di HP</p>
             <p className="mt-0.5 text-sm text-slate-600">

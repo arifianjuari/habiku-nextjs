@@ -13,6 +13,8 @@ import {
 export type ParentPageHeaderState = {
   title: string;
   description?: string;
+  /** Label waktu beranda (Selamat pagi, dll.) — tampil di sticky header. */
+  timeGreeting?: string;
   /** Tampilkan tombol kembali di header (mis. sub-halaman dari pengaturan). */
   backHref?: string;
   backLabel?: string;
@@ -62,15 +64,16 @@ function useParentPageHeaderContext() {
 export function ParentPageHeaderSync({
   title,
   description,
+  timeGreeting,
   backHref,
   backLabel,
 }: ParentPageHeaderState) {
   const { setPageHeader } = useParentPageHeaderContext();
 
   useLayoutEffect(() => {
-    setPageHeader({ title, description, backHref, backLabel });
+    setPageHeader({ title, description, timeGreeting, backHref, backLabel });
     return () => setPageHeader(null);
-  }, [title, description, backHref, backLabel, setPageHeader]);
+  }, [title, description, timeGreeting, backHref, backLabel, setPageHeader]);
 
   return null;
 }

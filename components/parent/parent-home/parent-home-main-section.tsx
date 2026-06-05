@@ -10,10 +10,12 @@ import { cn } from "@/lib/utils";
 
 type ParentHomeMainSectionProps = {
   familyId: string;
+  isPrimaryParent: boolean;
 };
 
 export async function ParentHomeMainSection({
   familyId,
+  isPrimaryParent,
 }: ParentHomeMainSectionProps) {
   const { familyEnergy, activeGoalsCount, pendingCount, childrenWithData } =
     await getFamilyAggregates(familyId);
@@ -26,6 +28,7 @@ export async function ParentHomeMainSection({
           childrenCount={childrenWithData.length}
           activeGoalsCount={activeGoalsCount}
           pendingCount={pendingCount}
+          isPrimaryParent={isPrimaryParent}
         />
         <ParentPendingBanner pendingCount={pendingCount} />
       </div>

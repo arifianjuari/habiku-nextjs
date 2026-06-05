@@ -45,6 +45,7 @@ export function ParentHomeView({
         childrenCount={childrenWithData.length}
         activeGoalsCount={activeGoalsCount}
         pendingCount={pendingCount}
+        isPrimaryParent={account.role === "primary_parent"}
       />
 
       <ParentPendingBanner pendingCount={pendingCount} />

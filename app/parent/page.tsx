@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { getFamilyChildIds } from "@/lib/parent/parent-home-data";
 import { ParentHomeRealtime } from "@/components/parent/parent-home-realtime";
-import { ParentHomeGreeting } from "@/components/parent/parent-home/parent-home-greeting";
+import { ParentHomeHeaderSync } from "@/components/parent/parent-home/parent-home-header-sync";
 import { ParentHomeMainSection } from "@/components/parent/parent-home/parent-home-main-section";
 import { ParentHomeActivitySection } from "@/components/parent/parent-home/parent-home-activity-section";
 import {
@@ -31,10 +31,13 @@ export default async function ParentHomePage() {
   return (
     <ParentHomeRealtime childProfileIds={childProfileIds} accountId={account.id}>
       <div className="space-y-6 pb-2">
-        <ParentHomeGreeting account={account} family={family} />
+        <ParentHomeHeaderSync displayName={account.display_name || "Orang Tua"} />
 
         <Suspense fallback={<ParentHomeMainSkeleton />}>
-          <ParentHomeMainSection familyId={family.id} />
+          <ParentHomeMainSection
+            familyId={family.id}
+            isPrimaryParent={account.role === "primary_parent"}
+          />
         </Suspense>
 
         <Suspense fallback={<ParentHomeActivitySkeleton />}>

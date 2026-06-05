@@ -14,7 +14,16 @@ export function ParentHeaderBar() {
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
-        {pageHeader ? (
+        {pageHeader?.timeGreeting ? (
+          <div className="min-w-0 flex-1 pr-2">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+              {pageHeader.timeGreeting}
+            </p>
+            <h1 className="truncate font-heading text-base font-black leading-tight text-foreground sm:text-lg">
+              {pageHeader.title}
+            </h1>
+          </div>
+        ) : pageHeader ? (
           <div className="flex min-w-0 flex-1 items-start gap-2 pr-2">
             {pageHeader.backHref ? (
               <Link

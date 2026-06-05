@@ -44,6 +44,15 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/child") ||
     pathname.startsWith("/onboarding");
 
+  // PWA / deep link: langsung ke app jika sudah login (bukan landing marketing)
+  if (user && pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = request.cookies.get("habiku_child_mode")?.value === "1"
+      ? "/child/home"
+      : "/parent";
+    return NextResponse.redirect(url);
+  }
+
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
