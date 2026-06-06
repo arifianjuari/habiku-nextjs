@@ -18,9 +18,12 @@ export function ChildDailyTipStrip({ tip, microAnimEnabled }: ChildDailyTipStrip
 
   return (
     <Wrapper {...wrapperProps}>
-      <Card className="border border-sky-200/70 bg-sky-50/40 rounded-3xl shadow-sm">
-        <CardContent className="p-4 flex gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-2xl">
+      <Card
+        size="sm"
+        className="gap-0 rounded-3xl border border-sky-200/70 bg-sky-50/40 py-0 shadow-sm"
+      >
+        <CardContent className="flex gap-2.5 p-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-xl">
             {tip.emoji || "💡"}
           </div>
           <div className="min-w-0 space-y-1">

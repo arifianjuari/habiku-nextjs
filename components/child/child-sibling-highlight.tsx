@@ -21,9 +21,12 @@ export function ChildSiblingHighlight({
 
   return (
     <Wrapper {...wrapperProps}>
-      <Card className="border border-amber-200/70 bg-amber-50/50 rounded-3xl shadow-sm">
-        <CardContent className="p-4 flex gap-3 items-center">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+      <Card
+        size="sm"
+        className="gap-0 rounded-3xl border border-amber-200/70 bg-amber-50/50 py-0 shadow-sm"
+      >
+        <CardContent className="flex items-center gap-2.5 p-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
             <Users className="h-5 w-5" aria-hidden />
           </div>
           <p className="text-[11px] font-semibold text-amber-950 leading-relaxed text-pretty">

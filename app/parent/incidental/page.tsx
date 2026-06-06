@@ -4,7 +4,7 @@ import { getSessionContext } from "@/lib/auth/get-session-context";
 import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { fetchFamilyChildren } from "@/lib/parent/fetch-family-page-data";
 import { createClient } from "@/lib/supabase/server";
-import { IncidentalRewardForm } from "@/components/parent/incidental-reward-form";
+import { IncidentalPageRoot } from "@/components/parent/incidental-page-root";
 import type { Goal } from "@/types/database";
 
 export const metadata: Metadata = {
@@ -38,7 +38,7 @@ export default async function ParentIncidentalPage() {
         backHref="/parent/settings"
         backLabel="Kembali ke pengaturan"
       />
-      <IncidentalRewardForm children={children} goalsByProfile={goalsByProfile} />
+      <IncidentalPageRoot children={children} goalsByProfile={goalsByProfile} />
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
-import { fetchFamilyChildrenAndTasks } from "@/lib/parent/fetch-family-page-data";
+import { fetchFamilyChildrenAndGoals, fetchFamilyChildrenAndTasks } from "@/lib/parent/fetch-family-page-data";
 import { TasksClientView } from "@/components/parent/tasks-client-view";
+import type { Goal } from "@/types/database";
 
 export const metadata: Metadata = {
   title: "Kelola Misi — Habiku",
@@ -16,7 +17,15 @@ export default async function ParentTasksPage() {
     redirect("/login");
   }
 
-  const { children, tasks } = await fetchFamilyChildrenAndTasks(context.family.id);
+  const [{ children, tasks }, { goals }] = await Promise.all([
+    fetchFamilyChildrenAndTasks(context.family.id),
+    fetchFamilyChildrenAndGoals(context.family.id),
+  ]);
+
+  const goalsByProfile = children.reduce<Record<string, Goal[]>>((acc, child) => {
+    acc[child.id] = goals.filter((g) => g.profile_id === child.id);
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-4">
@@ -26,7 +35,7 @@ export default async function ParentTasksPage() {
           <p className="text-xs text-muted-foreground">Silakan tambahkan profil anak di menu Onboarding atau Pengaturan terlebih dahulu.</p>
         </div>
       ) : (
-        <TasksClientView children={children} initialTasks={tasks} />
+        <TasksClientView children={children} initialTasks={tasks} goalsByProfile={goalsByProfile} />
       )}
     </div>
   );

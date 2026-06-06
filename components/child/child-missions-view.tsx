@@ -83,7 +83,7 @@ export function ChildMissionsView() {
   }
 
   return (
-    <div className="space-y-6" data-fetching={isFetching ? "" : undefined}>
+    <div className="space-y-4" data-fetching={isFetching ? "" : undefined}>
       {/* Page Header */}
       <div className="space-y-1">
         <h2 className="font-heading text-xl font-black text-slate-900 tracking-tight leading-none">
@@ -96,7 +96,11 @@ export function ChildMissionsView() {
 
       {/* Missions Grid */}
       {tasks.length === 0 ? (
-        <Card className="border border-dashed border-slate-200 bg-white/40 backdrop-blur-sm rounded-3xl p-8 text-center flex flex-col items-center justify-center space-y-3">
+        <Card
+          size="sm"
+          className="flex flex-col items-center justify-center space-y-2.5 rounded-3xl border border-dashed border-slate-200 bg-white/40 py-0 text-center backdrop-blur-sm"
+        >
+          <CardContent className="flex flex-col items-center space-y-2.5 p-5">
           <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 text-slate-400">
             <BookOpen className="h-6 w-6" />
           </div>
@@ -106,9 +110,10 @@ export function ChildMissionsView() {
               Minta Papa atau Mama untuk menambahkan misi baru di dasbor orang tua ya!
             </p>
           </div>
+          </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {tasks.map((task) => {
             const config = CATEGORY_CONFIG[task.category] || CATEGORY_CONFIG.lainnya;
             const Icon = config.icon;
@@ -124,13 +129,16 @@ export function ChildMissionsView() {
                 whileHover={{ scale: 1.01 }}
                 className="group relative"
               >
-                <Card className={`overflow-hidden border backdrop-blur-md rounded-3xl shadow-sm group-hover:shadow-md transition-all duration-300 ${
+                <Card
+                  size="sm"
+                  className={`gap-0 overflow-hidden rounded-3xl border py-0 shadow-sm backdrop-blur-md transition-all duration-300 group-hover:shadow-md ${
                   task.isFeatured
                     ? "border-amber-300 bg-gradient-to-br from-amber-50/70 via-white/95 to-yellow-50/60 shadow-amber-100 ring-2 ring-amber-400/10"
                     : `${config.border} ${config.bgLight}`
-                }`}>
+                }`}
+                >
                   {/* Category Accent Badge at Top-Right */}
-                  <div className={`absolute top-4 right-4 flex items-center gap-1 bg-white border rounded-full px-2.5 py-1 shadow-sm ${
+                  <div className={`absolute top-3 right-3 flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 shadow-sm ${
                     task.isFeatured 
                       ? "border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-800 font-extrabold shadow-amber-100 ring-2 ring-amber-400/20" 
                       : "border-slate-100 bg-white/80"
@@ -149,15 +157,15 @@ export function ChildMissionsView() {
                     )}
                   </div>
 
-                  <CardContent className="p-4 space-y-4">
+                  <CardContent className="space-y-3 p-3">
                     {/* Mission Header */}
-                    <div className="flex gap-3 items-start pr-14">
+                    <div className="flex items-start gap-2.5 pr-12">
                       {/* Round icon with category gradient */}
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white bg-gradient-to-br ${config.gradient} shadow-md`}>
-                        <Icon className="h-5 w-5" />
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md ${config.gradient}`}>
+                        <Icon className="h-4.5 w-4.5" />
                       </div>
                       
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         <div className="flex flex-wrap items-center gap-1">
                           <span className={`text-[9px] font-extrabold tracking-wider uppercase ${config.color}`}>
                             {config.label}
@@ -182,7 +190,7 @@ export function ChildMissionsView() {
                     </div>
 
                     {/* Mission Footer / Actions */}
-                    <div className="border-t border-slate-100/55 pt-3 flex items-center justify-between">
+                    <div className="flex items-center justify-between border-t border-slate-100/55 pt-2.5">
                       {/* Completed / Active Status tag */}
                       <div>
                         {task.isCompletedToday ? (

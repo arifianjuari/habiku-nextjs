@@ -37,10 +37,13 @@ export function ChildBroadcastSticky({
       initial={microAnimEnabled ? { opacity: 0, y: 8 } : false}
       animate={microAnimEnabled ? { opacity: 1, y: 0 } : undefined}
     >
-      <Card className="border border-violet-200/80 bg-gradient-to-br from-violet-50/90 to-fuchsia-50/50 rounded-3xl shadow-sm overflow-hidden">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-start gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+      <Card
+        size="sm"
+        className="gap-0 overflow-hidden rounded-3xl border border-violet-200/80 bg-gradient-to-br from-violet-50/90 to-fuchsia-50/50 py-0 shadow-sm"
+      >
+        <CardContent className="space-y-2.5 p-3">
+          <div className="flex items-start gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
               <MessageCircleHeart className="h-5 w-5" aria-hidden />
             </div>
             <div className="min-w-0 space-y-1">
@@ -57,7 +60,7 @@ export function ChildBroadcastSticky({
             variant="outline"
             disabled={isPending}
             onClick={handleThanks}
-            className="w-full h-10 rounded-xl border-violet-200 bg-white/80 font-bold text-violet-800 hover:bg-violet-50 cursor-pointer"
+            className="h-9 w-full cursor-pointer rounded-xl border-violet-200 bg-white/80 font-bold text-violet-800 hover:bg-violet-50"
           >
             <Heart className="h-4 w-4 mr-1.5 fill-rose-400 text-rose-500" aria-hidden />
             {isPending ? "Mengirim…" : "Kirim Terima Kasih"}

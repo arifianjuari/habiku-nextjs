@@ -4,6 +4,22 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { RPC } from "@/lib/database/rpc";
 import type { TaskCategory } from "@/lib/database/enums";
+import type { Goal } from "@/types/database";
+
+const INCIDENTAL_REWARD_ERRORS: Record<string, string> = {
+  not_authenticated: "Sesi login berakhir. Silakan masuk kembali.",
+  title_required: "Judul wajib diisi.",
+  amount_required: "Isi minimal HP ke target atau energi bebas.",
+  profile_not_found: "Profil anak tidak ditemukan.",
+  forbidden: "Anda tidak memiliki akses ke profil anak ini.",
+  goal_required: "Pilih target aktif jika memberi HP.",
+  invalid_goal: "Target tidak valid atau tidak aktif.",
+};
+
+function mapIncidentalRewardError(message: string): string {
+  const code = Object.keys(INCIDENTAL_REWARD_ERRORS).find((key) => message.includes(key));
+  return code ? INCIDENTAL_REWARD_ERRORS[code] : message || "Gagal memberi reward insidental.";
+}
 
 export async function setFamilyBroadcastMessageAction(message: string) {
   const supabase = await createClient();
@@ -79,12 +95,24 @@ export async function giveIncidentalRewardAction(
 
   if (error) {
     console.error("give_incidental_reward:", error);
-    return { error: error.message || "Gagal memberi reward insidental." };
+    return { error: mapIncidentalRewardError(error.message ?? "") };
+  }
+
+  let goal: Goal | undefined;
+  if (goalId && hpToTarget > 0) {
+    const { data: updatedGoal } = await supabase
+      .from("goals")
+      .select("*")
+      .eq("id", goalId)
+      .maybeSingle();
+    goal = updatedGoal ?? undefined;
   }
 
   revalidatePath("/parent");
+  revalidatePath("/parent/tasks");
+  revalidatePath("/parent/targets");
   revalidatePath("/parent/ledger");
   revalidatePath(`/parent/goal/${profileId}`);
   revalidatePath("/child/home");
-  return { success: true };
+  return { success: true, goal };
 }

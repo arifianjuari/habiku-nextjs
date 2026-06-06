@@ -17,6 +17,7 @@ import {
   Plus,
   Star,
   Zap,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,11 +40,13 @@ import {
 } from "@/app/parent/tasks/actions";
 import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { cn } from "@/lib/utils";
-import type { ChildProfile, Task } from "@/types/database";
+import { IncidentalRewardDialog } from "@/components/parent/incidental-reward-dialog";
+import type { ChildProfile, Goal, Task } from "@/types/database";
 
 interface TasksClientViewProps {
   children: ChildProfile[];
   initialTasks: Task[];
+  goalsByProfile: Record<string, Goal[]>;
 }
 
 const CATEGORY_STYLES = {
@@ -118,7 +121,7 @@ function TaskActiveSwitch({
   );
 }
 
-export function TasksClientView({ children, initialTasks }: TasksClientViewProps) {
+export function TasksClientView({ children, initialTasks, goalsByProfile }: TasksClientViewProps) {
   const [activeChildId, setActiveChildId] = useState<string>(
     children[0]?.id || ""
   );
@@ -133,6 +136,7 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
   const [rewardPoints, setRewardPoints] = useState("10");
   const [frequencyType, setFrequencyType] = useState<"daily" | "weekly" | "custom">("daily");
   const [formError, setFormError] = useState<string | null>(null);
+  const [rewardOpen, setRewardOpen] = useState(false);
 
   const isEditMode = editingTaskId !== null;
 
@@ -296,6 +300,7 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <div className="space-y-3 pb-12">
         <ParentPageHeaderSync
@@ -485,9 +490,18 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
         </AnimatePresence>
       </div>
 
-      {/* FAB Tambah Misi — mengambang di atas bottom nav */}
+      {/* FAB — mengambang di atas bottom nav */}
       <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.625rem)] z-50">
-        <div className="mx-auto flex max-w-lg justify-center px-4 pointer-events-auto">
+        <div className="pointer-events-auto mx-auto flex max-w-lg items-center justify-center gap-2 px-4">
+          <button
+            type="button"
+            data-compact
+            onClick={() => setRewardOpen(true)}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-orange-500 px-4 text-xs font-bold text-white shadow-lg shadow-orange-950/25 ring-1 ring-orange-600/30 transition-colors hover:bg-orange-600 cursor-pointer select-none outline-none"
+          >
+            <Gift className="h-4 w-4" aria-hidden />
+            Reward
+          </button>
           <button
             type="button"
             data-compact
@@ -614,5 +628,15 @@ export function TasksClientView({ children, initialTasks }: TasksClientViewProps
         </form>
       </DialogContent>
     </Dialog>
+
+    <IncidentalRewardDialog
+      open={rewardOpen}
+      onOpenChange={setRewardOpen}
+      children={children}
+      goalsByProfile={goalsByProfile}
+      activeChildId={activeChildId}
+      onActiveChildIdChange={setActiveChildId}
+    />
+    </>
   );
 }

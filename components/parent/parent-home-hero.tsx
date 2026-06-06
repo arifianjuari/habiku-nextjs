@@ -93,24 +93,26 @@ export function ParentHomeHero({
       <div className="pointer-events-none absolute -right-4 -top-6 size-20 rounded-full bg-emerald-400/15 blur-2xl" />
 
       <div className="relative flex flex-col gap-2">
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="inline-flex h-5 items-center rounded-full border border-white/15 bg-white/10 px-2 text-[9px] font-bold text-emerald-50">
-            {isPrimaryParent ? "Ortu Utama" : "Ortu Pendamping"}
-          </span>
-          <span className="inline-flex h-5 items-center gap-1 rounded-full border border-white/10 bg-emerald-950/30 px-2 text-[9px] font-semibold text-emerald-100/80">
-            <Radio className="size-2.5 animate-pulse" aria-hidden />
-            Live sync
-          </span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-emerald-100/80">
+            <Zap className="size-3 shrink-0 fill-amber-300 text-amber-300" aria-hidden />
+            <span className="truncate">Total Energi Keluarga</span>
+            <FamilyEnergyInfoButton />
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span className="inline-flex h-5 items-center rounded-full border border-white/15 bg-white/10 px-2 text-[9px] font-bold text-emerald-50">
+              {isPrimaryParent ? "Ortu Utama" : "Ortu Pendamping"}
+            </span>
+            <span className="inline-flex h-5 items-center gap-1 rounded-full border border-white/10 bg-emerald-950/30 px-2 text-[9px] font-semibold text-emerald-100/80">
+              <Radio className="size-2.5 animate-pulse" aria-hidden />
+              Live sync
+            </span>
+          </div>
         </div>
 
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-emerald-100/80">
-              <Zap className="size-3 shrink-0 fill-amber-300 text-amber-300" aria-hidden />
-              <span className="truncate">Total Energi Keluarga</span>
-              <FamilyEnergyInfoButton />
-            </div>
-            <div className="mt-0.5 flex items-baseline gap-1.5">
+            <div className="flex items-baseline gap-1.5">
               <span className="font-heading text-3xl font-black leading-none tracking-tight tabular-nums">
                 {familyEnergy}
               </span>
