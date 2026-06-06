@@ -1,4 +1,4 @@
-const CACHE_NAME = "habiku-pwa-cache-v4";
+const CACHE_NAME = "habiku-pwa-cache-v5";
 const OFFLINE_URL = "/offline";
 
 const PRE_CACHE_RESOURCES = [
@@ -26,7 +26,7 @@ self.addEventListener("install", (event) => {
       );
     })
   );
-  self.skipWaiting();
+  // Aktivasi ditunda — klien memuat ulang hanya saat pengguna mengetuk "Muat ulang"
 });
 
 // Activate Event: Cleanup stale caches
@@ -44,6 +44,12 @@ self.addEventListener("activate", (event) => {
     })
   );
   self.clients.claim();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 function shouldBypassServiceWorker(request, url) {

@@ -10,6 +10,7 @@ import {
 
 const CHILD_MODE_STORAGE_KEY = "habiku-child-mode";
 const CHILD_MODE_COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 7;
+const HYDRATION_FALLBACK_MS = 400;
 
 export function setChildModeCookie(active: boolean) {
   if (typeof document === "undefined") return;
@@ -30,7 +31,7 @@ export function isChildModeCookieActive(): boolean {
     });
 }
 
-/** Sinkronkan cookie sebelum reload SW / tab ditutup agar middleware tetap mengenali mode anak. */
+/** Sinkronkan cookie sebelum tab ditutup agar middleware tetap mengenali mode anak. */
 export function syncChildModeCookieFromStore() {
   const { isActive, profileId } = useChildModeStore.getState();
   if (isActive && profileId) {
@@ -58,6 +59,18 @@ function recoverChildModeFromStorage(): PersistedChildMode | null {
   return null;
 }
 
+function applyRecoveredChildMode() {
+  const recovered = recoverChildModeFromStorage();
+  if (!recovered?.isActive || !recovered.profileId) return false;
+  useChildModeStore.setState({
+    isActive: true,
+    profileId: recovered.profileId,
+    profileName: recovered.profileName ?? null,
+  });
+  setChildModeCookie(true);
+  return true;
+}
+
 type ChildModeState = {
   isActive: boolean;
   profileId: string | null;
@@ -69,7 +82,7 @@ type ChildModeState = {
 let childModeStoreHydrated = false;
 const childModeHydrationListeners = new Set<() => void>();
 
-function markChildModeStoreHydrated() {
+export function markChildModeStoreHydrated() {
   if (childModeStoreHydrated) return;
   childModeStoreHydrated = true;
   for (const listener of childModeHydrationListeners) {
@@ -95,7 +108,6 @@ export const useChildModeStore = create<ChildModeState>()(
     }),
     {
       name: CHILD_MODE_STORAGE_KEY,
-      version: 1,
       partialize: (state) => ({
         isActive: state.isActive,
         profileId: state.profileId,
@@ -104,23 +116,9 @@ export const useChildModeStore = create<ChildModeState>()(
       onRehydrateStorage: () => (state) => {
         if (state?.isActive && state.profileId) {
           setChildModeCookie(true);
-          markChildModeStoreHydrated();
-          return;
+        } else if (isChildModeCookieActive()) {
+          applyRecoveredChildMode();
         }
-
-        // Pemulihan setelah reload/deploy: cookie masih aktif tapi state belum terbaca
-        if (isChildModeCookieActive()) {
-          const recovered = recoverChildModeFromStorage();
-          if (recovered?.isActive && recovered.profileId) {
-            useChildModeStore.setState({
-              isActive: true,
-              profileId: recovered.profileId,
-              profileName: recovered.profileName ?? null,
-            });
-            setChildModeCookie(true);
-          }
-        }
-
         markChildModeStoreHydrated();
       },
     },
@@ -129,7 +127,7 @@ export const useChildModeStore = create<ChildModeState>()(
 
 /**
  * Tunggu localStorage selesai dibaca sebelum guard/redirect mode anak.
- * Inisialisasi selalu `false` agar SSR dan hydration pertama client identik.
+ * Ada fallback timeout agar tidak hang selamanya di layar loading.
  */
 export function useChildModeHydrated(): boolean {
   const [hydrated, setHydrated] = useState(false);
@@ -142,8 +140,28 @@ export function useChildModeHydrated(): boolean {
 
     const listener = () => setHydrated(true);
     childModeHydrationListeners.add(listener);
+
+    void Promise.resolve(useChildModeStore.persist.rehydrate()).finally(() => {
+      if (!childModeStoreHydrated) {
+        if (isChildModeCookieActive()) {
+          applyRecoveredChildMode();
+        }
+        markChildModeStoreHydrated();
+      }
+    });
+
+    const fallback = window.setTimeout(() => {
+      if (!childModeStoreHydrated) {
+        if (isChildModeCookieActive()) {
+          applyRecoveredChildMode();
+        }
+        markChildModeStoreHydrated();
+      }
+    }, HYDRATION_FALLBACK_MS);
+
     return () => {
       childModeHydrationListeners.delete(listener);
+      window.clearTimeout(fallback);
     };
   }, []);
 
