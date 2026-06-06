@@ -20,6 +20,7 @@ import Link from "next/link";
 import { checkInChildAction } from "@/app/child/actions";
 import { ChildBroadcastSticky } from "@/components/child/child-broadcast-sticky";
 import { ChildDailyTipStrip } from "@/components/child/child-daily-tip-strip";
+import { ChildFamilySharedGoalCard } from "@/components/child/child-family-shared-goal-card";
 import { ChildSiblingHighlight } from "@/components/child/child-sibling-highlight";
 import { ChildAvatar } from "@/components/shared/child-avatar";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
@@ -112,8 +113,15 @@ export function ChildHomeView() {
     );
   }
 
-  const { child, activeGoal, totalPoints, checkInChain, isCheckedInToday, engagement } =
-    data;
+  const {
+    child,
+    activeGoal,
+    totalPoints,
+    checkInChain,
+    isCheckedInToday,
+    engagement,
+    sharedFamilyGoal,
+  } = data;
   const {
     personalStickyMessage,
     familyBroadcastMessage,
@@ -211,6 +219,11 @@ export function ChildHomeView() {
           microAnimEnabled={microAnim}
         />
       )}
+
+      <ChildFamilySharedGoalCard
+        sharedFamilyGoal={sharedFamilyGoal}
+        microAnimEnabled={microAnim}
+      />
 
       {/* Check-in harian */}
       <motion.div {...sectionMotion} transition={{ delay: 0.08 }}>

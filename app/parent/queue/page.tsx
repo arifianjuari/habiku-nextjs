@@ -86,9 +86,5 @@ export default async function ParentQueuePage() {
     })
     .filter((item) => item.child && item.task); // defensive exclusion
 
-  return (
-    <div className="space-y-4">
-      <QueueClientView initialQueueItems={queueItems} />
-    </div>
-  );
+  return <QueueClientView initialQueueItems={queueItems} />;
 }

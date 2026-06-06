@@ -7,6 +7,11 @@ import {
   type ChildEngagementData,
 } from "@/lib/child/engagement-types";
 import { getJakartaTodayString } from "@/lib/child/jakarta-today";
+import {
+  EMPTY_FAMILY_SHARED_GOAL,
+  fetchFamilySharedGoal,
+  type FamilySharedGoal,
+} from "@/lib/parent/family-shared-goal";
 import type { ChildProfile, Goal, Task, TaskRequest } from "@/types/database";
 
 /** RPC kustom belum terdaftar di generated Database types. */
@@ -27,6 +32,7 @@ export type ChildHomeData = {
   checkInChain: number;
   isCheckedInToday: boolean;
   engagement: ChildEngagementData;
+  sharedFamilyGoal: FamilySharedGoal;
 };
 
 export type TaskWithStatus = Task & {
@@ -112,6 +118,11 @@ export async function fetchChildHomeData(
   engagement.familyBroadcastMessage = sticky.familyBroadcastMessage;
   engagement.stickyMessage = sticky.stickyMessage;
 
+  const sharedFamilyGoal =
+    child?.family_id != null
+      ? await fetchFamilySharedGoal(child.family_id, client)
+      : EMPTY_FAMILY_SHARED_GOAL;
+
   return {
     child,
     activeGoal: goalResult.data ?? null,
@@ -119,6 +130,7 @@ export async function fetchChildHomeData(
     checkInChain,
     isCheckedInToday: !!checkInResult.data,
     engagement,
+    sharedFamilyGoal,
   };
 }
 

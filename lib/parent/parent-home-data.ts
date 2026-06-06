@@ -1,5 +1,10 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import {
+  computeFamilyEarnEnergy,
+  EMPTY_FAMILY_SHARED_GOAL,
+  type FamilySharedGoal,
+} from "@/lib/parent/family-shared-goal";
 import type { ChildProfile, Goal } from "@/types/database";
 
 export type ParentDashboardChild = {
@@ -21,12 +26,14 @@ export type ParentDashboardActivity = {
 export type ParentHomeAggregates = {
   childrenWithData: ParentDashboardChild[];
   pendingCount: number;
+  totalTasksCount: number;
   familyEnergy: number;
   activeGoalsCount: number;
+  sharedFamilyGoal: FamilySharedGoal;
 };
 
 function sumPointsByProfile(
-  ledger: { profile_id: string; amount: number }[] | null,
+  ledger: { profile_id: string; amount: number; type: string }[] | null,
 ): Map<string, number> {
   const map = new Map<string, number>();
   for (const entry of ledger ?? []) {
@@ -95,30 +102,44 @@ export const getFamilyAggregates = cache(
       return {
         childrenWithData: [],
         pendingCount: 0,
+        totalTasksCount: 0,
         familyEnergy: 0,
         activeGoalsCount: 0,
+        sharedFamilyGoal: EMPTY_FAMILY_SHARED_GOAL,
       };
     }
 
     const supabase = await createClient();
 
-    const [activeGoalsResult, ledgerResult, pendingResult] = await Promise.all([
-      supabase
-        .from("goals")
-        .select("*")
-        .in("profile_id", childIds)
-        .eq("status", "active")
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("point_ledger")
-        .select("profile_id, amount")
-        .in("profile_id", childIds),
-      supabase
-        .from("task_history")
-        .select("*", { count: "exact", head: true })
-        .in("profile_id", childIds)
-        .eq("status", "pending"),
-    ]);
+    const [activeGoalsResult, ledgerResult, pendingResult, tasksResult, settingsResult] =
+      await Promise.all([
+        supabase
+          .from("goals")
+          .select("*")
+          .in("profile_id", childIds)
+          .eq("status", "active")
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("point_ledger")
+          .select("profile_id, amount, type")
+          .in("profile_id", childIds),
+        supabase
+          .from("task_history")
+          .select("*", { count: "exact", head: true })
+          .in("profile_id", childIds)
+          .eq("status", "pending"),
+        supabase
+          .from("tasks")
+          .select("*", { count: "exact", head: true })
+          .in("profile_id", childIds),
+        supabase
+          .from("family_settings")
+          .select(
+            "shared_family_goal_title, shared_family_goal_target_points, shared_family_goal_celebration_dismissed",
+          )
+          .eq("family_id", familyId)
+          .maybeSingle(),
+      ]);
 
     const activeGoalsByProfile = new Map<string, Goal>();
     let activeGoalsCount = 0;
@@ -139,12 +160,28 @@ export const getFamilyAggregates = cache(
     }));
 
     const familyEnergy = childrenWithData.reduce((sum, item) => sum + item.points, 0);
+    const familyEarnEnergy = computeFamilyEarnEnergy(ledgerResult.data);
+
+    if (settingsResult.error) {
+      console.error("getFamilyAggregates family_settings:", settingsResult.error);
+    }
+
+    const settings = settingsResult.error ? null : settingsResult.data;
+
+    const sharedFamilyGoal: FamilySharedGoal = {
+      title: settings?.shared_family_goal_title ?? null,
+      targetPoints: settings?.shared_family_goal_target_points ?? null,
+      celebrationDismissed: settings?.shared_family_goal_celebration_dismissed ?? false,
+      familyEarnEnergy,
+    };
 
     return {
       childrenWithData,
       pendingCount: pendingResult.count ?? 0,
+      totalTasksCount: tasksResult.count ?? 0,
       familyEnergy,
       activeGoalsCount,
+      sharedFamilyGoal,
     };
   },
 );

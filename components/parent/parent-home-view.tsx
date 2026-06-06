@@ -6,7 +6,6 @@ import Link from "next/link";
 import { PlusCircle, UserPlus } from "lucide-react";
 import { ChildrenCarousel } from "@/components/parent/children-carousel";
 import { ParentHomeHero } from "@/components/parent/parent-home-hero";
-import { ParentPendingBanner } from "@/components/parent/parent-pending-banner";
 import { ParentActivityFeed } from "@/components/parent/parent-activity-feed";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,10 +19,10 @@ export function ParentHomeView({
   account,
   family,
   childrenWithData,
-  pendingCount,
+  totalTasksCount,
   recentActivities,
-  familyEnergy,
   activeGoalsCount,
+  sharedFamilyGoal,
 }: ParentHomeViewProps) {
   const router = useRouter();
   const childProfileIds = childrenWithData.map((item) => item.child.id);
@@ -41,14 +40,12 @@ export function ParentHomeView({
   return (
     <div className="space-y-6 pb-2">
       <ParentHomeHero
-        familyEnergy={familyEnergy}
         childrenCount={childrenWithData.length}
         activeGoalsCount={activeGoalsCount}
-        pendingCount={pendingCount}
+        totalTasksCount={totalTasksCount}
         isPrimaryParent={account.role === "primary_parent"}
+        sharedFamilyGoal={sharedFamilyGoal}
       />
-
-      <ParentPendingBanner pendingCount={pendingCount} />
 
       <section aria-labelledby="parent-children-heading" className="space-y-3">
         <div className="flex items-center justify-between gap-2">

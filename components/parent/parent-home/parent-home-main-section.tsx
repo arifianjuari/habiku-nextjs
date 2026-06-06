@@ -2,35 +2,45 @@ import Link from "next/link";
 import { PlusCircle, UserPlus } from "lucide-react";
 import { getFamilyAggregates } from "@/lib/parent/parent-home-data";
 import { ParentHomeHero } from "@/components/parent/parent-home-hero";
-import { ParentPendingBanner } from "@/components/parent/parent-pending-banner";
+import { ParentQuickActions } from "@/components/parent/parent-quick-actions";
 import { ChildrenCarousel } from "@/components/parent/children-carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { getParentTimeGreeting } from "@/lib/parent/parent-greeting";
 import { cn } from "@/lib/utils";
 
 type ParentHomeMainSectionProps = {
   familyId: string;
   isPrimaryParent: boolean;
+  displayName: string;
 };
 
 export async function ParentHomeMainSection({
   familyId,
   isPrimaryParent,
+  displayName,
 }: ParentHomeMainSectionProps) {
-  const { familyEnergy, activeGoalsCount, pendingCount, childrenWithData } =
-    await getFamilyAggregates(familyId);
+  const {
+    activeGoalsCount,
+    pendingCount,
+    totalTasksCount,
+    childrenWithData,
+    sharedFamilyGoal,
+  } = await getFamilyAggregates(familyId);
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-3">
         <ParentHomeHero
-          familyEnergy={familyEnergy}
           childrenCount={childrenWithData.length}
           activeGoalsCount={activeGoalsCount}
-          pendingCount={pendingCount}
+          totalTasksCount={totalTasksCount}
           isPrimaryParent={isPrimaryParent}
+          displayName={displayName}
+          timeGreeting={getParentTimeGreeting()}
+          sharedFamilyGoal={sharedFamilyGoal}
         />
-        <ParentPendingBanner pendingCount={pendingCount} />
+        <ParentQuickActions pendingCount={pendingCount} />
       </div>
 
       <section aria-labelledby="parent-children-heading" className="space-y-3">

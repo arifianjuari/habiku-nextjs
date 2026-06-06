@@ -350,6 +350,9 @@ export type Database = {
           savings_interest_enabled: boolean;
           max_monthly_interest_bps: number;
           daily_check_in_bonus: number;
+          shared_family_goal_title: string | null;
+          shared_family_goal_target_points: number | null;
+          shared_family_goal_celebration_dismissed: boolean;
           updated_at: string;
           updated_by: string | null;
         };

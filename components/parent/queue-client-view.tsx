@@ -2,14 +2,12 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import {
   Check,
   X,
   FileText,
-  Image as ImageIcon,
   Zap,
   Target,
   AlertTriangle,
@@ -21,9 +19,7 @@ import {
   HelpCircle,
   Eye,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChildAvatar } from "@/components/shared/child-avatar";
 import {
@@ -32,7 +28,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { approveTaskHistoryAction, rejectTaskHistoryAction } from "@/app/parent/queue/actions";
@@ -40,6 +35,11 @@ import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-con
 import { SupabaseImage } from "@/components/shared/supabase-image";
 import { useParentListCache } from "@/lib/hooks/use-parent-list-cache";
 import { parentQueryKeys } from "@/lib/parent/query-keys";
+import {
+  buildParentChildCardHeaderWash,
+  resolveHomeCardAccent,
+} from "@/lib/child/resolve-home-card-accent";
+import { cn } from "@/lib/utils";
 import type { ChildProfile, Goal, Task } from "@/types/database";
 
 interface QueueItem {
@@ -74,14 +74,11 @@ function parseAINotes(rawNotes: string | null): {
     try {
       const jsonStr = rawNotes.substring(startIndex + startTag.length, endIndex);
       const aiData = JSON.parse(jsonStr);
-      
-      // Clean up child notes to remove the AI JSON part
-      let childNotes = rawNotes.replace(rawNotes.substring(startIndex, endIndex + endTag.length), "").trim();
-      
-      return {
-        childNotes: childNotes || null,
-        aiData,
-      };
+      const childNotes = rawNotes
+        .replace(rawNotes.substring(startIndex, endIndex + endTag.length), "")
+        .trim();
+
+      return { childNotes: childNotes || null, aiData };
     } catch (e) {
       console.error("Failed to parse AI JSON from notes:", e);
     }
@@ -93,35 +90,242 @@ function parseAINotes(rawNotes: string | null): {
 const CATEGORY_STYLES = {
   ibadah: {
     iconBg: "bg-violet-500",
-    text: "text-violet-700",
     label: "Ibadah",
     icon: BookOpen,
   },
   belajar: {
     iconBg: "bg-blue-500",
-    text: "text-blue-700",
     label: "Belajar",
     icon: GraduationCap,
   },
   kebersihan: {
     iconBg: "bg-emerald-500",
-    text: "text-emerald-700",
     label: "Kebersihan",
     icon: Sparkles,
   },
   olahraga: {
     iconBg: "bg-amber-500",
-    text: "text-amber-700",
     label: "Olahraga",
     icon: Activity,
   },
   lainnya: {
     iconBg: "bg-slate-500",
-    text: "text-slate-700",
     label: "Lainnya",
     icon: HelpCircle,
   },
+} as const;
+
+function formatQueueTime(timeString: string): string {
+  try {
+    const date = new Date(timeString);
+    return (
+      date.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }) + " WIB"
+    );
+  } catch {
+    return "Waktu tidak valid";
+  }
+}
+
+type QueueMissionCardProps = {
+  item: QueueItem;
+  selectedGoalId: string;
+  isPending: boolean;
+  onGoalChange: (goalId: string) => void;
+  onReject: () => void;
+  onApprove: () => void;
+  onPreviewEvidence: (url: string) => void;
 };
+
+function QueueMissionCard({
+  item,
+  selectedGoalId,
+  isPending,
+  onGoalChange,
+  onReject,
+  onApprove,
+  onPreviewEvidence,
+}: QueueMissionCardProps) {
+  const style = CATEGORY_STYLES[item.task.category as keyof typeof CATEGORY_STYLES] ?? CATEGORY_STYLES.lainnya;
+  const Icon = style.icon;
+  const activeChildGoals = item.childGoals.filter((g) => g.status === "active");
+  const hasActiveGoals = activeChildGoals.length > 0;
+  const accentColor = resolveHomeCardAccent(item.child.home_card_accent, {
+    gender: item.child.gender,
+  });
+  const { childNotes, aiData } = parseAINotes(item.notes);
+
+  return (
+    <article className="flex w-full min-w-0 flex-col overflow-hidden rounded-3xl bg-card shadow-sm ring-1 ring-border/60">
+      <div
+        className="flex items-start gap-3 px-4 pb-3 pt-4"
+        style={{ background: buildParentChildCardHeaderWash(accentColor) }}
+      >
+        <ChildAvatar
+          name={item.child.name}
+          avatarUrl={item.child.avatar_url}
+          avatarPreference={item.child.avatar_preference}
+          avatarEmoji={item.child.avatar_emoji}
+          accentColor={accentColor}
+          className="size-11 shrink-0 rounded-2xl ring-2 ring-white/80 shadow-sm"
+          fallbackSizeClass="text-sm"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate font-heading text-sm font-bold text-foreground">
+                {item.child.name}
+              </p>
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="size-3.5 shrink-0" aria-hidden />
+                {formatQueueTime(item.completed_at)}
+              </p>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-400/20 px-2.5 py-1 text-sm font-black tabular-nums text-amber-950 ring-1 ring-amber-300/50">
+              <Zap className="size-4 fill-amber-500 text-amber-500" aria-hidden />
+              +{item.task.reward_points}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 border-t border-border/50 px-4 py-3">
+        <div className="flex items-start gap-2.5">
+          <span
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-xl text-white",
+              style.iconBg,
+            )}
+            aria-hidden
+          >
+            <Icon className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+              {style.label}
+            </p>
+            <p className="text-sm font-semibold leading-snug text-foreground text-pretty">
+              {item.task.title}
+            </p>
+          </div>
+        </div>
+
+        {(aiData || childNotes || item.evidence_url) && (
+          <div className="flex gap-3">
+            {item.evidence_url ? (
+              <button
+                type="button"
+                onClick={() => onPreviewEvidence(item.evidence_url!)}
+                className="relative size-20 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted ring-1 ring-foreground/5"
+                aria-label="Lihat bukti foto"
+              >
+                <SupabaseImage
+                  src={item.evidence_url}
+                  alt="Bukti misi"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                />
+                <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                  <Eye className="size-5 text-white" aria-hidden />
+                </span>
+              </button>
+            ) : null}
+            <div className="min-w-0 flex-1 space-y-2">
+              {aiData ? (
+                <div className="rounded-2xl border border-violet-200/70 bg-violet-50/50 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-violet-800">
+                      <Sparkles className="size-3.5 text-violet-600" aria-hidden />
+                      AI {aiData.confidence}%
+                    </span>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
+                        aiData.status === "matched"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-amber-100 text-amber-800",
+                      )}
+                    >
+                      {aiData.status === "matched" ? "Sesuai" : "Perlu cek"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-snug text-muted-foreground line-clamp-3">
+                    {aiData.analysis}
+                  </p>
+                </div>
+              ) : null}
+              {childNotes ? (
+                <div className="flex gap-2 rounded-2xl border border-border/70 bg-muted/40 px-3 py-2">
+                  <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <p className="text-xs italic leading-snug text-foreground/80 line-clamp-3">
+                    &ldquo;{childNotes}&rdquo;
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {hasActiveGoals ? (
+          <div className="space-y-1.5">
+            <Label
+              htmlFor={`goal-${item.id}`}
+              className="flex items-center gap-1.5 text-xs font-bold text-foreground"
+            >
+              <Target className="size-3.5 text-violet-600" aria-hidden />
+              Target hadiah
+            </Label>
+            <select
+              id={`goal-${item.id}`}
+              value={selectedGoalId}
+              onChange={(e) => onGoalChange(e.target.value)}
+              className="flex h-11 w-full min-w-0 rounded-xl border border-border bg-background px-3 text-sm font-medium focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {activeChildGoals.map((goal) => (
+                <option key={goal.id} value={goal.id}>
+                  {goal.title} ({goal.current_hp}/{goal.target_hp} HP)
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="flex items-start gap-2 rounded-2xl border border-dashed border-amber-200 bg-amber-50/40 px-3 py-2.5 text-xs leading-snug text-amber-900">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+            <p>
+              <span className="font-bold">Belum ada target aktif.</span> Poin masuk ke saldo
+              ledger anak.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 border-t border-border/50 bg-muted/20 p-3">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={onReject}
+          className="h-11 rounded-xl border-red-200 bg-card text-sm font-bold text-red-700 hover:bg-red-50"
+        >
+          <X className="size-4" aria-hidden />
+          Tolak
+        </Button>
+        <Button
+          type="button"
+          disabled={isPending}
+          onClick={onApprove}
+          className="h-11 rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-sm hover:bg-emerald-700"
+        >
+          <Check className="size-4" aria-hidden />
+          Setujui
+        </Button>
+      </div>
+    </article>
+  );
+}
 
 export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
   const router = useRouter();
@@ -131,52 +335,42 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
     initialQueueItems,
   );
   const [isPending, startTransition] = useTransition();
-
-  // Active Goals Selection States (taskId -> goalId mapping)
   const [selectedGoalIds, setSelectedGoalIds] = useState<Record<string, string>>({});
-
-  // Rejection Dialog States
   const [rejectingItemId, setRejectingItemId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectionError, setRejectionError] = useState<string | null>(null);
-
-  // Evidence Preview Dialog States
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
-  // Sync state with props
   useEffect(() => {
     setItems(initialQueueItems);
-    
-    // Auto-select the first active goal for each child profile
+  }, [initialQueueItems, setItems]);
+
+  useEffect(() => {
     const initialSelections: Record<string, string> = {};
     initialQueueItems.forEach((item) => {
       const activeGoalsForChild = item.childGoals.filter((g) => g.status === "active");
-      if (activeGoalsForChild.length > 0 && !selectedGoalIds[item.id]) {
+      if (activeGoalsForChild.length > 0) {
         initialSelections[item.id] = activeGoalsForChild[0].id;
       }
     });
 
-    if (Object.keys(initialSelections).length > 0) {
-      setSelectedGoalIds((prev) => ({ ...prev, ...initialSelections }));
-    }
+    setSelectedGoalIds((prev) => {
+      const next = { ...prev };
+      for (const [id, goalId] of Object.entries(initialSelections)) {
+        if (!next[id]) next[id] = goalId;
+      }
+      return next;
+    });
   }, [initialQueueItems]);
 
-  // Supabase Realtime Subscription
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
       .channel("task-queue-realtime")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "task_history",
-        },
-        () => {
-          // Refresh the Server Component data dynamically
-          router.refresh();
-        }
+        { event: "*", schema: "public", table: "task_history" },
+        () => router.refresh(),
       )
       .subscribe();
 
@@ -194,16 +388,15 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
       return;
     }
 
-    // Optimistic UI update
     setItems((prev) => prev.filter((i) => i.id !== itemId));
 
     startTransition(async () => {
       const res = await approveTaskHistoryAction(itemId, chosenGoalId);
       if (res?.error) {
         toast.error(res.error);
-        router.refresh(); // Rollback & fetch fresh data
+        router.refresh();
       } else {
-        toast.success("Misi disetujui! Poin energi disalurkan. 🎉");
+        toast.success("Misi disetujui! Poin energi disalurkan.");
       }
     });
   };
@@ -217,7 +410,6 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
     }
 
     const itemId = rejectingItemId;
-    // Optimistic UI update
     setItems((prev) => prev.filter((i) => i.id !== itemId));
     setRejectingItemId(null);
 
@@ -225,7 +417,7 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
       const res = await rejectTaskHistoryAction(itemId, rejectionReason);
       if (res?.error) {
         toast.error(res.error);
-        router.refresh(); // Rollback
+        router.refresh();
       } else {
         toast.success("Misi ditolak. Anak akan mendapatkan notifikasi revisi.");
       }
@@ -234,241 +426,51 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
     });
   };
 
-  const formatTime = (timeString: string) => {
-    try {
-      const date = new Date(timeString);
-      return date.toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }) + " WIB";
-    } catch {
-      return "Waktu tidak valid";
-    }
-  };
-
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden pb-2">
       <ParentPageHeaderSync
         title={`Persetujuan Misi (${items.length})`}
         description="Tinjau hasil misi anak dan berikan poin energi (E)."
+        backHref="/parent"
+        backLabel="Kembali ke beranda"
       />
 
-      <AnimatePresence mode="popLayout">
-        {items.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="flex flex-col items-center justify-center p-12 text-center rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 backdrop-blur-sm space-y-4"
-          >
-            <div className="rounded-full bg-emerald-50 p-4 border border-emerald-100">
-              <Check className="h-8 w-8 text-emerald-600" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-sm font-bold text-slate-800">Antrean Bersih! ✨</h3>
-              <p className="text-xs text-slate-500 max-w-[260px]">
-                Semua misi anak sudah ditinjau. Bagus sekali papa/mama!
-              </p>
-            </div>
-          </motion.div>
-        ) : (
-          <div className="grid gap-2.5">
-            {items.map((item) => {
-              const style = CATEGORY_STYLES[item.task.category] || CATEGORY_STYLES.lainnya;
-              const Icon = style.icon;
-              const activeChildGoals = item.childGoals.filter((g) => g.status === "active");
-              const hasActiveGoals = activeChildGoals.length > 0;
-              const childAccent = item.child.home_card_accent || "#8B5CF6";
-              const { childNotes, aiData } = parseAINotes(item.notes);
-
-              return (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card
-                    size="sm"
-                    className="gap-0 overflow-hidden rounded-2xl border border-slate-150 bg-white !py-0 shadow-sm transition-shadow hover:shadow-md"
-                  >
-                    <div className="h-0.5 w-full" style={{ backgroundColor: childAccent }} />
-
-                    <CardContent className="space-y-1.5 !px-2.5 !py-1.5">
-                      {/* Header: anak, misi, dan reward dalam satu baris kompak */}
-                      <div className="flex items-start gap-2">
-                        <ChildAvatar
-                          name={item.child.name}
-                          avatarUrl={item.child.avatar_url}
-                          avatarPreference={item.child.avatar_preference}
-                          avatarEmoji={item.child.avatar_emoji}
-                          accentColor={childAccent}
-                          className="h-7 w-7 shrink-0 rounded-full shadow-sm"
-                          fallbackSizeClass="text-[10px]"
-                        />
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-bold leading-tight text-slate-900">
-                                {item.child.name}
-                              </p>
-                              <p className="flex items-center gap-1 text-[9px] text-slate-400">
-                                <Clock className="h-2.5 w-2.5 shrink-0" />
-                                {formatTime(item.completed_at)}
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-amber-200/50 bg-amber-50 px-1.5 py-0.5">
-                              <Zap className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
-                              <span className="text-[10px] font-extrabold text-amber-950">
-                                +{item.task.reward_points} E
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <div
-                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white ${style.iconBg}`}
-                            >
-                              <Icon className="h-3 w-3" />
-                            </div>
-                            <p className="min-w-0 truncate text-xs font-semibold text-slate-800">
-                              <span className="font-medium text-slate-500">{style.label} · </span>
-                              {item.task.title}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Bukti, catatan, dan AI — baris horizontal kompak */}
-                      {(aiData || childNotes || item.evidence_url) && (
-                        <div className="flex gap-2">
-                          {item.evidence_url && (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewImageUrl(item.evidence_url)}
-                              className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-100"
-                              aria-label="Lihat bukti foto"
-                            >
-                              <SupabaseImage
-                                src={item.evidence_url}
-                                alt="Bukti Misi"
-                                fill
-                                className="object-cover"
-                                sizes="56px"
-                              />
-                              <span className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity hover:opacity-100">
-                                <Eye className="h-3.5 w-3.5 text-white" />
-                              </span>
-                            </button>
-                          )}
-                          <div className="min-w-0 flex-1 space-y-1.5">
-                            {aiData && (
-                              <div className="rounded-lg border border-violet-100 bg-violet-50/40 px-2 py-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-violet-800">
-                                    <Sparkles className="h-3 w-3 text-violet-600" />
-                                    AI {aiData.confidence}%
-                                  </span>
-                                  <span
-                                    className={`shrink-0 rounded-full px-1.5 py-px text-[8px] font-bold uppercase ${
-                                      aiData.status === "matched"
-                                        ? "bg-emerald-50 text-emerald-700"
-                                        : "bg-amber-50 text-amber-700"
-                                    }`}
-                                  >
-                                    {aiData.status === "matched" ? "Sesuai" : "Perlu cek"}
-                                  </span>
-                                </div>
-                                <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-slate-600">
-                                  {aiData.analysis}
-                                </p>
-                              </div>
-                            )}
-                            {childNotes && (
-                              <div className="flex gap-1.5 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1">
-                                <FileText className="mt-px h-3 w-3 shrink-0 text-slate-400" />
-                                <p className="line-clamp-2 text-[10px] italic leading-snug text-slate-600">
-                                  &ldquo;{childNotes}&rdquo;
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Target hadiah */}
-                      {hasActiveGoals ? (
-                        <div className="rounded-lg border border-violet-100/60 bg-violet-50/25 px-2 py-1">
-                          <Label
-                            htmlFor={`goal-${item.id}`}
-                            className="mb-0.5 flex items-center gap-1 text-[9px] font-bold text-violet-900"
-                          >
-                            <Target className="h-3 w-3 text-violet-700" />
-                            Target hadiah
-                          </Label>
-                          <select
-                            id={`goal-${item.id}`}
-                            value={selectedGoalIds[item.id] || ""}
-                            onChange={(e) =>
-                              setSelectedGoalIds((prev) => ({
-                                ...prev,
-                                [item.id]: e.target.value,
-                              }))
-                            }
-                            className="flex h-8 w-full rounded-lg border border-violet-100 bg-white px-2 text-[11px] font-medium ring-offset-background placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-violet-700"
-                          >
-                            {activeChildGoals.map((goal) => (
-                              <option key={goal.id} value={goal.id}>
-                                {goal.title} ({goal.current_hp}/{goal.target_hp} HP)
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      ) : (
-                        <div className="flex items-start gap-1.5 rounded-lg border border-dashed border-amber-200 bg-amber-50/20 px-2 py-1 text-[9px] leading-snug text-amber-800">
-                          <AlertTriangle className="mt-px h-3 w-3 shrink-0 text-amber-500" />
-                          <p>
-                            <span className="font-bold">Belum ada target aktif.</span>{" "}
-                            Poin masuk ke saldo ledger anak.
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Aksi */}
-                      <div className="flex gap-1.5">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            setRejectingItemId(item.id);
-                            setRejectionReason("");
-                            setRejectionError(null);
-                          }}
-                          className="h-8 flex-1 rounded-lg border border-red-200 text-xs hover:bg-red-50"
-                        >
-                          <X className="mr-0.5 h-3 w-3" />
-                          Tolak
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleApprove(item.id, item.childGoals)}
-                          className="h-8 flex-1 rounded-lg bg-emerald-600 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
-                        >
-                          <Check className="mr-0.5 h-3 w-3" />
-                          Setujui
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <Check className="size-7" aria-hidden />
           </div>
-        )}
-      </AnimatePresence>
+          <div className="space-y-1">
+            <h3 className="font-heading text-base font-bold text-foreground">Antrean bersih</h3>
+            <p className="max-w-xs text-sm text-muted-foreground text-pretty">
+              Semua misi anak sudah ditinjau. Bagus sekali!
+            </p>
+          </div>
+        </div>
+      ) : (
+        <ul className="m-0 flex list-none flex-col gap-3 p-0">
+          {items.map((item) => (
+            <li key={item.id} className="min-w-0">
+              <QueueMissionCard
+                item={item}
+                selectedGoalId={selectedGoalIds[item.id] || ""}
+                isPending={isPending}
+                onGoalChange={(goalId) =>
+                  setSelectedGoalIds((prev) => ({ ...prev, [item.id]: goalId }))
+                }
+                onReject={() => {
+                  setRejectingItemId(item.id);
+                  setRejectionReason("");
+                  setRejectionError(null);
+                }}
+                onApprove={() => handleApprove(item.id, item.childGoals)}
+                onPreviewEvidence={setPreviewImageUrl}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
 
-      {/* Rejection Dialog Popover */}
       <Dialog
         open={rejectingItemId !== null}
         onOpenChange={(open) => {
@@ -479,85 +481,85 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
           }
         }}
       >
-        <DialogContent className="max-w-xs rounded-3xl border border-red-100 bg-white/95 backdrop-blur-md">
+        <DialogContent className="max-w-[calc(100%-2rem)] rounded-3xl border border-red-100 sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-heading text-base font-bold text-center flex items-center justify-center gap-2 text-red-700">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-              Tolak Pengajuan Misi
+            <DialogTitle className="flex items-center justify-center gap-2 text-center font-heading text-base font-bold text-red-700">
+              <AlertTriangle className="size-4" aria-hidden />
+              Tolak pengajuan misi
             </DialogTitle>
-            <DialogDescription className="text-center text-[11px] text-slate-500">
-              Berikan saran koreksi/alasan mengapa tugas perlu direvisi.
+            <DialogDescription className="text-center text-sm text-muted-foreground">
+              Berikan saran koreksi atau alasan mengapa tugas perlu direvisi.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleRejectSubmit} className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <Label htmlFor="rejectionReason" className="text-xs font-bold text-slate-800">Saran Revisi Papa / Mama</Label>
+              <Label htmlFor="rejectionReason" className="text-sm font-bold">
+                Saran revisi
+              </Label>
               <textarea
                 id="rejectionReason"
-                rows={3}
-                placeholder="Misal: Bukti fotonya kurang jelas sayang, tolong foto ulang ya..."
+                rows={4}
+                placeholder="Misal: Bukti fotonya kurang jelas, tolong foto ulang ya..."
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                className="flex w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent font-medium"
+                className="flex w-full rounded-xl border border-border bg-background p-3 text-sm placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500"
                 required
               />
             </div>
 
-            {rejectionError && (
-              <p className="text-xs font-semibold text-red-600 text-center bg-red-50 p-2 rounded-lg border border-red-100" role="alert">
+            {rejectionError ? (
+              <p
+                className="rounded-xl border border-red-100 bg-red-50 p-2 text-center text-sm font-semibold text-red-700"
+                role="alert"
+              >
                 {rejectionError}
               </p>
-            )}
+            ) : null}
 
-            <DialogFooter className="flex gap-2">
+            <DialogFooter className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setRejectingItemId(null)}
-                className="flex-1 rounded-xl h-10 border-slate-200 hover:bg-slate-50"
+                className="h-11 rounded-xl"
               >
                 Kembali
               </Button>
-              <Button
-                type="submit"
-                className="flex-1 bg-red-600 hover:bg-red-750 text-white font-bold h-10 rounded-xl"
-              >
-                Kirim Tolak
+              <Button type="submit" className="h-11 rounded-xl bg-red-600 font-bold text-white hover:bg-red-700">
+                Kirim tolak
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Fullscreen Image Evidence Preview Dialog */}
       <Dialog
         open={previewImageUrl !== null}
         onOpenChange={(open) => {
           if (!open) setPreviewImageUrl(null);
         }}
       >
-        <DialogContent className="max-w-md rounded-3xl border border-violet-100 bg-white p-2 shadow-2xl overflow-hidden">
-          {previewImageUrl && (
-            <div className="relative h-[70vh] w-full overflow-hidden rounded-2xl bg-slate-950">
+        <DialogContent className="max-w-[calc(100%-1rem)] gap-3 rounded-3xl p-2 sm:max-w-md">
+          {previewImageUrl ? (
+            <div className="relative aspect-[3/4] max-h-[70vh] w-full overflow-hidden rounded-2xl bg-slate-950">
               <SupabaseImage
                 src={previewImageUrl}
-                alt="Bukti Misi Fullscreen"
+                alt="Bukti misi"
                 fill
                 className="object-contain"
                 sizes="100vw"
                 priority
               />
             </div>
-          )}
-          <DialogFooter className="px-2 pt-2 pb-1">
-            <Button
-              onClick={() => setPreviewImageUrl(null)}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-10 rounded-xl"
-            >
-              Tutup Bukti
-            </Button>
-          </DialogFooter>
+          ) : null}
+          <Button
+            type="button"
+            onClick={() => setPreviewImageUrl(null)}
+            className="h-11 w-full rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800"
+          >
+            Tutup bukti
+          </Button>
         </DialogContent>
       </Dialog>
     </div>
