@@ -6,7 +6,7 @@ import { Play, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import { createClient } from "@/lib/supabase/client";
-import { RPC } from "@/lib/database/rpc";
+import { verifyChildProfilePin } from "@/lib/supabase/rpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,8 +55,8 @@ export function ChildModeEnterDialog({
 
     startTransition(async () => {
       try {
-        const { data: isValid, error: rpcError } = await supabase.rpc(
-          RPC.verifyChildProfilePin,
+        const { data: isValid, error: rpcError } = await verifyChildProfilePin(
+          supabase,
           { p_profile_id: profileId, p_pin: pin },
         );
 
