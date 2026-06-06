@@ -43,6 +43,8 @@ import { cn } from "@/lib/utils";
 import { IncidentalRewardDialog } from "@/components/parent/incidental-reward-dialog";
 import { TaskRequestsPanel } from "@/components/parent/task-requests-panel";
 import type { PendingTaskRequest } from "@/lib/parent/fetch-family-page-data";
+import { useParentListCache } from "@/lib/hooks/use-parent-list-cache";
+import { parentQueryKeys } from "@/lib/parent/query-keys";
 import type { ChildProfile, Goal, Task } from "@/types/database";
 import {
   formatMaxSubmissionsFieldLabel,
@@ -132,12 +134,18 @@ export function TasksClientView({
   goalsByProfile,
   initialPendingRequests = [],
 }: TasksClientViewProps) {
+  const familyId = children[0]?.family_id ?? "default";
   const [activeChildId, setActiveChildId] = useState<string>(
     children[0]?.id || ""
   );
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [pendingRequests, setPendingRequests] =
-    useState<PendingTaskRequest[]>(initialPendingRequests);
+  const [tasks, setTasks] = useParentListCache<Task[]>(
+    parentQueryKeys.tasks(familyId),
+    initialTasks,
+  );
+  const [pendingRequests, setPendingRequests] = useParentListCache<PendingTaskRequest[]>(
+    [...parentQueryKeys.tasks(familyId), "pending-requests"],
+    initialPendingRequests,
+  );
   const [profiles, setProfiles] = useState<ChildProfile[]>(children);
   const [isOpen, setIsOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);

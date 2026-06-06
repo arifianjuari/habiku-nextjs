@@ -4,8 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { childQueryKeys } from "@/lib/child/query-keys";
 import { fetchChildHomeData, type ChildHomeData } from "@/lib/child/fetch-child-data";
 import { isValidChildProfileId } from "@/lib/child/profile-id";
-
-const CHILD_STALE_MS = 60_000;
+import { CHILD_STALE_MS } from "@/lib/query/constants";
 
 export function useChildHomeData(profileId: string | null) {
   const enabled = isValidChildProfileId(profileId);
@@ -15,7 +14,6 @@ export function useChildHomeData(profileId: string | null) {
     queryFn: () => fetchChildHomeData(profileId!),
     enabled,
     staleTime: CHILD_STALE_MS,
-    refetchOnMount: "always",
     placeholderData: (prev) => prev,
   });
 }

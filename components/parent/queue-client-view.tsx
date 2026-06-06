@@ -37,6 +37,9 @@ import {
 } from "@/components/ui/dialog";
 import { approveTaskHistoryAction, rejectTaskHistoryAction } from "@/app/parent/queue/actions";
 import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
+import { SupabaseImage } from "@/components/shared/supabase-image";
+import { useParentListCache } from "@/lib/hooks/use-parent-list-cache";
+import { parentQueryKeys } from "@/lib/parent/query-keys";
 import type { ChildProfile, Goal, Task } from "@/types/database";
 
 interface QueueItem {
@@ -122,7 +125,11 @@ const CATEGORY_STYLES = {
 
 export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
   const router = useRouter();
-  const [items, setItems] = useState<QueueItem[]>(initialQueueItems);
+  const familyId = initialQueueItems[0]?.child.family_id ?? "default";
+  const [items, setItems] = useParentListCache<QueueItem[]>(
+    parentQueryKeys.queue(familyId),
+    initialQueueItems,
+  );
   const [isPending, startTransition] = useTransition();
 
   // Active Goals Selection States (taskId -> goalId mapping)
@@ -343,10 +350,12 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
                               className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-100"
                               aria-label="Lihat bukti foto"
                             >
-                              <img
+                              <SupabaseImage
                                 src={item.evidence_url}
                                 alt="Bukti Misi"
-                                className="h-full w-full object-cover"
+                                fill
+                                className="object-cover"
+                                sizes="56px"
                               />
                               <span className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity hover:opacity-100">
                                 <Eye className="h-3.5 w-3.5 text-white" />
@@ -530,11 +539,14 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
       >
         <DialogContent className="max-w-md rounded-3xl border border-violet-100 bg-white p-2 shadow-2xl overflow-hidden">
           {previewImageUrl && (
-            <div className="rounded-2xl overflow-hidden w-full max-h-[80vh] flex items-center justify-center bg-slate-950">
-              <img
+            <div className="relative h-[70vh] w-full overflow-hidden rounded-2xl bg-slate-950">
+              <SupabaseImage
                 src={previewImageUrl}
                 alt="Bukti Misi Fullscreen"
-                className="w-full h-auto max-h-[80vh] object-contain"
+                fill
+                className="object-contain"
+                sizes="100vw"
+                priority
               />
             </div>
           )}

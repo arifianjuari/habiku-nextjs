@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState } from "react";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
-import { createClient } from "@/lib/supabase/client";
+import { useChildBadgesData } from "@/lib/hooks/use-child-badges-data";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
+import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
 import { motion } from "framer-motion";
 import {
   Award,
@@ -115,68 +117,19 @@ const ALL_BADGES: BadgeMetadata[] = [
 
 export function ChildBadgeShelf() {
   const { profileId, profileName } = useChildModeStore();
-  const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
+  const { data: unlockedKeys = [], isLoading, isFetching } = useChildBadgesData(profileId);
   const [selectedBadge, setSelectedBadge] = useState<BadgeMetadata | null>(ALL_BADGES[0]);
-  const [loading, setLoading] = useState(true);
 
-  const supabase = createClient();
-
-  useEffect(() => {
-    if (!profileId) return;
-    const activeProfileId = profileId;
-
-    // Guard: Pastikan profileId adalah UUID yang valid untuk mencegah Postgres 22P02 error
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(activeProfileId)) {
-      console.warn("⚠️ Invalid profileId UUID format in Shelf:", activeProfileId);
-      setUnlockedKeys([]);
-      setLoading(false);
-      return;
-    }
-
-    async function loadBadges() {
-      try {
-        setLoading(true);
-
-        // 1. Trigger RPC untuk evaluasi lencana eligible baru secara idempotent
-        await (supabase as any).rpc("award_eligible_badges", {
-          p_profile_id: activeProfileId,
-        });
-
-        // 2. Fetch lencana anak
-        const { data: badgesRaw } = await supabase
-          .from("child_badges")
-          .select("badge_key")
-          .eq("profile_id", activeProfileId);
-
-        if (badgesRaw) {
-          const keys = badgesRaw.map((b) => b.badge_key);
-          setUnlockedKeys(keys);
-        }
-      } catch (err) {
-        console.error("Error loading child badges:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadBadges();
-  }, [profileId]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
-        <span className="text-xs font-semibold text-emerald-800">Menyiapkan Lemari Lencanamu…</span>
-      </div>
-    );
+  if (!profileId || (isLoading && unlockedKeys.length === 0)) {
+    return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
   }
 
   const unlockedCount = unlockedKeys.length;
   const totalCount = ALL_BADGES.length;
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6" data-fetching={isFetching ? "" : undefined}>
+      <ChildFetchingIndicator isFetching={isFetching && unlockedKeys.length > 0} />
       {/* 1. Welcoming & Counter Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

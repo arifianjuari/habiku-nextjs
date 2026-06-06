@@ -8,11 +8,17 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "framer-motion"],
   },
   images: {
+    minimumCacheTTL: 3600,
     remotePatterns: [
       {
         protocol: "https",
         hostname: "**.supabase.co",
         pathname: "/storage/v1/object/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/render/image/**",
       },
     ],
   },

@@ -23,6 +23,7 @@ import { ChildDailyTipStrip } from "@/components/child/child-daily-tip-strip";
 import { ChildSiblingHighlight } from "@/components/child/child-sibling-highlight";
 import { ChildAvatar } from "@/components/shared/child-avatar";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
+import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
 import {
   useChildHomeData,
   usePatchChildHomeCache,
@@ -135,7 +136,8 @@ export function ChildHomeView() {
     : 0;
 
   return (
-    <div className="space-y-3.5 pb-2" data-fetching={isFetching ? "" : undefined}>
+    <div className="relative space-y-3.5 pb-2" data-fetching={isFetching ? "" : undefined}>
+      <ChildFetchingIndicator isFetching={isFetching && !!data} />
       {/* Hero petualang */}
       <motion.section
         {...sectionMotion}

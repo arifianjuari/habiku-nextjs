@@ -1,45 +1,35 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { PiggyBank, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
-import { getChildSavingsDataAction } from "@/app/child/savings/get-child-savings";
+import {
+  useChildSavingsData,
+  useInvalidateChildSavings,
+} from "@/lib/hooks/use-child-savings-data";
 import {
   depositToSavingsAction,
   requestSavingsWithdrawAction,
 } from "@/app/child/savings/actions";
-import type { ChildSavingsData } from "@/lib/savings/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
+import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
 
 export function ChildSavingsView() {
   const profileId = useChildModeStore((s) => s.profileId);
   const profileName = useChildModeStore((s) => s.profileName);
-  const [data, setData] = useState<ChildSavingsData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading, isFetching } = useChildSavingsData(profileId);
+  const invalidateSavings = useInvalidateChildSavings(profileId ?? "");
   const [isPending, startTransition] = useTransition();
   const [activePocketId, setActivePocketId] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState("5");
   const [withdrawAmount, setWithdrawAmount] = useState("5");
   const [withdrawNote, setWithdrawNote] = useState("");
-
-  const reload = async () => {
-    if (!profileId) return;
-    setLoading(true);
-    const res = await getChildSavingsDataAction(profileId);
-    if (res.error) toast.error(res.error);
-    else setData(res.data ?? null);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    void reload();
-  }, [profileId]);
 
   const handleDeposit = () => {
     if (!activePocketId) return;
@@ -53,7 +43,7 @@ export function ChildSavingsView() {
       if (res.error) toast.error(res.error);
       else {
         toast.success("Berhasil menabung!");
-        await reload();
+        invalidateSavings();
       }
     });
   };
@@ -75,7 +65,7 @@ export function ChildSavingsView() {
       else {
         toast.success("Permintaan penarikan dikirim ke ortu.");
         setWithdrawNote("");
-        await reload();
+        invalidateSavings();
       }
     });
   };
@@ -88,8 +78,16 @@ export function ChildSavingsView() {
     );
   }
 
-  if (loading || !data) {
-    return <PageLoadingSkeleton />;
+  if (isLoading && !data) {
+    return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
+  }
+
+  if (!data) {
+    return (
+      <p className="text-center text-sm text-muted-foreground">
+        Gagal memuat tabungan. Coba refresh halaman.
+      </p>
+    );
   }
 
   if (!data.savingsEnabled) {
@@ -114,7 +112,9 @@ export function ChildSavingsView() {
     : 0;
 
   return (
-    <div className="space-y-5 pb-4">
+    <div className="relative space-y-5 pb-4" data-fetching={isFetching ? "" : undefined}>
+      <ChildFetchingIndicator isFetching={isFetching && !!data} />
+
       <div className="rounded-2xl border border-emerald-200 bg-white/90 p-4 shadow-sm">
         <p className="text-xs font-medium text-emerald-700">Dompet {profileName}</p>
         <p className="font-heading text-3xl font-bold text-emerald-800">

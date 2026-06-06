@@ -3,6 +3,7 @@
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import { useChildTargetsData } from "@/lib/hooks/use-child-targets-data";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
+import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Target,
@@ -46,7 +47,8 @@ export function ChildTargetsView() {
   const archivedGoals = goals.filter((g) => g.status === "archived");
 
   return (
-    <div className="space-y-6" data-fetching={isFetching ? "" : undefined}>
+    <div className="relative space-y-6" data-fetching={isFetching ? "" : undefined}>
+      <ChildFetchingIndicator isFetching={isFetching && !!data} />
       {/* 1. Header Area */}
       <div className="flex items-center justify-between">
         <div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import { useChildMissionsData } from "@/lib/hooks/use-child-missions-data";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
+import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
 import { ChildMissionRequestDialog } from "@/components/child/child-mission-request-dialog";
 import { motion } from "framer-motion";
 import {
@@ -93,7 +94,8 @@ export function ChildMissionsView() {
   }
 
   return (
-    <div className="space-y-4" data-fetching={isFetching ? "" : undefined}>
+    <div className="relative space-y-4" data-fetching={isFetching ? "" : undefined}>
+      <ChildFetchingIndicator isFetching={isFetching && tasks.length > 0} />
       {/* Page Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">

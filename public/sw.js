@@ -1,4 +1,4 @@
-const CACHE_NAME = "habiku-pwa-cache-v5";
+const CACHE_NAME = "habiku-pwa-cache-v6";
 const OFFLINE_URL = "/offline";
 
 const PRE_CACHE_RESOURCES = [
@@ -10,6 +10,11 @@ const PRE_CACHE_RESOURCES = [
   "/icons/192",
   "/icons/512",
   "/icons/maskable",
+  "/child/home",
+  "/child/missions",
+  "/child/savings",
+  "/child/targets",
+  "/child/garden",
 ];
 
 // Install Event: Pre-cache shell and offline assets (jangan gagal total jika satu aset 404)
@@ -21,12 +26,11 @@ self.addEventListener("install", (event) => {
         PRE_CACHE_RESOURCES.map((url) =>
           cache.add(url).catch((error) => {
             console.warn("[PWA SW] Gagal pre-cache:", url, error);
-          })
-        )
+          }),
+        ),
       );
-    })
+    }),
   );
-  // Aktivasi ditunda — klien memuat ulang hanya saat pengguna mengetuk "Muat ulang"
 });
 
 // Activate Event: Cleanup stale caches
@@ -39,9 +43,9 @@ self.addEventListener("activate", (event) => {
             console.log("[PWA SW] Deleting old cache:", name);
             return caches.delete(name);
           }
-        })
+        }),
       );
-    })
+    }),
   );
   self.clients.claim();
 });
@@ -52,17 +56,77 @@ self.addEventListener("message", (event) => {
   }
 });
 
+function isSupabaseStorageGet(url) {
+  return (
+    url.origin.includes("supabase.co") &&
+    url.pathname.includes("/storage/v1/object/")
+  );
+}
+
 function shouldBypassServiceWorker(request, url) {
   if (request.method !== "GET") return true;
-  if (url.origin.includes("supabase.co") || url.pathname.startsWith("/api/")) {
-    return true;
-  }
-  // Biarkan Next.js App Router menangani prefetch/RSC tanpa menunggu jaringan penuh
+  if (url.pathname.startsWith("/api/")) return true;
   if (url.pathname.startsWith("/_next")) return true;
   if (request.headers.get("RSC") === "1") return true;
   if (request.headers.get("Next-Router-Prefetch") === "1") return true;
   if (request.headers.get("Next-Router-State-Tree")) return true;
+  // REST/RPC Supabase (bukan file storage) — selalu segar dari jaringan
+  if (url.origin.includes("supabase.co") && !isSupabaseStorageGet(url)) {
+    return true;
+  }
   return false;
+}
+
+function cacheFirstWithBackgroundUpdate(request) {
+  return caches.match(request).then((cachedResponse) => {
+    const networkUpdate = fetch(request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          void caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => null);
+
+    if (cachedResponse) {
+      void networkUpdate;
+      return cachedResponse;
+    }
+
+    return networkUpdate.then(
+      (networkResponse) =>
+        networkResponse ||
+        new Response("Offline", { status: 503, statusText: "Offline" }),
+    );
+  });
+}
+
+function staleWhileRevalidateNavigate(request) {
+  return caches.match(request).then((cachedResponse) => {
+    const networkFetch = fetch(request)
+      .then((response) => {
+        if (response && response.ok) {
+          const responseClone = response.clone();
+          void caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return response;
+      })
+      .catch(() => null);
+
+    if (cachedResponse) {
+      void networkFetch;
+      return cachedResponse;
+    }
+
+    return networkFetch.then(
+      (response) => response || caches.match(OFFLINE_URL),
+    );
+  });
 }
 
 // Fetch Event: Caching strategies
@@ -74,64 +138,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // For dynamic Webpages / Pages: Network First with Cache and Offline fallback
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Put clone into dynamic cache
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-          return response;
-        })
-        .catch(() => {
-          // Network failed, try cache
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // If completely offline and not cached, return offline fallback page
-            return caches.match(OFFLINE_URL);
-          });
-        })
-    );
+  if (isSupabaseStorageGet(url)) {
+    event.respondWith(cacheFirstWithBackgroundUpdate(request));
     return;
   }
 
-  // Static assets (Fonts, Images, CSS, SVG, JS): Cache First with network update
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return from cache, but fetch fresh in background to update cache
-        fetch(request)
-          .then((networkResponse) => {
-            if (networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, networkResponse);
-              });
-            }
-          })
-          .catch(() => {
-            /* ignore background fetch failures when offline */
-          });
-        return cachedResponse;
-      }
+  if (request.mode === "navigate") {
+    event.respondWith(staleWhileRevalidateNavigate(request));
+    return;
+  }
 
-      // Fetch from network and put in cache dynamically
-      return fetch(request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== "basic") {
-          return networkResponse;
-        }
-        const responseClone = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseClone);
-        });
-        return networkResponse;
-      });
-    })
-  );
+  event.respondWith(cacheFirstWithBackgroundUpdate(request));
 });
 
 // ==========================================
@@ -158,26 +175,25 @@ self.addEventListener("push", (event) => {
     },
   };
 
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  
+
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      const url = event.notification.data?.url || "/parent";
-      for (const client of clientList) {
-        if (client.url === url && "focus" in client) {
-          return client.focus();
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        const url = event.notification.data?.url || "/parent";
+        for (const client of clientList) {
+          if (client.url === url && "focus" in client) {
+            return client.focus();
+          }
         }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
-    })
+        if (clients.openWindow) {
+          return clients.openWindow(url);
+        }
+      }),
   );
 });
-

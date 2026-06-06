@@ -1,5 +1,4 @@
-import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
-
+/** Skeleton ditangani client + React Query cache; hindari double flash. */
 export default function ChildLoading() {
-  return <PageLoadingSkeleton variant="child" />;
+  return null;
 }

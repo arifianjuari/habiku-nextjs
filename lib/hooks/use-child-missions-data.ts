@@ -4,8 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { childQueryKeys } from "@/lib/child/query-keys";
 import { fetchChildMissionsData } from "@/lib/child/fetch-child-data";
 import { isValidChildProfileId } from "@/lib/child/profile-id";
-
-const CHILD_STALE_MS = 60_000;
+import { CHILD_STALE_MS } from "@/lib/query/constants";
 
 export function useChildMissionsData(profileId: string | null) {
   const enabled = isValidChildProfileId(profileId);

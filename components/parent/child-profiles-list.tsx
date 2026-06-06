@@ -27,6 +27,7 @@ import {
   isChildAvatarStoragePath,
   STORAGE_BUCKETS,
 } from "@/lib/storage/child-avatar";
+import { getCachedSignedUrl } from "@/lib/storage/signed-url-cache";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -187,14 +188,19 @@ export function ChildProfilesList({
     let cancelled = false;
     const supabase = createClient();
 
-    void supabase.storage
-      .from(STORAGE_BUCKETS.childAvatars)
-      .createSignedUrl(editingChild.avatar_url, 3600)
-      .then(({ data, error }) => {
-        if (!cancelled) {
-          setEditExistingPhotoPreview(error ? null : data?.signedUrl ?? null);
-        }
-      });
+    const cacheKey = `${STORAGE_BUCKETS.childAvatars}:${editingChild.avatar_url}`;
+    void getCachedSignedUrl(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase.storage
+          .from(STORAGE_BUCKETS.childAvatars)
+          .createSignedUrl(editingChild.avatar_url!, 3600);
+        return error ? null : data?.signedUrl ?? null;
+      },
+      3600,
+    ).then((url) => {
+      if (!cancelled) setEditExistingPhotoPreview(url);
+    });
 
     return () => {
       cancelled = true;

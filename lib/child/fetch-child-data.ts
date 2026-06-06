@@ -1,5 +1,6 @@
 import { getChildStickyMessagesAction } from "@/app/child/actions";
 import { createClient } from "@/lib/supabase/client";
+import type { AppSupabaseClient } from "@/lib/supabase/types";
 import { fetchChildEngagement } from "@/lib/child/fetch-child-engagement";
 import {
   DEFAULT_CHILD_ENGAGEMENT_SETTINGS,
@@ -8,10 +9,8 @@ import {
 import { getJakartaTodayString } from "@/lib/child/jakarta-today";
 import type { ChildProfile, Goal, Task, TaskRequest } from "@/types/database";
 
-type SupabaseClient = ReturnType<typeof createClient>;
-
 /** RPC kustom belum terdaftar di generated Database types. */
-function callProfileRpc(supabase: SupabaseClient, fn: string, profileId: string) {
+function callProfileRpc(supabase: AppSupabaseClient, fn: string, profileId: string) {
   const client = supabase as unknown as {
     rpc: (
       name: string,
@@ -59,22 +58,25 @@ export async function fetchChildPoints(profileId: string): Promise<number> {
   return ledger?.reduce((sum, entry) => sum + entry.amount, 0) ?? 0;
 }
 
-export async function fetchChildHomeData(profileId: string): Promise<ChildHomeData> {
-  const supabase = createClient();
+export async function fetchChildHomeData(
+  profileId: string,
+  supabase?: AppSupabaseClient,
+): Promise<ChildHomeData> {
+  const client = supabase ?? createClient();
   const todayStr = getJakartaTodayString();
 
   const [profileResult, ledgerResult, goalResult, chainResult, checkInResult] =
     await Promise.all([
-      supabase.from("child_profiles").select("*").eq("id", profileId).maybeSingle(),
-      supabase.from("point_ledger").select("amount").eq("profile_id", profileId),
-      supabase
+      client.from("child_profiles").select("*").eq("id", profileId).maybeSingle(),
+      client.from("point_ledger").select("amount").eq("profile_id", profileId),
+      client
         .from("goals")
         .select("*")
         .eq("profile_id", profileId)
         .eq("status", "active")
         .maybeSingle(),
-      callProfileRpc(supabase, "compute_check_in_chain_length", profileId),
-      supabase
+      callProfileRpc(client, "compute_check_in_chain_length", profileId),
+      client
         .from("daily_check_ins")
         .select("id")
         .eq("profile_id", profileId)
@@ -121,25 +123,26 @@ export async function fetchChildHomeData(profileId: string): Promise<ChildHomeDa
 
 export async function fetchChildMissionsData(
   profileId: string,
+  supabase?: AppSupabaseClient,
 ): Promise<ChildMissionsBundle> {
-  const supabase = createClient();
+  const client = supabase ?? createClient();
   const todayStr = getJakartaTodayString();
 
   const [tasksResult, historyResult, featuredResult, pendingRequestsResult] =
     await Promise.all([
-    supabase
+    client
       .from("tasks")
       .select("*")
       .eq("profile_id", profileId)
       .eq("is_active", true)
       .order("created_at", { ascending: false }),
-    supabase
+    client
       .from("task_history")
       .select("id, task_id, status")
       .eq("profile_id", profileId)
       .eq("period_date", todayStr),
-    callProfileRpc(supabase, "compute_featured_task", profileId),
-    supabase
+    callProfileRpc(client, "compute_featured_task", profileId),
+    client
       .from("task_requests")
       .select("*")
       .eq("profile_id", profileId)
@@ -184,16 +187,17 @@ export async function fetchChildMissionsData(
 
 export async function fetchChildTargetsData(
   profileId: string,
+  supabase?: AppSupabaseClient,
 ): Promise<ChildTargetsData> {
-  const supabase = createClient();
+  const client = supabase ?? createClient();
 
   const [goalsResult, ledgerResult] = await Promise.all([
-    supabase
+    client
       .from("goals")
       .select("*")
       .eq("profile_id", profileId)
       .order("created_at", { ascending: false }),
-    supabase.from("point_ledger").select("amount").eq("profile_id", profileId),
+    client.from("point_ledger").select("amount").eq("profile_id", profileId),
   ]);
 
   const totalPoints =

@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Home, ListTodo, Target, Sprout, PiggyBank } from "lucide-react";
+import { useChildModeStore } from "@/lib/stores/child-mode-store";
+import { prefetchChildTabData } from "@/lib/child/prefetch-child-queries";
+import { isValidChildProfileId } from "@/lib/child/profile-id";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -45,6 +49,13 @@ const items = [
 
 export function ChildBottomNav() {
   const pathname = usePathname();
+  const profileId = useChildModeStore((s) => s.profileId);
+  const queryClient = useQueryClient();
+
+  const warmTab = (href: string) => {
+    if (!isValidChildProfileId(profileId)) return;
+    void prefetchChildTabData(queryClient, profileId, href);
+  };
 
   return (
     <nav
@@ -59,6 +70,9 @@ export function ChildBottomNav() {
               <Link
                 href={href}
                 prefetch={true}
+                onMouseEnter={() => warmTab(href)}
+                onFocus={() => warmTab(href)}
+                onTouchStart={() => warmTab(href)}
                 className={cn(
                   "group flex min-h-[4rem] flex-col items-center justify-center gap-1 px-0.5 py-1.5 transition-transform active:scale-95",
                 )}

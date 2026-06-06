@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
   CHILD_MODE_COOKIE,
+  CHILD_PROFILE_COOKIE,
   isChildModeCookieValue,
 } from "@/lib/child/child-mode-session";
 
@@ -18,6 +19,16 @@ export function setChildModeCookie(active: boolean) {
     document.cookie = `${CHILD_MODE_COOKIE}=1; path=/; max-age=${CHILD_MODE_COOKIE_MAX_AGE_SEC}; SameSite=Lax`;
   } else {
     document.cookie = `${CHILD_MODE_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax`;
+    setChildProfileCookie(null);
+  }
+}
+
+export function setChildProfileCookie(profileId: string | null) {
+  if (typeof document === "undefined") return;
+  if (profileId) {
+    document.cookie = `${CHILD_PROFILE_COOKIE}=${profileId}; path=/; max-age=${CHILD_MODE_COOKIE_MAX_AGE_SEC}; SameSite=Lax`;
+  } else {
+    document.cookie = `${CHILD_PROFILE_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax`;
   }
 }
 
@@ -36,6 +47,7 @@ export function syncChildModeCookieFromStore() {
   const { isActive, profileId } = useChildModeStore.getState();
   if (isActive && profileId) {
     setChildModeCookie(true);
+    setChildProfileCookie(profileId);
   }
 }
 
@@ -68,6 +80,7 @@ function applyRecoveredChildMode() {
     profileName: recovered.profileName ?? null,
   });
   setChildModeCookie(true);
+  setChildProfileCookie(recovered.profileId);
   return true;
 }
 
@@ -99,10 +112,12 @@ export const useChildModeStore = create<ChildModeState>()(
       profileName: null,
       enter: (profileId, profileName) => {
         setChildModeCookie(true);
+        setChildProfileCookie(profileId);
         set({ isActive: true, profileId, profileName });
       },
       exit: () => {
         setChildModeCookie(false);
+        setChildProfileCookie(null);
         set({ isActive: false, profileId: null, profileName: null });
       },
     }),
@@ -116,6 +131,7 @@ export const useChildModeStore = create<ChildModeState>()(
       onRehydrateStorage: () => (state) => {
         if (state?.isActive && state.profileId) {
           setChildModeCookie(true);
+          setChildProfileCookie(state.profileId);
         } else if (isChildModeCookieActive()) {
           applyRecoveredChildMode();
         }

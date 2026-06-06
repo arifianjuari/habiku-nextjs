@@ -1,6 +1,9 @@
 /** Cookie hint untuk middleware — otoritas penuh tetap di Zustand + PIN RPC. */
 export const CHILD_MODE_COOKIE = "habiku_child_mode";
 
+/** UUID profil anak aktif — untuk prefetch RSC + React Query dehydrate. */
+export const CHILD_PROFILE_COOKIE = "habiku_child_profile";
+
 export const CHILD_MODE_HOME = "/child/home";
 export const PARENT_HOME = "/parent";
 
