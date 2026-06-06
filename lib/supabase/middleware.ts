@@ -1,6 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  CHILD_MODE_COOKIE,
+  CHILD_MODE_HOME,
+  getAuthenticatedHomePath,
+  isChildModeCookieValue,
+} from "@/lib/child/child-mode-session";
 import { hasSupabaseConfig } from "@/lib/env";
+
+function isChildModeActive(request: NextRequest): boolean {
+  return isChildModeCookieValue(request.cookies.get(CHILD_MODE_COOKIE)?.value);
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -44,12 +54,19 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/child") ||
     pathname.startsWith("/onboarding");
 
+  const childModeActive = isChildModeActive(request);
+
   // PWA / deep link: langsung ke app jika sudah login (bukan landing marketing)
   if (user && pathname === "/") {
     const url = request.nextUrl.clone();
-    url.pathname = request.cookies.get("habiku_child_mode")?.value === "1"
-      ? "/child/home"
-      : "/parent";
+    url.pathname = getAuthenticatedHomePath(childModeActive);
+    return NextResponse.redirect(url);
+  }
+
+  // Tetap di mode anak setelah update/reload — jangan lempar ke dasbor ortu
+  if (user && childModeActive && pathname.startsWith("/parent")) {
+    const url = request.nextUrl.clone();
+    url.pathname = CHILD_MODE_HOME;
     return NextResponse.redirect(url);
   }
 
@@ -62,7 +79,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/parent";
+    url.pathname = getAuthenticatedHomePath(childModeActive);
     return NextResponse.redirect(url);
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition, type ChangeEvent, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Lightbulb, Zap } from "lucide-react";
 import { submitTaskRequestAction } from "@/app/child/actions";
@@ -17,6 +17,11 @@ import {
 } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { childQueryKeys } from "@/lib/child/query-keys";
+import {
+  formatMaxSubmissionsFieldLabel,
+  PARENT_FREQUENCY_OPTIONS,
+  type ParentFrequencyType,
+} from "@/lib/tasks/mission-frequency";
 
 type ChildMissionRequestDialogProps = {
   open: boolean;
@@ -30,7 +35,9 @@ export function ChildMissionRequestDialog({
   profileId,
 }: ChildMissionRequestDialogProps) {
   const [title, setTitle] = useState("");
-  const [rewardPoints, setRewardPoints] = useState("10");
+  const [rewardPoints, setRewardPoints] = useState("1");
+  const [frequencyType, setFrequencyType] = useState<ParentFrequencyType>("daily");
+  const [maxSubmissionsPerPeriod, setMaxSubmissionsPerPeriod] = useState("1");
   const [note, setNote] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -38,7 +45,9 @@ export function ChildMissionRequestDialog({
 
   const resetForm = () => {
     setTitle("");
-    setRewardPoints("10");
+    setRewardPoints("1");
+    setFrequencyType("daily");
+    setMaxSubmissionsPerPeriod("1");
     setNote("");
     setFormError(null);
   };
@@ -55,6 +64,8 @@ export function ChildMissionRequestDialog({
     setFormError(null);
 
     const reward = Number(rewardPoints);
+    const maxSubmissions = Number(maxSubmissionsPerPeriod);
+
     if (!title.trim()) {
       setFormError("Nama misi wajib diisi.");
       return;
@@ -63,12 +74,18 @@ export function ChildMissionRequestDialog({
       setFormError("Energi harus minimal 1.");
       return;
     }
+    if (!Number.isFinite(maxSubmissions) || maxSubmissions < 1 || maxSubmissions > 20) {
+      setFormError("Batas pengerjaan harus antara 1 dan 20.");
+      return;
+    }
 
     startTransition(async () => {
       const res = await submitTaskRequestAction(
         profileId,
         title,
         reward,
+        frequencyType,
+        maxSubmissions,
         note || undefined,
       );
 
@@ -95,8 +112,8 @@ export function ChildMissionRequestDialog({
             Ajukan Misi Baru
           </DialogTitle>
           <DialogDescription className="text-center text-xs text-slate-500">
-            Ceritakan misi yang ingin kamu kerjakan dan berapa energi yang kamu
-            inginkan. Papa atau Mama akan meninjau dulu ya!
+            Ceritakan misi yang ingin kamu kerjakan, energi, frekuensi, dan
+            berapa kali boleh dikerjakan. Papa atau Mama akan meninjau dulu ya!
           </DialogDescription>
         </DialogHeader>
 
@@ -116,26 +133,68 @@ export function ChildMissionRequestDialog({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="mission-reward"
+                className="flex items-center gap-1 text-xs font-bold text-slate-800"
+              >
+                <Zap className="h-3.5 w-3.5 fill-amber-400 text-amber-500" aria-hidden />
+                Energi
+              </Label>
+              <Input
+                id="mission-reward"
+                type="number"
+                min={1}
+                max={50}
+                value={rewardPoints}
+                onChange={(e) => setRewardPoints(e.target.value)}
+                className="h-9 rounded-xl border-emerald-100 text-sm"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="mission-frequency" className="text-xs font-bold text-slate-800">
+                Frekuensi
+              </Label>
+              <select
+                id="mission-frequency"
+                value={frequencyType}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                  setFrequencyType(e.target.value as ParentFrequencyType)
+                }
+                className="flex h-9 w-full rounded-xl border border-emerald-100 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+              >
+                {PARENT_FREQUENCY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <Label
-              htmlFor="mission-reward"
-              className="flex items-center gap-1 text-xs font-bold text-slate-800"
+              htmlFor="mission-max-submissions"
+              className="text-xs font-bold text-slate-800"
             >
-              <Zap className="h-3.5 w-3.5 fill-amber-400 text-amber-500" aria-hidden />
-              Energi yang Diminta
+              {formatMaxSubmissionsFieldLabel(frequencyType)}
             </Label>
             <Input
-              id="mission-reward"
+              id="mission-max-submissions"
               type="number"
               min={1}
-              max={50}
-              value={rewardPoints}
-              onChange={(e) => setRewardPoints(e.target.value)}
+              max={20}
+              value={maxSubmissionsPerPeriod}
+              onChange={(e) => setMaxSubmissionsPerPeriod(e.target.value)}
               className="h-9 rounded-xl border-emerald-100 text-sm"
               required
             />
             <p className="text-[10px] text-slate-400">
-              Papa/Mama bisa menyesuaikan saat menyetujui.
+              Berapa kali kamu boleh mengerjakan misi ini dalam satu{" "}
+              {frequencyType === "weekly" ? "minggu" : "hari"}.
             </p>
           </div>
 

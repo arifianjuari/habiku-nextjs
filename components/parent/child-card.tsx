@@ -46,7 +46,6 @@ export function ChildCard({ child, activeGoal, points, className }: ChildCardPro
 
   const handleEnterChildModeDirect = () => {
     enter(child.id, child.name);
-    document.cookie = `habiku_child_mode=1; path=/; max-age=${60 * 60 * 24 * 7}`;
     router.push("/child/home");
   };
 

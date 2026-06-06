@@ -46,7 +46,7 @@ export type ChildTargetsData = {
 
 export type ChildMissionsBundle = {
   tasks: TaskWithStatus[];
-  pendingRequest: TaskRequest | null;
+  pendingRequests: TaskRequest[];
 };
 
 export async function fetchChildPoints(profileId: string): Promise<number> {
@@ -125,7 +125,7 @@ export async function fetchChildMissionsData(
   const supabase = createClient();
   const todayStr = getJakartaTodayString();
 
-  const [tasksResult, historyResult, featuredResult, pendingRequestResult] =
+  const [tasksResult, historyResult, featuredResult, pendingRequestsResult] =
     await Promise.all([
     supabase
       .from("tasks")
@@ -144,9 +144,7 @@ export async function fetchChildMissionsData(
       .select("*")
       .eq("profile_id", profileId)
       .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .order("created_at", { ascending: false }),
   ]);
 
   if (tasksResult.error) throw tasksResult.error;
@@ -180,7 +178,7 @@ export async function fetchChildMissionsData(
 
   return {
     tasks,
-    pendingRequest: (pendingRequestResult.data as TaskRequest | null) ?? null,
+    pendingRequests: (pendingRequestsResult.data as TaskRequest[]) ?? [],
   };
 }
 

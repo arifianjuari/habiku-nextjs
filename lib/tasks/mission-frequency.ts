@@ -61,3 +61,20 @@ export function parseMaxSubmissionsPerPeriod(raw: FormDataEntryValue | null): nu
   }
   return Math.min(value, 20);
 }
+
+export function parseMaxSubmissionsPerPeriodNumber(value: number): number | null {
+  const n = Math.floor(value);
+  if (!Number.isFinite(n) || n < 1) {
+    return null;
+  }
+  return Math.min(n, 20);
+}
+
+export function parseParentFrequencyType(
+  raw: string | null | undefined,
+): ParentFrequencyType | null {
+  if (raw === "daily" || raw === "weekly") {
+    return raw;
+  }
+  return null;
+}

@@ -11,6 +11,11 @@ import { analyzeEvidenceImage } from "@/lib/services/ai";
 import { sendTaskPendingWebPush } from "@/lib/push/send-task-pending-web-push";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { RPC } from "@/lib/database/rpc";
+import type { ParentFrequencyType } from "@/lib/tasks/mission-frequency";
+import {
+  parseMaxSubmissionsPerPeriodNumber,
+  parseParentFrequencyType,
+} from "@/lib/tasks/mission-frequency";
 
 export async function checkInChildAction(profileId: string) {
   if (!profileId) {
@@ -167,8 +172,11 @@ function mapTaskRequestError(message: string): string {
   if (message.includes("invalid_reward")) {
     return "Energi harus minimal 1.";
   }
-  if (message.includes("pending_exists")) {
-    return "Masih ada pengajuan misi yang menunggu persetujuan ortu.";
+  if (message.includes("invalid_max_submissions")) {
+    return "Batas pengerjaan harus antara 1 dan 20.";
+  }
+  if (message.includes("invalid_frequency")) {
+    return "Frekuensi misi tidak valid.";
   }
   if (message.includes("profile_not_found") || message.includes("forbidden")) {
     return "Profil anak tidak valid.";
@@ -180,6 +188,8 @@ export async function submitTaskRequestAction(
   profileId: string,
   title: string,
   requestedRewardPoints: number,
+  frequencyType: ParentFrequencyType,
+  maxSubmissionsPerPeriod: number,
   note?: string,
 ) {
   const context = await getSessionContext();
@@ -201,6 +211,16 @@ export async function submitTaskRequestAction(
     return { error: "Energi harus minimal 1." };
   }
 
+  const frequency = parseParentFrequencyType(frequencyType);
+  if (!frequency) {
+    return { error: "Frekuensi misi tidak valid." };
+  }
+
+  const maxSubmissions = parseMaxSubmissionsPerPeriodNumber(maxSubmissionsPerPeriod);
+  if (maxSubmissions === null) {
+    return { error: "Batas pengerjaan harus antara 1 dan 20." };
+  }
+
   const supabase = await createClient();
   const { data, error } = await (supabase as unknown as {
     rpc: (
@@ -212,6 +232,8 @@ export async function submitTaskRequestAction(
     p_title: trimmedTitle,
     p_note: note?.trim() || null,
     p_requested_reward_points: reward,
+    p_requested_frequency_type: frequency,
+    p_requested_max_submissions_per_period: maxSubmissions,
   });
 
   if (error) {

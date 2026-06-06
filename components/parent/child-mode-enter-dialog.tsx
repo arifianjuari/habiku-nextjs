@@ -71,7 +71,6 @@ export function ChildModeEnterDialog({
         }
 
         enter(profileId, childName);
-        document.cookie = `habiku_child_mode=1; path=/; max-age=${60 * 60 * 24 * 7}`;
         setIsOpen(false);
         reset();
         toast.success(`Mode Anak aktif untuk ${childName}`);

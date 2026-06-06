@@ -4,7 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { TaskCategory, FrequencyType } from "@/lib/database/enums";
 import { RPC } from "@/lib/database/rpc";
-import { parseMaxSubmissionsPerPeriod } from "@/lib/tasks/mission-frequency";
+import {
+  parseMaxSubmissionsPerPeriod,
+  parseMaxSubmissionsPerPeriodNumber,
+  parseParentFrequencyType,
+  type ParentFrequencyType,
+} from "@/lib/tasks/mission-frequency";
 
 const CATEGORY_ATTRIBUTE_MAP: Record<TaskCategory, string> = {
   ibadah: "attr_discipline",
@@ -176,6 +181,8 @@ export async function approveTaskRequestAction(
   requestId: string,
   rewardPoints: number,
   category: TaskCategory = "lainnya",
+  frequencyType: ParentFrequencyType = "daily",
+  maxSubmissionsPerPeriod = 1,
 ) {
   if (!requestId) {
     return { error: "ID pengajuan wajib disertakan." };
@@ -184,6 +191,16 @@ export async function approveTaskRequestAction(
   const reward = Math.floor(rewardPoints);
   if (!Number.isFinite(reward) || reward < 1) {
     return { error: "Energi harus minimal 1." };
+  }
+
+  const frequency = parseParentFrequencyType(frequencyType);
+  if (!frequency) {
+    return { error: "Frekuensi misi tidak valid." };
+  }
+
+  const maxSubmissions = parseMaxSubmissionsPerPeriodNumber(maxSubmissionsPerPeriod);
+  if (maxSubmissions === null) {
+    return { error: "Batas pengerjaan harus antara 1 dan 20." };
   }
 
   const supabase = await createClient();
@@ -196,8 +213,8 @@ export async function approveTaskRequestAction(
     p_request_id: requestId,
     p_reward_points: reward,
     p_category: category,
-    p_max_submissions_per_period: 1,
-    p_frequency_type: "daily",
+    p_max_submissions_per_period: maxSubmissions,
+    p_frequency_type: frequency,
   });
 
   if (error) {

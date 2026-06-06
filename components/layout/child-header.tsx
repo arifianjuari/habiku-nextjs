@@ -56,8 +56,6 @@ export function ChildHeader() {
         } else if (!isValid) {
           setError("PIN salah. Silakan minta bantuan Papa atau Mama!");
         } else {
-          // Success! Clear cookie and exit child mode
-          document.cookie = "habiku_child_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
           exit();
           toast.success("Berhasil keluar dari Mode Anak.");
           setIsOpen(false);

@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import {
   formatMaxSubmissionsLabel,
   getFrequencyDisplayLabel,
+  normalizeFrequencyForParentForm,
 } from "@/lib/tasks/mission-frequency";
 const CATEGORY_CONFIG: Record<
   string,
@@ -85,9 +86,9 @@ export function ChildMissionsView() {
   const [requestOpen, setRequestOpen] = useState(false);
 
   const tasks = data?.tasks ?? [];
-  const pendingRequest = data?.pendingRequest ?? null;
+  const pendingRequests = data?.pendingRequests ?? [];
 
-  if (!profileId || (isLoading && tasks.length === 0 && !pendingRequest)) {
+  if (!profileId || (isLoading && tasks.length === 0 && pendingRequests.length === 0)) {
     return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
   }
 
@@ -103,40 +104,64 @@ export function ChildMissionsView() {
             Selesaikan misi harian di bawah ini untuk mendapatkan energi!
           </p>
         </div>
-        {!pendingRequest ? (
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setRequestOpen(true)}
-            className="shrink-0 rounded-xl bg-amber-500 px-3 text-[10px] font-extrabold text-white hover:bg-amber-600 h-8"
-          >
-            <Lightbulb className="mr-1 h-3.5 w-3.5" aria-hidden />
-            Ajukan
-          </Button>
-        ) : null}
+        <Button
+          type="button"
+          size="xs"
+          onClick={() => setRequestOpen(true)}
+          className="shrink-0 rounded-lg bg-amber-500 font-bold text-white hover:bg-amber-600"
+        >
+          <Lightbulb className="mr-1 h-3.5 w-3.5" aria-hidden />
+          Ajukan
+        </Button>
       </div>
 
-      {pendingRequest ? (
-        <Card
-          size="sm"
-          className="gap-0 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/80 py-0 shadow-sm"
-        >
-          <CardContent className="flex items-start gap-2.5 p-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
-              <Clock className="h-4 w-4" aria-hidden />
-            </div>
-            <div className="min-w-0 space-y-0.5">
-              <p className="text-[10px] font-extrabold uppercase tracking-wide text-amber-700">
-                Menunggu Ortu
-              </p>
-              <p className="text-sm font-bold text-slate-900">{pendingRequest.title}</p>
-              <p className="text-[10px] font-semibold text-amber-800">
-                +{pendingRequest.requested_reward_points} E diminta
-                {pendingRequest.note ? ` · ${pendingRequest.note}` : ""}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      {pendingRequests.length > 0 ? (
+        <div className="space-y-1.5">
+          <p className="text-[9px] font-extrabold uppercase tracking-wide text-amber-700">
+            Menunggu ortu ({pendingRequests.length})
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {pendingRequests.map((request) => {
+              const freqType = request.requested_frequency_type ?? "daily";
+              const meta = `${getFrequencyDisplayLabel(freqType)} · ${formatMaxSubmissionsLabel(
+                request.requested_max_submissions_per_period ?? 1,
+                normalizeFrequencyForParentForm(freqType),
+              )}${request.note ? ` · ${request.note}` : ""}`;
+
+              return (
+                <Card
+                  key={request.id}
+                  className="!gap-0 overflow-hidden rounded-xl border border-amber-200 bg-amber-50/90 !py-0 shadow-sm"
+                >
+                  <CardContent className="!px-2.5 !py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-amber-500 text-white">
+                        <Clock className="h-3.5 w-3.5" aria-hidden />
+                      </div>
+                      <div className="min-w-0 flex-1 leading-none">
+                        <div className="flex items-baseline justify-between gap-1">
+                          <p className="truncate text-[13px] font-bold text-slate-900">
+                            {request.title}
+                          </p>
+                          <span className="inline-flex shrink-0 items-center gap-0.5 text-[9px] font-black text-amber-800">
+                            <Zap className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                            +{request.requested_reward_points}E
+                          </span>
+                        </div>
+                        <p className="mt-0.5 truncate text-[9px] font-medium text-amber-800/90">
+                          {meta}
+                        </p>
+                        <p className="mt-0.5 text-[8px] font-semibold text-amber-600">
+                          Menunggu persetujuan ortu
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
       ) : null}
 
       <ChildMissionRequestDialog
@@ -164,128 +189,111 @@ export function ChildMissionsView() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3">
+        <div className="flex flex-col gap-2">
           {tasks.map((task) => {
             const config = CATEGORY_CONFIG[task.category] || CATEGORY_CONFIG.lainnya;
             const Icon = config.icon;
-
-            // Determine if the child has reached max submissions today
+            const rewardPoints =
+              task.isFeatured && task.featuredMultiplierValue
+                ? Math.round(task.reward_points * task.featuredMultiplierValue)
+                : task.reward_points;
             const isLimitReached = task.submissionsToday >= task.max_submissions_per_period;
-            
+            const frequencyLabel = task.frequency_type
+              ? `${getFrequencyDisplayLabel(task.frequency_type)} · ${formatMaxSubmissionsLabel(task.max_submissions_per_period, task.frequency_type)}`
+              : null;
+
+            const statusLabel = task.isCompletedToday
+              ? "Selesai 🎉"
+              : task.isPendingToday
+                ? "Review ortu"
+                : "Belum dikerjakan";
+
             return (
               <motion.div
                 key={task.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                whileHover={{ scale: 1.01 }}
-                className="group relative"
               >
                 <Card
-                  size="sm"
-                  className={`gap-0 overflow-hidden rounded-3xl border py-0 shadow-sm backdrop-blur-md transition-all duration-300 group-hover:shadow-md ${
-                  task.isFeatured
-                    ? "border-amber-300 bg-gradient-to-br from-amber-50/70 via-white/95 to-yellow-50/60 shadow-amber-100 ring-2 ring-amber-400/10"
-                    : `${config.border} ${config.bgLight}`
-                }`}
+                  className={`!gap-0 overflow-hidden rounded-xl border !py-0 shadow-sm ${
+                    task.isFeatured
+                      ? "border-amber-300 bg-gradient-to-br from-amber-50/80 to-white ring-1 ring-amber-400/15"
+                      : `${config.border} ${config.bgLight}`
+                  }`}
                 >
-                  {/* Category Accent Badge at Top-Right */}
-                  <div className={`absolute top-3 right-3 flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 shadow-sm ${
-                    task.isFeatured 
-                      ? "border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-800 font-extrabold shadow-amber-100 ring-2 ring-amber-400/20" 
-                      : "border-slate-100 bg-white/80"
-                  }`}>
-                    <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
-                    <span className="text-[10px] font-black">
-                      +{task.isFeatured && task.featuredMultiplierValue 
-                        ? Math.round(task.reward_points * task.featuredMultiplierValue) 
-                        : task.reward_points
-                      } E
-                    </span>
-                    {task.isFeatured && (
-                      <span className="ml-0.5 text-[8px] px-1 bg-amber-500 text-white rounded-md font-black uppercase tracking-tight">
-                        {task.featuredMultiplierText}
-                      </span>
-                    )}
-                  </div>
-
-                  <CardContent className="space-y-3 p-3">
-                    {/* Mission Header */}
-                    <div className="flex items-start gap-2.5 pr-12">
-                      {/* Round icon with category gradient */}
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md ${config.gradient}`}>
-                        <Icon className="h-4.5 w-4.5" />
+                  <CardContent className="!px-2.5 !py-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br text-white ${config.gradient}`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
                       </div>
-                      
-                      <div className="space-y-0.5">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <span className={`text-[9px] font-extrabold tracking-wider uppercase ${config.color}`}>
-                            {config.label}
+
+                      <div className="min-w-0 flex-1 leading-none">
+                        <div className="flex items-baseline justify-between gap-1">
+                          <p className="truncate text-[13px] font-bold text-slate-900">
+                            {task.title}
+                          </p>
+                          <span className="inline-flex shrink-0 items-center gap-0.5 text-[9px] font-black text-amber-700">
+                            <Zap className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                            +{rewardPoints}E
                           </span>
-                          {task.isFeatured && (
-                            <span className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide bg-amber-500 text-white px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
-                              ⭐ Sorotan Papa & Mama
-                            </span>
-                          )}
                         </div>
-                        <h3 className="font-bold text-sm text-slate-900 leading-snug group-hover:text-slate-950">
-                          {task.title}
-                        </h3>
-                        {task.frequency_type && (
-                          <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-semibold">
-                            <span>
-                              Rutinitas: {getFrequencyDisplayLabel(task.frequency_type)}
-                            </span>
-                            <span>•</span>
-                            <span>
-                              {formatMaxSubmissionsLabel(
-                                task.max_submissions_per_period,
-                                task.frequency_type,
-                              )}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Mission Footer / Actions */}
-                    <div className="flex items-center justify-between border-t border-slate-100/55 pt-2.5">
-                      {/* Completed / Active Status tag */}
-                      <div>
-                        {task.isCompletedToday ? (
-                          <div className="flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5 text-[9px] font-bold">
-                            <CheckCircle className="h-3 w-3 fill-emerald-100" />
-                            <span>Selesai Hari Ini! 🎉</span>
-                          </div>
-                        ) : task.isPendingToday ? (
-                          <div className="flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-0.5 text-[9px] font-bold">
-                            <Clock className="h-3 w-3" />
-                            <span>Menunggu Review Ortu ⏳</span>
-                          </div>
-                        ) : (
-                          <div className="text-[9px] text-slate-400 font-semibold">
-                            Belum dikerjakan hari ini
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Action Button */}
-                      {isLimitReached ? (
-                        <Button
-                          disabled
-                          className="bg-slate-100 border border-slate-200 text-slate-400 rounded-xl h-8 text-[10px] font-extrabold px-3"
+                        <p className="mt-0.5 truncate text-[9px] font-medium text-slate-500">
+                          <span className={config.color}>{config.label}</span>
+                          {frequencyLabel ? ` · ${frequencyLabel}` : null}
+                          {task.isFeatured ? " · ⭐ Sorotan" : null}
+                        </p>
+                        <p
+                          className={`mt-0.5 truncate text-[8px] font-semibold ${
+                            task.isCompletedToday
+                              ? "text-emerald-600"
+                              : task.isPendingToday
+                                ? "text-amber-600"
+                                : "text-slate-400"
+                          }`}
                         >
-                          Misi Selesai
-                        </Button>
-                      ) : (
-                        <Link href={`/child/missions/${task.id}`} passHref>
+                          {task.isCompletedToday ? (
+                            <span className="inline-flex items-center gap-0.5">
+                              <CheckCircle className="h-2.5 w-2.5" />
+                              {statusLabel}
+                            </span>
+                          ) : task.isPendingToday ? (
+                            <span className="inline-flex items-center gap-0.5">
+                              <Clock className="h-2.5 w-2.5" />
+                              {statusLabel}
+                            </span>
+                          ) : (
+                            statusLabel
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="shrink-0 self-center">
+                        {isLimitReached ? (
                           <Button
-                            className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl h-8 text-[10px] font-extrabold px-3.5 shadow-sm shadow-emerald-700/10 cursor-pointer flex items-center gap-1"
+                            size="xs"
+                            disabled
+                            variant="secondary"
+                            className="h-6 min-h-0 rounded-md px-2 text-[9px] font-bold text-slate-400"
                           >
-                            <span>Kerjakan Misi</span>
-                            <ChevronRight className="h-3.5 w-3.5" />
+                            Selesai
                           </Button>
-                        </Link>
-                      )}
+                        ) : (
+                          <Link
+                            href={`/child/missions/${task.id}`}
+                            className="inline-flex"
+                          >
+                            <Button
+                              size="xs"
+                              className="h-6 min-h-0 rounded-md bg-emerald-700 px-2 text-[9px] font-bold text-white hover:bg-emerald-800"
+                            >
+                              Kerjakan
+                              <ChevronRight className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

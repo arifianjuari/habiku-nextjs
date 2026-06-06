@@ -16,7 +16,9 @@ export function SupabaseAuthListener() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+      // Jangan refresh pada TOKEN_REFRESHED — setelah deploy/update cukup perbarui cookie
+      // tanpa memicu navigasi ulang yang bisa mengganggu sesi mode anak.
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
         router.refresh();
       }
     });

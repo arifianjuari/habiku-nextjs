@@ -1,6 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { CHILD_MODE_COOKIE } from "@/lib/child/child-mode-session";
 import { createClient } from "@/lib/supabase/server";
 import { getAppUrl } from "@/lib/env";
 
@@ -42,5 +44,7 @@ export async function signUpWithEmail(formData: FormData) {
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  const cookieStore = await cookies();
+  cookieStore.delete(CHILD_MODE_COOKIE);
   redirect("/login");
 }

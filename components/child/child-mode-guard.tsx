@@ -1,43 +1,79 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useChildModeStore } from "@/lib/stores/child-mode-store";
+import {
+  isChildModeCookieActive,
+  syncChildModeCookieFromStore,
+  useChildModeHydrated,
+  useChildModeStore,
+} from "@/lib/stores/child-mode-store";
 import { toast } from "sonner";
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const REHYDRATE_RETRY_MS = 120;
 
 export function ChildModeGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const hydrated = useChildModeHydrated();
   const isActive = useChildModeStore((s) => s.isActive);
   const profileId = useChildModeStore((s) => s.profileId);
   const exit = useChildModeStore((s) => s.exit);
+  const rehydrateAttempted = useRef(false);
+
+  const isValidUuid = profileId ? UUID_REGEX.test(profileId) : false;
 
   useEffect(() => {
-    if (!isActive) {
-      router.replace("/parent/profil-anak");
+    if (!hydrated) return;
+
+    if (isActive && profileId && isValidUuid) {
+      syncChildModeCookieFromStore();
       return;
     }
 
-    // Guard UUID global di level layout untuk membersihkan sesi demo/stale lama
-    if (profileId) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(profileId)) {
-        console.warn("⚠️ Invalid child profileId UUID in Guard, exiting...", profileId);
-        // Hapus cookie
-        document.cookie = "habiku_child_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-        // Clear store
+    // Setelah update PWA: beri satu kesempatan rehydrate sebelum menganggap sesi hilang
+    if (
+      !rehydrateAttempted.current &&
+      isChildModeCookieActive() &&
+      (!isActive || !profileId)
+    ) {
+      rehydrateAttempted.current = true;
+      void useChildModeStore.persist.rehydrate();
+      const timer = window.setTimeout(() => {
+        const next = useChildModeStore.getState();
+        if (next.isActive && next.profileId && UUID_REGEX.test(next.profileId)) {
+          syncChildModeCookieFromStore();
+          return;
+        }
+        router.replace("/parent/profil-anak");
+      }, REHYDRATE_RETRY_MS);
+      return () => window.clearTimeout(timer);
+    }
+
+    if (!isActive || !profileId || !isValidUuid) {
+      if (isActive && profileId && !isValidUuid) {
+        console.warn("Invalid child profileId UUID in Guard, exiting...", profileId);
         exit();
         toast.error("Sesi anak tidak valid. Silakan masuk kembali dari dasbor orang tua.");
-        router.replace("/parent/profil-anak");
       }
+      router.replace("/parent/profil-anak");
     }
-  }, [isActive, profileId, exit, router]);
+  }, [hydrated, isActive, profileId, isValidUuid, exit, router]);
 
-  const isValidUuid = profileId ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId) : false;
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center p-6 text-center text-slate-500 font-semibold">
+        Memuat mode anak…
+      </div>
+    );
+  }
 
   if (!isActive || !isValidUuid) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center p-6 text-center text-slate-500 font-semibold">
-        Memuat mode anak…
+        {isChildModeCookieActive() ? "Memulihkan sesi anak…" : "Mengalihkan ke dasbor orang tua…"}
       </div>
     );
   }

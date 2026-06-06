@@ -1,4 +1,4 @@
-const CACHE_NAME = "habiku-pwa-cache-v3";
+const CACHE_NAME = "habiku-pwa-cache-v4";
 const OFFLINE_URL = "/offline";
 
 const PRE_CACHE_RESOURCES = [

@@ -9,7 +9,6 @@ import {
   approveTaskRequestAction,
   rejectTaskRequestAction,
 } from "@/app/parent/tasks/actions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +22,14 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types/database";
+import {
+  formatMaxSubmissionsFieldLabel,
+  formatMaxSubmissionsLabel,
+  getFrequencyDisplayLabel,
+  normalizeFrequencyForParentForm,
+  PARENT_FREQUENCY_OPTIONS,
+  type ParentFrequencyType,
+} from "@/lib/tasks/mission-frequency";
 
 const CATEGORY_OPTIONS: { value: TaskCategory; label: string }[] = [
   { value: "ibadah", label: "Ibadah" },
@@ -46,6 +53,8 @@ export function TaskRequestsPanel({
   const [isPending, startTransition] = useTransition();
   const [approveId, setApproveId] = useState<string | null>(null);
   const [rewardPoints, setRewardPoints] = useState("10");
+  const [frequencyType, setFrequencyType] = useState<ParentFrequencyType>("daily");
+  const [maxSubmissionsPerPeriod, setMaxSubmissionsPerPeriod] = useState("1");
   const [category, setCategory] = useState<TaskCategory>("lainnya");
 
   const selectedRequest = requests.find((r) => r.id === approveId) ?? null;
@@ -53,6 +62,12 @@ export function TaskRequestsPanel({
   const openApproveDialog = (request: PendingTaskRequest) => {
     setApproveId(request.id);
     setRewardPoints(String(request.requested_reward_points));
+    setFrequencyType(
+      normalizeFrequencyForParentForm(request.requested_frequency_type ?? "daily"),
+    );
+    setMaxSubmissionsPerPeriod(
+      String(request.requested_max_submissions_per_period ?? 1),
+    );
     setCategory("lainnya");
   };
 
@@ -83,8 +98,13 @@ export function TaskRequestsPanel({
     if (!approveId) return;
 
     const reward = Number(rewardPoints);
+    const maxSubmissions = Number(maxSubmissionsPerPeriod);
     if (!Number.isFinite(reward) || reward < 1) {
       toast.error("Energi harus minimal 1.");
+      return;
+    }
+    if (!Number.isFinite(maxSubmissions) || maxSubmissions < 1 || maxSubmissions > 20) {
+      toast.error("Batas pengerjaan harus antara 1 dan 20.");
       return;
     }
 
@@ -92,7 +112,13 @@ export function TaskRequestsPanel({
     onRequestsChange(requests.filter((r) => r.id !== approveId));
 
     startTransition(async () => {
-      const res = await approveTaskRequestAction(approveId, reward, category);
+      const res = await approveTaskRequestAction(
+        approveId,
+        reward,
+        category,
+        frequencyType,
+        maxSubmissions,
+      );
       if (res.error) {
         onRequestsChange(previous);
         toast.error(res.error);
@@ -112,66 +138,83 @@ export function TaskRequestsPanel({
 
   return (
     <>
-      <Card className="border-amber-200 bg-amber-50/80">
-        <CardHeader className="pb-2">
-          <CardTitle className="font-heading flex items-center gap-2 text-base">
-            <Lightbulb className="h-4 w-4 text-amber-600" aria-hidden />
-            Pengajuan Misi dari Anak ({requests.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {requests.map((request) => (
-            <div
-              key={request.id}
-              className="flex flex-col gap-2 rounded-xl border border-amber-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0 space-y-1">
-                <p className="text-sm font-semibold text-slate-900">
-                  {request.child_name}
-                </p>
-                <p className="text-sm font-medium text-slate-800">{request.title}</p>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-200/60 bg-amber-50 px-1.5 py-0.5 font-bold text-amber-950">
-                    <Zap
-                      className="h-3 w-3 fill-amber-400 text-amber-500"
-                      aria-hidden
-                    />
-                    {request.requested_reward_points} E diminta
-                  </span>
-                  <span className="inline-flex items-center gap-0.5">
-                    <Clock className="h-3 w-3" aria-hidden />
-                    Menunggu tinjauan
-                  </span>
+      <section className="space-y-1.5">
+        <p className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-wide text-amber-800">
+          <Lightbulb className="h-3.5 w-3.5 text-amber-600" aria-hidden />
+          Pengajuan misi dari anak ({requests.length})
+        </p>
+        <div className="flex flex-col gap-1.5 rounded-xl border border-amber-200 bg-amber-50/90 p-2">
+          {requests.map((request) => {
+            const freqType = request.requested_frequency_type ?? "daily";
+            const meta = `${request.child_name} · ${getFrequencyDisplayLabel(freqType)} · ${formatMaxSubmissionsLabel(
+              request.requested_max_submissions_per_period ?? 1,
+              freqType,
+            )}`;
+
+            return (
+              <div
+                key={request.id}
+                className="flex items-center gap-2 rounded-lg border border-amber-100 bg-white px-2 py-1.5"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-amber-500 text-white">
+                  <Clock className="h-3.5 w-3.5" aria-hidden />
                 </div>
-                {request.note ? (
-                  <p className="text-xs text-slate-500">&ldquo;{request.note}&rdquo;</p>
-                ) : null}
+
+                <div className="min-w-0 flex-1 leading-none">
+                  <div className="flex items-baseline justify-between gap-1">
+                    <p className="truncate text-[13px] font-bold text-slate-900">
+                      {request.title}
+                    </p>
+                    <span className="inline-flex shrink-0 items-center gap-0.5 text-[9px] font-black text-amber-800">
+                      <Zap
+                        className="h-2.5 w-2.5 fill-amber-500 text-amber-500"
+                        aria-hidden
+                      />
+                      +{request.requested_reward_points}E
+                    </span>
+                  </div>
+                  <p className="mt-0.5 truncate text-[9px] font-medium text-slate-500">
+                    {meta}
+                  </p>
+                  {request.note ? (
+                    <p className="mt-0.5 truncate text-[8px] italic text-slate-400">
+                      &ldquo;{request.note}&rdquo;
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 text-[8px] font-semibold text-amber-600">
+                      Menunggu tinjauan
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex shrink-0 flex-col gap-1 self-center">
+                  <Button
+                    size="xs"
+                    disabled={isPending}
+                    onClick={() => openApproveDialog(request)}
+                    className="h-6 min-h-0 rounded-md px-2 text-[9px] font-bold"
+                    aria-label={`Setujui pengajuan ${request.title}`}
+                  >
+                    <Check className="h-3 w-3" aria-hidden />
+                    Setujui
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() => handleReject(request.id)}
+                    className="h-6 min-h-0 rounded-md border-red-200 px-2 text-[9px] font-bold text-red-600 hover:bg-red-50"
+                    aria-label={`Tolak pengajuan ${request.title}`}
+                  >
+                    <X className="h-3 w-3" aria-hidden />
+                    Tolak
+                  </Button>
+                </div>
               </div>
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() => openApproveDialog(request)}
-                  className="gap-1"
-                >
-                  <Check className="h-4 w-4" aria-hidden />
-                  Setujui
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={isPending}
-                  onClick={() => handleReject(request.id)}
-                  className="gap-1 border-red-200 text-red-600 hover:bg-red-50"
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                  Tolak
-                </Button>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            );
+          })}
+        </div>
+      </section>
 
       <Dialog open={approveId !== null} onOpenChange={(open) => !open && closeApproveDialog()}>
         <DialogContent className="max-w-sm rounded-3xl">
@@ -200,6 +243,43 @@ export function TaskRequestsPanel({
                 onChange={(e) => setRewardPoints(e.target.value)}
                 className="h-9 rounded-xl"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="approve-frequency" className="text-xs font-bold">
+                  Frekuensi
+                </Label>
+                <select
+                  id="approve-frequency"
+                  value={frequencyType}
+                  onChange={(e) =>
+                    setFrequencyType(e.target.value as ParentFrequencyType)
+                  }
+                  className="flex h-9 w-full rounded-xl border border-violet-100 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-700"
+                >
+                  {PARENT_FREQUENCY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="approve-max-submissions" className="text-xs font-bold">
+                  {formatMaxSubmissionsFieldLabel(frequencyType)}
+                </Label>
+                <Input
+                  id="approve-max-submissions"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={maxSubmissionsPerPeriod}
+                  onChange={(e) => setMaxSubmissionsPerPeriod(e.target.value)}
+                  className="h-9 rounded-xl"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">

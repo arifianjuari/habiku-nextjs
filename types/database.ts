@@ -463,6 +463,8 @@ export type Database = {
           title: string;
           note: string | null;
           requested_reward_points: number;
+          requested_frequency_type: FrequencyType;
+          requested_max_submissions_per_period: number;
           status: RequestStatus;
           created_task_id: string | null;
           reviewed_at: string | null;
