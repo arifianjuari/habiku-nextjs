@@ -300,6 +300,11 @@ export type Database = {
           is_active: boolean;
           created_by_account_id: string | null;
           created_at: string;
+          pocket_type: "flexible" | "term";
+          monthly_interest_bps: number;
+          lock_months: number | null;
+          lock_bonus_coefficient: number;
+          default_for_goal_save: boolean;
         };
         Insert: Omit<
           Database["public"]["Tables"]["savings_pockets"]["Row"],
@@ -313,7 +318,7 @@ export type Database = {
           id: string;
           pocket_id: string;
           profile_id: string;
-          kind: "deposit" | "withdraw";
+          kind: "deposit" | "withdraw" | "interest";
           amount: number;
           ledger_id: string | null;
           withdraw_status: "pending" | "approved" | "rejected" | null;
@@ -322,6 +327,10 @@ export type Database = {
           reviewed_by_account_id: string | null;
           reviewed_at: string | null;
           created_at: string;
+          locked_until: string | null;
+          interest_accrued: number;
+          principal_snapshot: number | null;
+          last_interest_at: string | null;
         };
         Insert: never;
         Update: never;
@@ -337,6 +346,9 @@ export type Database = {
           check_in_reminder_enabled: boolean;
           family_garden_enabled: boolean;
           savings_enabled: boolean;
+          goal_save_enabled: boolean;
+          savings_interest_enabled: boolean;
+          max_monthly_interest_bps: number;
           daily_check_in_bonus: number;
           updated_at: string;
           updated_by: string | null;
@@ -481,6 +493,27 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["task_requests"]["Insert"]>;
+        Relationships: [];
+      };
+      goal_claim_requests: {
+        Row: {
+          id: string;
+          goal_id: string;
+          profile_id: string;
+          kind: "redeem" | "save";
+          status: "pending" | "approved" | "rejected";
+          requested_by_account_id: string | null;
+          reviewed_by_account_id: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["goal_claim_requests"]["Row"],
+          "id" | "created_at"
+        > & { id?: string; created_at?: string };
+        Update: Partial<
+          Database["public"]["Tables"]["goal_claim_requests"]["Insert"]
+        >;
         Relationships: [];
       };
       goal_hp_transfers: {

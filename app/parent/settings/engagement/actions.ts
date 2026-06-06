@@ -11,6 +11,8 @@ export async function updateFamilySettingsAction(
   checkInReminderEnabled: boolean,
   familyGardenEnabled: boolean,
   savingsEnabled: boolean,
+  goalSaveEnabled: boolean,
+  savingsInterestEnabled: boolean,
 ) {
   const supabase = await createClient();
 
@@ -41,6 +43,8 @@ export async function updateFamilySettingsAction(
       check_in_reminder_enabled: checkInReminderEnabled,
       family_garden_enabled: familyGardenEnabled,
       savings_enabled: savingsEnabled,
+      goal_save_enabled: goalSaveEnabled,
+      savings_interest_enabled: savingsInterestEnabled,
       updated_by: user.id,
     })
     .eq("family_id", account.family_id);
@@ -54,6 +58,7 @@ export async function updateFamilySettingsAction(
   revalidatePath("/parent/savings");
   revalidatePath("/child/savings");
   revalidatePath("/child/home");
+  revalidatePath("/child/targets");
   return { success: true };
 }
 

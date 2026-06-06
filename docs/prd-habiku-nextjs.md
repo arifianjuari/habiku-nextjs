@@ -83,6 +83,9 @@ Gratis (Free-to-use); donasi komunitas di masa depan (gateway §7). Tidak ada pa
 | F13 | **Misi Insidental** | `give_incidental_reward` |
 | F14 | **Engagement Beranda Anak** | Check-in, sorotan, badge, tips, refleksi, kebun energi |
 | F15 | **Validasi Tugas** | Konfirmasi manual ortu |
+| F16 | **Kantong tabungan v2** | Ortu membuat kantong tipe `flexible` (akumulatif) atau `term` (deposito sekali-setor); bunga %/bulan, durasi kunci (bulan), koefisien bonus kunci |
+| F17 | **Bunga tabungan** | Akrual bulanan pada saldo kantong terkunci/aktif; tercatat di ledger `savings_interest`; plafon keluarga |
+| F18 | **Klaim target → tabung/cair** | Saat `current_hp >= target_hp`, goal masuk state `ready_to_claim`; anak pilih cair (antrean ortu) atau tabung (RPC atomik ke kantong) |
 
 ### 2.2. Non-Fungsional
 
@@ -141,7 +144,8 @@ Status default: **`[ ]` belum** — diisi setelah verifikasi kode di repo ini.
 - [ ] **Badge, tips edukatif, sorotan saudara**
 - [ ] **Misi insidental, goal countdown, animasi mikro** (Framer Motion + toggle)
 - [ ] **Perjanjian konsekuensi (FSD)** — setelah migrasi 10.A
-- [ ] **Tabungan digital, Weekly Boss, Skill Tree, Mystery, Recovery, Co-op** — sama roadmap RN §18
+- [ ] **Tabungan digital v2 (W8)** — bunga, kunci deposito, klaim target → tabung/cair ([`w8-tabungan-v2-bunga-kunci.md`](./w8-tabungan-v2-bunga-kunci.md))
+- [ ] **Weekly Boss, Skill Tree, Mystery, Recovery, Co-op** — sama roadmap RN §18
 
 ### P2 — Roadmap jangka panjang
 
@@ -494,6 +498,23 @@ Ringkasan produk juga ada di [`prd-habiku-react.md` §9](./prd-habiku-react.md).
 |---------------------------------|-------|
 | `push_subscriptions` | `account_id`, `endpoint`, `p256dh`, `auth`, `user_agent`, `created_at` |
 
+### 9.1. Tabungan v2 (W8) — ringkasan skema
+
+Detail migrasi: [`w8-tabungan-v2-bunga-kunci.md`](./w8-tabungan-v2-bunga-kunci.md).
+
+| Entitas | Perubahan |
+|---------|-----------|
+| `savings_pockets` | `pocket_type` (`flexible` \| `term`), `monthly_interest_bps`, `lock_months`, `lock_bonus_coefficient`, `default_for_goal_save` (maks. 1 per anak) |
+| `savings_transactions` | `locked_until`, `interest_accrued`, `principal_snapshot`; kind baru `interest` |
+| `goals` | Status `ready_to_claim` (HP penuh, menunggu keputusan anak) |
+| `goal_claim_requests` | Antrean cair hadiah fisik (`pending` → `approved` / `rejected`) |
+| `ledger_type` | `savings_interest`, `goal_redeem_spend` |
+| `family_settings` | `savings_interest_enabled`, `max_monthly_interest_bps`, `goal_save_enabled` |
+
+**Aturan tipe kantong:**
+- **`term` (deposito):** satu kantong = satu setoran energi; tidak diakumulasi; kunci hingga `locked_until`.
+- **`flexible`:** banyak setoran; bunga (jika diaktifkan) pada saldo aktif.
+
 ---
 
 ## 10. RPC & Server Functions
@@ -506,11 +527,54 @@ await supabase.rpc("approve_task_history", { task_history_id, account_id, goal_i
 
 **Tidak** menduplikasi logika approve di Next API.
 
+### 10.1. RPC Tabungan v2 (W8)
+
+| RPC | Pemanggil | Keterangan |
+|-----|-----------|------------|
+| `create_savings_pocket_v2` | Ortu | Tipe kantong, bunga, kunci, koefisien, default klaim target |
+| `request_goal_reward_redeem` | Anak | Antrean cair hadiah fisik |
+| `approve_goal_reward_redeem` | Ortu | Setujui → goal `completed`, HP = 0 |
+| `reject_goal_reward_redeem` | Ortu | Tolak; goal tetap `ready_to_claim` |
+| `save_goal_hp_to_savings` | Anak | Transfer HP goal → kantong (validasi `term` vs `flexible`) |
+| `accrue_savings_interest` | Cron/service | Job bulanan akrual bunga |
+
+RPC W7 tetap berlaku: `create_savings_pocket`, `deposit_to_savings`, `request_savings_withdraw`, dll.
+
 ---
 
 ## 11. Gameplay Mechanics
 
 Seluruh mekanik (Skill Tree, Streak, Mystery, Weekly Boss, Kantong, FSD) — **sama produk** [`prd-habiku-react.md` §11](./prd-habiku-react.md). Implementasi UI web mengikuti prioritas §3.
+
+### 11.1. Kantong v2 (W8)
+
+**Alur klaim target:**
+
+```mermaid
+flowchart TD
+  hpFull[HP goal mencapai target_hp]
+  readyState[status ready_to_claim]
+  childChoice[Anak memilih]
+  redeem[Cairkan hadiah fisik]
+  save[Tabung ke kantong]
+  parentQueue[Antrean ortu]
+  pocketDeposit[Setoran ke kantong + kunci]
+  completed[goal completed]
+  hpFull --> readyState --> childChoice
+  childChoice --> redeem --> parentQueue --> completed
+  childChoice --> save --> pocketDeposit --> completed
+```
+
+**Bunga (W8b):**
+- Akrual **simple monthly** pada principal terkunci: `interest = floor(principal × monthly_rate_bps / 10000)`.
+- Koefisien kunci (`lock_bonus_coefficient`) memperbesar rate efektif untuk kantong `term`: `effective_bps = monthly_interest_bps × lock_bonus_coefficient`.
+- Simulasi UI: `projected = principal + interest × lock_months` (perkiraan, bukan compound).
+- Plafon: `max_monthly_interest_bps` di `family_settings`; default konservatif (mis. 500 = 5%/bulan).
+
+**Aturan bisnis:**
+- Kantong `term` menolak setoran kedua.
+- Penarikan sebelum `locked_until` ditolak (override ortu = P2).
+- HP goal dan dompet (`point_ledger`) terpisah; tabung dari target **tidak** lewat dompet.
 
 ---
 
@@ -527,6 +591,12 @@ Fitur dan toggle `family_settings` **sama** [`prd-habiku-react.md` §12](./prd-h
 | Tips | `child-daily-tip-strip.tsx` |
 | Refleksi | `child-evening-reflection-sheet.tsx` (dialog/sheet) |
 | Kebun | `/child/garden` |
+| Tabungan v2 | `/parent/savings`, `/child/savings`, klaim di `/child/targets` |
+
+**Toggle W8 di `family_settings`:**
+- `savings_enabled` — matikan seluruh UI tabungan (W7).
+- `goal_save_enabled` — tampilkan opsi tabung saat target siap klaim.
+- `savings_interest_enabled` — aktifkan job akrual bunga bulanan.
 
 Aturan toggle: hanya menyembunyikan UI; idempotensi RPC tetap.
 
@@ -630,6 +700,8 @@ Alur identik RN §15.3; langkah 6 animasi memakai Framer Motion, tanpa haptics.
 | BigQuery Analytics | P1 | ⬜ | Pipeline data & dasbor Looker Studio |
 | Engagement P1/P2 | P1–P2 | ⬜ | Ikut §3 |
 | Perjanjian FSD | P1 | ⬜ | Setelah migrasi 10.A |
+| Tabungan digital (W7) | P1 | ✅ | Kantong dasar, setor/tarik |
+| Tabungan v2 (W8) | P1 | 🔄 | Bunga, kunci deposito, klaim target |
 | App Store release | — | N/A | Web distribution |
 
 ---
@@ -705,4 +777,4 @@ Detail tugas per sprint: [`implementation-roadmap-nextjs.md`](./implementation-r
 
 Jika terjadi konflik **produk** (fitur, aturan bisnis): utamakan konsistensi dengan PRD React lalu update kedua dokumen. Jika konflik **teknis web**: utamakan dokumen ini.
 
-**Terakhir diperbarui:** 2026-05-28 — PRD awal stack Next.js; implementasi belum dimulai di workspace ini.
+**Terakhir diperbarui:** 2026-06-06 — Tabungan v2 (W8): F16–F18, skema, RPC, gameplay kantong berbunga & klaim target.

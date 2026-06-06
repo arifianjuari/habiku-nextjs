@@ -101,6 +101,35 @@ Detail: [`w7-tabungan-digital.md`](./w7-tabungan-digital.md)
 
 ---
 
+## W8 — Tabungan v2: Bunga, Kunci & Klaim Target ✅
+
+| Task | Status | Keterangan |
+|------|:------:|------------|
+| Desain skema & migrasi `w8_savings_v2` | ✅ | `pocket_type`, lock, interest, `ready_to_claim`, `goal_claim_requests` |
+| RPC kantong v2 | ✅ | `create_savings_pocket_v2`, validasi `term` vs `flexible`, patch `deposit_to_savings` |
+| State goal `ready_to_claim` | ✅ | `resolve_goal_status_on_hp_reached` di RPC alokasi HP |
+| RPC klaim target | ✅ | `request/approve/reject_goal_reward_redeem`, `save_goal_hp_to_savings` |
+| UI ortu `/parent/savings` | ✅ | Form kantong: bunga %, kunci bulan, koefisien, tipe deposito |
+| UI ortu antrean klaim hadiah | ✅ | Kartu pending cair hadiah di halaman tabungan |
+| UI anak klaim target | ✅ | Modal di `/child/targets`: Cair vs Tabung |
+| UI anak kantong | ✅ | Countdown kunci, proyeksi bunga |
+| Job bunga bulanan | ✅ | Route cron `/api/cron/accrue-savings-interest` + `CRON_SECRET` |
+| Notifikasi | ✅ | `goal_claim_pending`, `goal_saved_to_pocket`, bunga via ledger |
+| Toggle engagement | ✅ | `goal_save_enabled`, `savings_interest_enabled` di pengaturan ortu |
+| E2E alur klaim | ⬜ | Target penuh → tabung → saldo kantong (manual QA) |
+
+Detail: [`w8-tabungan-v2-bunga-kunci.md`](./w8-tabungan-v2-bunga-kunci.md)
+
+### Sub-fase W8
+
+| Sub-fase | Cakupan |
+|----------|---------|
+| **W8a** | Tipe kantong + jembatan target → tabung/cair + antrean ortu |
+| **W8b** | Bunga bulanan + job akrual + proyeksi UI |
+| **W8c** | Polish koefisien kunci × simulasi visual (post-MVP) |
+
+---
+
 ## Urutan Dependensi
 
 ```mermaid
@@ -110,8 +139,11 @@ flowchart LR
   W2 --> W3[W3 PWA & BigQuery]
   W3 --> W4[W4 FCM & Engagement]
   W4 --> W7[W7 Tabungan digital]
+  W7 --> W8a[W8a Kantong v2 + klaim]
+  W8a --> W8b[W8b Bunga bulanan]
+  W8b --> W8c[W8c Koefisien + simulasi UI]
 ```
 
 ---
 
-**Terakhir diperbarui:** 2026-06-03 (W7 tabungan digital)
+**Terakhir diperbarui:** 2026-06-06 (W8 tabungan v2 — bunga, kunci, klaim target)

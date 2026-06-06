@@ -3,12 +3,14 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { PiggyBank, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { PiggyBank, ArrowDownToLine, ArrowUpFromLine, Lock } from "lucide-react";
+import { formatInterestBps, effectiveMonthlyBps } from "@/lib/savings/interest";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import {
   useChildSavingsData,
   useInvalidateChildSavings,
 } from "@/lib/hooks/use-child-savings-data";
+import { useInvalidateChildTargets } from "@/lib/hooks/use-child-targets-data";
 import {
   depositToSavingsAction,
   requestSavingsWithdrawAction,
@@ -25,6 +27,7 @@ export function ChildSavingsView() {
   const profileName = useChildModeStore((s) => s.profileName);
   const { data, isLoading, isFetching } = useChildSavingsData(profileId);
   const invalidateSavings = useInvalidateChildSavings(profileId ?? "");
+  const invalidateTargets = useInvalidateChildTargets(profileId ?? "");
   const [isPending, startTransition] = useTransition();
   const [activePocketId, setActivePocketId] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState("5");
@@ -38,12 +41,17 @@ export function ChildSavingsView() {
       toast.error("Masukkan jumlah energi minimal 1.");
       return;
     }
+    if (amount > savable) {
+      toast.error(`Maksimal ${savable} energi dari target aktif.`);
+      return;
+    }
     startTransition(async () => {
       const res = await depositToSavingsAction(activePocketId, amount);
       if (res.error) toast.error(res.error);
       else {
         toast.success("Berhasil menabung!");
         invalidateSavings();
+        invalidateTargets();
       }
     });
   };
@@ -110,18 +118,23 @@ export function ChildSavingsView() {
   const availableInPocket = activePocket
     ? activePocket.balance - activePocket.reserved
     : 0;
+  const termPocketFull =
+    activePocket?.pocket_type === "term" && (activePocket?.balance ?? 0) > 0;
+  const savable = data.savableBalance;
+  const canDeposit = activePocket && !termPocketFull && savable > 0;
+  const canWithdraw = activePocket && !activePocket.is_locked && availableInPocket > 0;
 
   return (
     <div className="relative space-y-5 pb-4" data-fetching={isFetching ? "" : undefined}>
       <ChildFetchingIndicator isFetching={isFetching && !!data} />
 
       <div className="rounded-2xl border border-emerald-200 bg-white/90 p-4 shadow-sm">
-        <p className="text-xs font-medium text-emerald-700">Dompet {profileName}</p>
+        <p className="text-xs font-medium text-emerald-700">Energi di target aktif</p>
         <p className="font-heading text-3xl font-bold text-emerald-800">
-          {data.walletBalance} ⚡
+          {savable} ⚡
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Energi yang bisa ditabung ke kantong
+          Hanya energi di target aktif yang bisa ditabung ke kantong
         </p>
       </div>
 
@@ -187,6 +200,24 @@ export function ChildSavingsView() {
                       %
                     </p>
                   ) : null}
+                  {activePocket.monthly_interest_bps > 0 ? (
+                    <p className="text-xs text-emerald-700">
+                      Bunga {formatInterestBps(effectiveMonthlyBps(activePocket))}/bulan
+                      {activePocket.projected_interest > 0
+                        ? ` · perkiraan +${activePocket.projected_interest} ⚡`
+                        : ""}
+                    </p>
+                  ) : null}
+                  {activePocket.is_locked && activePocket.locked_until ? (
+                    <p className="flex items-center gap-1 text-xs text-amber-700">
+                      <Lock className="size-3" aria-hidden />
+                      Terkunci sampai{" "}
+                      {new Date(activePocket.locked_until).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </p>
+                  ) : null}
                   {activePocket.reserved > 0 ? (
                     <p className="text-xs text-amber-700">
                       {activePocket.reserved} energi menunggu persetujuan ortu
@@ -195,27 +226,33 @@ export function ChildSavingsView() {
                 </CardContent>
               </Card>
 
-              <Card className="border-emerald-100 bg-emerald-50/50">
-                <CardContent className="space-y-3 pt-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
-                    <ArrowDownToLine className="size-4" aria-hidden />
-                    Nabung ke kantong
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={500}
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      aria-label="Jumlah nabung"
-                    />
-                    <Button disabled={isPending} onClick={handleDeposit}>
-                      Nabung
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {canDeposit ? (
+                <Card className="border-emerald-100 bg-emerald-50/50">
+                  <CardContent className="space-y-3 pt-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                      <ArrowDownToLine className="size-4" aria-hidden />
+                      Nabung ke kantong
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={Math.min(500, savable)}
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        aria-label="Jumlah nabung"
+                      />
+                      <Button disabled={isPending} onClick={handleDeposit}>
+                        Nabung
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : termPocketFull ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-800">
+                  Kantong deposito ini sudah berisi setoran. Buat kantong baru untuk menabung lagi.
+                </p>
+              ) : null}
 
               <Card className="border-violet-100 bg-violet-50/40">
                 <CardContent className="space-y-3 pt-4">
@@ -247,10 +284,10 @@ export function ChildSavingsView() {
                   <Button
                     variant="outline"
                     className="w-full border-violet-300"
-                    disabled={isPending || availableInPocket < 1}
+                    disabled={isPending || !canWithdraw}
                     onClick={handleWithdraw}
                   >
-                    Ajukan penarikan
+                    {activePocket.is_locked ? "Masih terkunci" : "Ajukan penarikan"}
                   </Button>
                 </CardContent>
               </Card>

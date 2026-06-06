@@ -169,6 +169,7 @@ export function TargetsClientView({
   const childGoals = goals.filter((g) => g.profile_id === activeChildId);
 
   const activeGoals = childGoals.filter((g) => g.status === "active");
+  const readyToClaimGoals = childGoals.filter((g) => g.status === "ready_to_claim");
   const completedGoals = childGoals.filter((g) => g.status === "completed");
   const archivedGoals = childGoals.filter((g) => g.status === "archived");
 
@@ -265,10 +266,14 @@ export function TargetsClientView({
 
   const handleToggleStatus = (
     goalId: string,
-    currentStatus: "active" | "completed" | "archived",
+    currentStatus: "active" | "ready_to_claim" | "completed" | "archived",
   ) => {
-    if (currentStatus === "completed") {
-      toast.error("Target hadiah yang sudah diklaim/selesai tidak bisa diubah statusnya.");
+    if (currentStatus === "completed" || currentStatus === "ready_to_claim") {
+      toast.error(
+        currentStatus === "ready_to_claim"
+          ? "Target sedang menunggu pilihan anak (cair atau tabung)."
+          : "Target hadiah yang sudah diklaim/selesai tidak bisa diubah statusnya.",
+      );
       return;
     }
 
@@ -530,6 +535,35 @@ export function TargetsClientView({
             </div>
           )}
         </div>
+
+        {readyToClaimGoals.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              <Gift className="h-3.5 w-3.5" aria-hidden />
+              Siap Dipilih Anak ({readyToClaimGoals.length})
+            </h3>
+            <div className="grid gap-2">
+              {readyToClaimGoals.map((goal) => (
+                <div
+                  key={goal.id}
+                  className="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/40 p-2.5"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                    <Zap className="h-4 w-4 fill-amber-400 text-amber-500" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs font-semibold leading-snug break-words text-amber-950 [overflow-wrap:anywhere]">
+                      {goal.title}
+                    </h4>
+                    <p className="mt-0.5 text-[10px] text-amber-800">
+                      {goal.current_hp}/{goal.target_hp} HP — anak memilih cair hadiah atau tabung.
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Target Selesai — collapse default */}
         {completedGoals.length > 0 && (

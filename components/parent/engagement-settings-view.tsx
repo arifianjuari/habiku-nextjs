@@ -21,6 +21,8 @@ interface EngagementSettingsViewProps {
     check_in_reminder_enabled: boolean;
     family_garden_enabled: boolean;
     savings_enabled: boolean;
+    goal_save_enabled?: boolean;
+    savings_interest_enabled?: boolean;
   };
 }
 
@@ -72,6 +74,12 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
   const [savingsEnabled, setSavingsEnabled] = useState(
     initialSettings.savings_enabled ?? true,
   );
+  const [goalSaveEnabled, setGoalSaveEnabled] = useState(
+    initialSettings.goal_save_enabled ?? true,
+  );
+  const [savingsInterestEnabled, setSavingsInterestEnabled] = useState(
+    initialSettings.savings_interest_enabled ?? true,
+  );
 
   const handleSave = () => {
     startTransition(async () => {
@@ -83,6 +91,8 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
         checkInReminder,
         familyGarden,
         savingsEnabled,
+        goalSaveEnabled,
+        savingsInterestEnabled,
       );
 
       if (res?.error) {
@@ -206,7 +216,7 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
             />
           </div>
 
-          <div className="flex items-start justify-between gap-4 py-2">
+          <div className="flex items-start justify-between gap-4 py-2 border-b border-slate-100">
             <div className="space-y-0.5 max-w-[80%]">
               <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                 <PiggyBank className="h-4 w-4 text-violet-600" aria-hidden />
@@ -219,6 +229,37 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
             <SettingsSwitch
               checked={savingsEnabled}
               onToggle={() => setSavingsEnabled(!savingsEnabled)}
+              accent="violet"
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-4 py-2 border-b border-slate-100">
+            <div className="space-y-0.5 max-w-[80%]">
+              <span className="text-xs font-bold text-slate-900 block">
+                Tabung dari Target Hadiah
+              </span>
+              <span className="text-[9px] text-slate-500 block leading-relaxed">
+                Saat target penuh, anak bisa memilih menabung energi ke kantong (bukan langsung
+                selesai).
+              </span>
+            </div>
+            <SettingsSwitch
+              checked={goalSaveEnabled}
+              onToggle={() => setGoalSaveEnabled(!goalSaveEnabled)}
+              accent="violet"
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-4 py-2">
+            <div className="space-y-0.5 max-w-[80%]">
+              <span className="text-xs font-bold text-slate-900 block">Bunga Tabungan</span>
+              <span className="text-[9px] text-slate-500 block leading-relaxed">
+                Akrual bunga bulanan pada saldo kantong sesuai pengaturan ortu.
+              </span>
+            </div>
+            <SettingsSwitch
+              checked={savingsInterestEnabled}
+              onToggle={() => setSavingsInterestEnabled(!savingsInterestEnabled)}
               accent="violet"
             />
           </div>

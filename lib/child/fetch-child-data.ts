@@ -41,6 +41,7 @@ export type TaskWithStatus = Task & {
 export type ChildTargetsData = {
   goals: Goal[];
   totalPoints: number;
+  goalSaveEnabled: boolean;
 };
 
 export type ChildMissionsBundle = {
@@ -191,13 +192,26 @@ export async function fetchChildTargetsData(
 ): Promise<ChildTargetsData> {
   const client = supabase ?? createClient();
 
-  const [goalsResult, ledgerResult] = await Promise.all([
+  const { data: child } = await client
+    .from("child_profiles")
+    .select("family_id")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  const [goalsResult, ledgerResult, settingsResult] = await Promise.all([
     client
       .from("goals")
       .select("*")
       .eq("profile_id", profileId)
       .order("created_at", { ascending: false }),
     client.from("point_ledger").select("amount").eq("profile_id", profileId),
+    child?.family_id
+      ? client
+          .from("family_settings")
+          .select("goal_save_enabled")
+          .eq("family_id", child.family_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   const totalPoints =
@@ -206,5 +220,6 @@ export async function fetchChildTargetsData(
   return {
     goals: goalsResult.data ?? [],
     totalPoints,
+    goalSaveEnabled: settingsResult.data?.goal_save_enabled ?? true,
   };
 }

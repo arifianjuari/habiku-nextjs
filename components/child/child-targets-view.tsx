@@ -24,6 +24,7 @@ import type { Goal } from "@/types/database";
 import { GoalVisualStateBadge } from "@/components/shared/goal-visual-state-badge";
 import { getGoalVisualStateMeta } from "@/lib/goals/visual-state";
 import { cn } from "@/lib/utils";
+import { ChildGoalClaimPanel } from "@/components/child/child-goal-claim-panel";
 
 export function ChildTargetsView() {
   const { profileId } = useChildModeStore();
@@ -41,8 +42,9 @@ export function ChildTargetsView() {
     );
   }
 
-  const { goals, totalPoints } = data;
+  const { goals, totalPoints, goalSaveEnabled } = data;
   const activeGoals = goals.filter((g) => g.status === "active");
+  const readyToClaimGoals = goals.filter((g) => g.status === "ready_to_claim");
   const completedGoals = goals.filter((g) => g.status === "completed");
   const archivedGoals = goals.filter((g) => g.status === "archived");
 
@@ -64,6 +66,28 @@ export function ChildTargetsView() {
           <span className="text-xs font-extrabold text-amber-950">{totalPoints} E</span>
         </div>
       </div>
+
+      {readyToClaimGoals.length > 0 ? (
+        <div className="space-y-3">
+          <h3 className="flex items-center gap-1.5 px-1 text-xs font-bold uppercase tracking-wider text-emerald-600">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+            Siap Dipilih!
+          </h3>
+          {readyToClaimGoals.map((goal) => (
+            <Card key={goal.id} className="overflow-hidden border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-white shadow-md">
+              <CardContent className="space-y-3 p-5">
+                <div>
+                  <h4 className="font-heading text-sm font-black text-slate-900">{goal.title}</h4>
+                  <p className="text-xs text-emerald-800">
+                    {goal.current_hp}/{goal.target_hp} energi terkumpul — pilih langkah selanjutnya:
+                  </p>
+                </div>
+                <ChildGoalClaimPanel goal={goal} goalSaveEnabled={goalSaveEnabled} />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : null}
 
       {/* 2. Active Target Progress Card */}
       <div className="space-y-3">

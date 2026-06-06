@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChildAvatar } from "@/components/shared/child-avatar";
+import { ChildTabSelector } from "@/components/parent/child-tab-selector";
 import {
   Dialog,
   DialogContent,
@@ -342,39 +343,11 @@ export function TasksClientView({
           onTaskCreated={handleTaskCreatedFromRequest}
         />
 
-        {/* Tab Selector Anak */}
-        {profiles.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {profiles.map((child) => {
-              const isSelected = child.id === activeChildId;
-              const accentColor = child.home_card_accent || "#8B5CF6";
-              return (
-                <button
-                  key={child.id}
-                  onClick={() => setActiveChildId(child.id)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
-                    isSelected
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100",
-                  )}
-                  style={isSelected ? { borderColor: `${accentColor}50` } : {}}
-                >
-                  <ChildAvatar
-                    name={child.name}
-                    avatarUrl={child.avatar_url}
-                    avatarPreference={child.avatar_preference}
-                    avatarEmoji={child.avatar_emoji}
-                    accentColor={accentColor}
-                    className="h-6 w-6 shrink-0 rounded-lg shadow-sm"
-                    fallbackSizeClass="text-[10px]"
-                  />
-                  <span>{child.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <ChildTabSelector
+          profiles={profiles}
+          activeChildId={activeChildId}
+          onActiveChildIdChange={setActiveChildId}
+        />
 
         {/* Daftar Misi */}
         <AnimatePresence mode="wait">

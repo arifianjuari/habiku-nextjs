@@ -6,6 +6,9 @@ import { getSessionContext } from "@/lib/auth/get-session-context";
 import { RPC } from "@/lib/database/rpc";
 
 function mapRpcError(message: string): string {
+  if (message.includes("insufficient_goal_energy")) {
+    return "Energi di target aktif tidak cukup.";
+  }
   if (message.includes("insufficient_wallet")) {
     return "Energi di dompet tidak cukup.";
   }
@@ -14,6 +17,12 @@ function mapRpcError(message: string): string {
   }
   if (message.includes("savings_disabled")) {
     return "Fitur tabungan belum aktif.";
+  }
+  if (message.includes("pocket_locked")) {
+    return "Kantong masih terkunci; belum bisa ditarik.";
+  }
+  if (message.includes("term_pocket_full")) {
+    return "Kantong deposito sudah berisi setoran.";
   }
   return message || "Terjadi kesalahan.";
 }
@@ -33,6 +42,7 @@ export async function depositToSavingsAction(pocketId: string, amount: number) {
   if (error) return { error: mapRpcError(error.message) };
 
   revalidatePath("/child/savings");
+  revalidatePath("/child/targets");
   revalidatePath("/child/home");
   revalidatePath("/parent/savings");
   revalidatePath("/parent/ledger");

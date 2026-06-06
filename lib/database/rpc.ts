@@ -35,11 +35,18 @@ export const RPC = {
   createFamilyInvite: "create_family_invite",
   acceptFamilyInvite: "accept_family_invite",
   createSavingsPocket: "create_savings_pocket",
+  createSavingsPocketV2: "create_savings_pocket_v2",
   depositToSavings: "deposit_to_savings",
+  saveGoalHpToSavings: "save_goal_hp_to_savings",
+  requestGoalRewardRedeem: "request_goal_reward_redeem",
+  approveGoalRewardRedeem: "approve_goal_reward_redeem",
+  rejectGoalRewardRedeem: "reject_goal_reward_redeem",
+  accrueSavingsInterest: "accrue_savings_interest",
   requestSavingsWithdraw: "request_savings_withdraw",
   approveSavingsWithdraw: "approve_savings_withdraw",
   rejectSavingsWithdraw: "reject_savings_withdraw",
   computeWalletBalance: "compute_wallet_balance",
+  computeSavableGoalEnergy: "compute_savable_goal_energy",
   computeSavingsPocketBalance: "compute_savings_pocket_balance",
 } as const;
 

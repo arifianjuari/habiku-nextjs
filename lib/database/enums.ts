@@ -3,7 +3,12 @@
 export const ACCOUNT_ROLES = ["primary_parent", "secondary_parent"] as const;
 export type AccountRole = (typeof ACCOUNT_ROLES)[number];
 
-export const GOAL_STATUSES = ["active", "completed", "archived"] as const;
+export const GOAL_STATUSES = [
+  "active",
+  "ready_to_claim",
+  "completed",
+  "archived",
+] as const;
 export type GoalStatus = (typeof GOAL_STATUSES)[number];
 
 export const FREQUENCY_TYPES = ["daily", "weekly", "custom"] as const;
@@ -26,7 +31,12 @@ export const LEDGER_TYPES = [
   "mystery_bonus",
   "savings_deposit",
   "savings_withdraw",
+  "savings_interest",
+  "goal_redeem_spend",
 ] as const;
+
+export const SAVINGS_POCKET_TYPES = ["flexible", "term"] as const;
+export type SavingsPocketType = (typeof SAVINGS_POCKET_TYPES)[number];
 export type LedgerType = (typeof LEDGER_TYPES)[number];
 
 export const TASK_HISTORY_STATUSES = [

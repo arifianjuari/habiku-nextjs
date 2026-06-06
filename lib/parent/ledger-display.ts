@@ -70,6 +70,15 @@ export function getLedgerDisplayDetail(entry: LedgerEntryRow): LedgerDisplayDeta
       pointsColor: "text-violet-700",
     };
   }
+  if (entry.type === "savings_interest") {
+    return {
+      title: "Bunga Tabungan",
+      desc: "Bunga bulanan dari kantong tabungan",
+      amountSign: "+",
+      color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+      pointsColor: "text-emerald-700",
+    };
+  }
   return {
     title: "Penyesuaian Manual Ortu",
     desc: "Penyesuaian saldo poin",

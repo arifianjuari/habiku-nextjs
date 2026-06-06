@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { childQueryKeys } from "@/lib/child/query-keys";
 import { fetchChildTargetsData } from "@/lib/child/fetch-child-data";
 import { isValidChildProfileId } from "@/lib/child/profile-id";
@@ -16,4 +16,11 @@ export function useChildTargetsData(profileId: string | null) {
     staleTime: CHILD_STALE_MS,
     placeholderData: (prev) => prev,
   });
+}
+
+export function useInvalidateChildTargets(profileId: string) {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: childQueryKeys.targets(profileId) });
+  };
 }
