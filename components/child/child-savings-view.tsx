@@ -175,12 +175,7 @@ export function ChildSavingsView() {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-4"
             >
-              <Card className="overflow-hidden border-violet-200">
-                <div
-                  className="h-1.5"
-                  style={{ backgroundColor: activePocket.accent_color }}
-                  aria-hidden
-                />
+              <Card className="border-violet-200">
                 <CardContent className="pt-4">
                   <p className="font-heading text-lg font-semibold">
                     {activePocket.emoji} {activePocket.name}

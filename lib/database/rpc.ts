@@ -36,6 +36,7 @@ export const RPC = {
   acceptFamilyInvite: "accept_family_invite",
   createSavingsPocket: "create_savings_pocket",
   createSavingsPocketV2: "create_savings_pocket_v2",
+  updateSavingsPocketV2: "update_savings_pocket_v2",
   depositToSavings: "deposit_to_savings",
   saveGoalHpToSavings: "save_goal_hp_to_savings",
   requestGoalRewardRedeem: "request_goal_reward_redeem",

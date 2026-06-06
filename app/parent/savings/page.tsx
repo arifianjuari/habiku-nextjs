@@ -17,12 +17,12 @@ export default async function ParentSavingsPage() {
   const data = await fetchParentSavingsData(context.family.id);
 
   return (
-    <div className="space-y-4">
+    <>
       <ParentPageHeaderSync
         title="Tabungan digital"
         description="Kantong tabungan per anak — setor energi dan setujui penarikan."
       />
       <ParentSavingsView {...data} />
-    </div>
+    </>
   );
 }

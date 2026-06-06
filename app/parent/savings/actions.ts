@@ -19,7 +19,7 @@ function mapRpcError(message: string): string {
     return "Fitur tabungan dinonaktifkan di pengaturan keluarga.";
   }
   if (message.includes("interest_rate_too_high")) {
-    return "Bunga melebihi batas maksimum keluarga.";
+    return "Bunga melebihi batas maksimum 20% per bulan.";
   }
   if (message.includes("lock_months_required")) {
     return "Deposito membutuhkan durasi kunci (bulan).";
@@ -29,6 +29,12 @@ function mapRpcError(message: string): string {
   }
   if (message.includes("pocket_locked")) {
     return "Kantong masih terkunci; penarikan belum bisa diajukan.";
+  }
+  if (message.includes("pocket_not_found")) {
+    return "Kantong tabungan tidak ditemukan.";
+  }
+  if (message.includes("name_required")) {
+    return "Nama kantong wajib diisi.";
   }
   return message || "Terjadi kesalahan.";
 }
@@ -75,6 +81,50 @@ export async function createSavingsPocketAction(formData: FormData) {
   revalidatePath("/child/savings");
   revalidatePath("/child/targets");
   return { ok: true as const, pocketId: data };
+}
+
+export async function updateSavingsPocketAction(formData: FormData) {
+  const context = await getSessionContext();
+  if (!context) return { error: "Sesi tidak valid." };
+
+  const pocketId = String(formData.get("pocketId") ?? "");
+  const name = String(formData.get("name") ?? "");
+  const emoji = String(formData.get("emoji") ?? "🐷");
+  const accentColor = String(formData.get("accentColor") ?? "#8B5CF6");
+  const targetRaw = String(formData.get("targetAmount") ?? "");
+  const targetAmount = targetRaw ? Number(targetRaw) : null;
+  const pocketType = String(formData.get("pocketType") ?? "flexible");
+  const monthlyInterestBps = Number(formData.get("monthlyInterestBps") ?? 0);
+  const lockMonthsRaw = String(formData.get("lockMonths") ?? "");
+  const lockMonths = lockMonthsRaw ? Number(lockMonthsRaw) : null;
+  const lockBonusCoefficient = Number(formData.get("lockBonusCoefficient") ?? 1);
+  const defaultForGoalSave = formData.get("defaultForGoalSave") === "on";
+
+  const supabase = await createClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (
+      n: string,
+      a: Record<string, unknown>,
+    ) => Promise<{ error: { message: string } | null }>;
+  }).rpc(RPC.updateSavingsPocketV2, {
+    p_pocket_id: pocketId,
+    p_name: name,
+    p_pocket_type: pocketType,
+    p_emoji: emoji,
+    p_accent_color: accentColor,
+    p_target_amount: targetAmount,
+    p_monthly_interest_bps: monthlyInterestBps,
+    p_lock_months: lockMonths,
+    p_lock_bonus_coefficient: lockBonusCoefficient,
+    p_default_for_goal_save: defaultForGoalSave,
+  });
+
+  if (error) return { error: mapRpcError(error.message) };
+
+  revalidatePath("/parent/savings");
+  revalidatePath("/child/savings");
+  revalidatePath("/child/targets");
+  return { ok: true as const };
 }
 
 export async function approveSavingsWithdrawAction(transactionId: string) {
