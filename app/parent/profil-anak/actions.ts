@@ -1,5 +1,7 @@
 "use server";
 
+import { RPC } from "@/lib/database/rpc";
+import { childAvatarStoragePath } from "@/lib/storage/child-avatar";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -77,21 +79,74 @@ export async function updateChildProfileAction(
   return { success: true };
 }
 
-export async function deleteChildProfileAction(profileId: string) {
+export async function setChildProfileAvatarPathAction(
+  profileId: string,
+  storagePath?: string,
+) {
+  if (!profileId) {
+    return { error: "ID profil anak wajib disertakan." };
+  }
+
+  const path = (storagePath ?? childAvatarStoragePath(profileId)).trim();
+  if (path.length < 3) {
+    return { error: "Path foto avatar tidak valid." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await (supabase as any).rpc(RPC.setChildProfileAvatarPath, {
+    p_profile_id: profileId,
+    p_storage_path: path,
+  });
+
+  if (error) {
+    console.error("set_child_profile_avatar_path:", error);
+    return { error: error.message || "Gagal menyimpan path foto avatar." };
+  }
+
+  revalidatePath("/parent/profil-anak");
+  revalidatePath("/parent");
+  return { success: true, storagePath: path };
+}
+
+export async function archiveChildProfileAction(profileId: string) {
   if (!profileId) {
     return { error: "ID profil anak wajib disertakan." };
   }
 
   const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("child_profiles")
-    .delete()
-    .eq("id", profileId);
+  const { error } = await (supabase as unknown as {
+    rpc: (
+      name: string,
+      args: { p_profile_id: string },
+    ) => Promise<{ error: { message: string } | null }>;
+  }).rpc(RPC.archiveChildProfile, { p_profile_id: profileId });
 
   if (error) {
-    console.error("Error deleting child profile:", error);
-    return { error: error.message || "Gagal menghapus profil anak." };
+    console.error("archive_child_profile:", error);
+    return { error: error.message || "Gagal mengarsipkan profil anak." };
+  }
+
+  revalidatePath("/parent/profil-anak");
+  revalidatePath("/parent");
+  return { success: true };
+}
+
+export async function restoreChildProfileAction(profileId: string) {
+  if (!profileId) {
+    return { error: "ID profil anak wajib disertakan." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (
+      name: string,
+      args: { p_profile_id: string },
+    ) => Promise<{ error: { message: string } | null }>;
+  }).rpc(RPC.restoreChildProfile, { p_profile_id: profileId });
+
+  if (error) {
+    console.error("restore_child_profile:", error);
+    return { error: error.message || "Gagal memulihkan profil anak." };
   }
 
   revalidatePath("/parent/profil-anak");

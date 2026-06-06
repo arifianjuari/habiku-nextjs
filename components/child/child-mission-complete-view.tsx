@@ -21,6 +21,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { submitTaskEvidenceAction } from "@/app/child/actions";
 import type { Task } from "@/types/database";
+import {
+  formatMaxSubmissionsLabel,
+  getFrequencyDisplayLabel,
+} from "@/lib/tasks/mission-frequency";
 
 interface ChildMissionCompleteViewProps {
   taskId: string;
@@ -323,7 +327,11 @@ export function ChildMissionCompleteView({ taskId }: ChildMissionCompleteViewPro
                   </h3>
                   {task.frequency_type && (
                     <p className="text-[10px] font-semibold text-slate-400">
-                      Rutinitas: {task.frequency_type} • Maksimal {task.max_submissions_per_period}x pengerjaan / hari
+                      Rutinitas: {getFrequencyDisplayLabel(task.frequency_type)} •{" "}
+                      {formatMaxSubmissionsLabel(
+                        task.max_submissions_per_period,
+                        task.frequency_type,
+                      )}
                     </p>
                   )}
                 </div>

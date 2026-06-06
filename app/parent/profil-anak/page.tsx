@@ -4,10 +4,12 @@ import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { createClient } from "@/lib/supabase/server";
-import { fetchFamilyChildren } from "@/lib/parent/fetch-family-page-data";
+import {
+  fetchArchivedFamilyChildren,
+  fetchFamilyChildren,
+} from "@/lib/parent/fetch-family-page-data";
 import { ChildProfilesList } from "@/components/parent/child-profiles-list";
 import { FamilyBroadcastEditor } from "@/components/parent/family-broadcast-editor";
-import { EnterChildModeCard } from "@/components/parent/enter-child-mode-card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +25,10 @@ export default async function ParentChildProfilesPage() {
     redirect("/login");
   }
 
-  const children = await fetchFamilyChildren(context.family.id);
+  const [children, archivedChildren] = await Promise.all([
+    fetchFamilyChildren(context.family.id),
+    fetchArchivedFamilyChildren(context.family.id),
+  ]);
 
   const supabase = await createClient();
   const { data: familyRow } = await supabase
@@ -39,11 +44,10 @@ export default async function ParentChildProfilesPage() {
   return (
     <div className="space-y-6">
       <FamilyBroadcastEditor initialMessage={broadcastMessage} />
-      <ChildProfilesList initialChildren={children} />
-
-      <div className="pt-2 border-t border-slate-100">
-        <EnterChildModeCard />
-      </div>
+      <ChildProfilesList
+        initialChildren={children}
+        initialArchivedChildren={archivedChildren}
+      />
 
       <Link
         href="/parent/ledger"

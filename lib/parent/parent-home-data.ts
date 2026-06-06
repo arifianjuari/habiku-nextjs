@@ -74,6 +74,7 @@ export const getFamilyChildren = cache(async (familyId: string): Promise<ChildPr
     .from("child_profiles")
     .select("*")
     .eq("family_id", familyId)
+    .is("archived_at", null)
     .order("created_at", { ascending: true });
 
   return data ?? [];

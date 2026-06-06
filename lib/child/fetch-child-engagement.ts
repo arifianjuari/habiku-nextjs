@@ -15,28 +15,19 @@ function callProfileRpc(supabase: SupabaseClient, fn: string, profileId: string)
     rpc: (
       name: string,
       args: { p_profile_id: string },
-    ) => Promise<{ data: unknown; error: unknown }>;
+    ) => Promise<{ data: unknown; error: { message: string } | null }>;
   };
   return client.rpc(fn, { p_profile_id: profileId });
-}
-
-function resolveStickyMessage(
-  parentSticky: string | null | undefined,
-  familyBroadcast: string | null | undefined,
-): string | null {
-  const personal = parentSticky?.trim();
-  if (personal) return personal;
-  const family = familyBroadcast?.trim();
-  return family || null;
 }
 
 export async function fetchChildEngagement(
   profileId: string,
   familyId: string,
-  parentSticky: string | null | undefined,
 ): Promise<ChildEngagementData> {
   if (!familyId) {
     return {
+      personalStickyMessage: null,
+      familyBroadcastMessage: null,
       stickyMessage: null,
       dailyTip: null,
       siblingHighlight: null,
@@ -47,13 +38,8 @@ export async function fetchChildEngagement(
 
   const supabase = createClient();
 
-  const [familyResult, settingsResult, tipResult, siblingResult, countdownResult] =
+  const [settingsResult, tipResult, siblingResult, countdownResult] =
     await Promise.all([
-      supabase
-        .from("families")
-        .select("family_broadcast_message")
-        .eq("id", familyId)
-        .maybeSingle(),
       supabase
         .from("family_settings")
         .select(
@@ -66,7 +52,6 @@ export async function fetchChildEngagement(
       callProfileRpc(supabase, "compute_goal_countdown", profileId),
     ]);
 
-  const familyRow = familyResult.data as { family_broadcast_message?: string | null } | null;
   const settingsRow = settingsResult.data as {
     micro_anim_enabled?: boolean;
     daily_tip_enabled?: boolean;
@@ -130,10 +115,9 @@ export async function fetchChildEngagement(
   }
 
   return {
-    stickyMessage: resolveStickyMessage(
-      parentSticky,
-      familyRow?.family_broadcast_message,
-    ),
+    personalStickyMessage: null,
+    familyBroadcastMessage: null,
+    stickyMessage: null,
     dailyTip,
     siblingHighlight,
     goalCountdowns,

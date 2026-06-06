@@ -26,6 +26,11 @@ export type ChildEngagementSettings = {
 };
 
 export type ChildEngagementData = {
+  /** Sticky pribadi dari ortu — kartu ungu + override hero. */
+  personalStickyMessage: string | null;
+  /** Pesan broadcast keluarga — tampil di hero jika tidak ada sticky pribadi. */
+  familyBroadcastMessage: string | null;
+  /** Pesan efektif (pribadi > keluarga) untuk aksi terima kasih. */
   stickyMessage: string | null;
   dailyTip: DailyTip | null;
   siblingHighlight: SiblingHighlight | null;

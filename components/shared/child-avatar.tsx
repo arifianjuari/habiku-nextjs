@@ -1,6 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import {
+  isChildAvatarStoragePath,
+  STORAGE_BUCKETS,
+} from "@/lib/storage/child-avatar";
 import { cn } from "@/lib/utils";
 
 interface ChildAvatarProps {
@@ -25,8 +30,40 @@ export function ChildAvatar({
   fallbackSizeClass = "text-xl",
 }: ChildAvatarProps) {
   const [hasError, setHasError] = useState(false);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
 
-  const showPhoto = avatarPreference === "photo" && avatarUrl && !hasError;
+  useEffect(() => {
+    setHasError(false);
+
+    if (!avatarUrl) {
+      setResolvedUrl(null);
+      return;
+    }
+
+    if (!isChildAvatarStoragePath(avatarUrl)) {
+      setResolvedUrl(avatarUrl);
+      return;
+    }
+
+    let cancelled = false;
+    const supabase = createClient();
+
+    void supabase.storage
+      .from(STORAGE_BUCKETS.childAvatars)
+      .createSignedUrl(avatarUrl, 3600)
+      .then(({ data, error }) => {
+        if (!cancelled) {
+          setResolvedUrl(error ? null : data?.signedUrl ?? null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [avatarUrl]);
+
+  const showPhoto =
+    avatarPreference === "photo" && resolvedUrl && !hasError;
 
   return (
     <div
@@ -38,7 +75,7 @@ export function ChildAvatar({
     >
       {showPhoto ? (
         <img
-          src={avatarUrl!}
+          src={resolvedUrl!}
           alt={name}
           className={cn("h-full w-full object-cover", imgClassName)}
           onError={() => setHasError(true)}

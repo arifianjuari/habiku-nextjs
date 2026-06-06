@@ -28,11 +28,17 @@ export function FamilyBroadcastEditor({ initialMessage }: FamilyBroadcastEditorP
   };
 
   return (
-    <Card className="rounded-2xl border-violet-100 bg-white shadow-sm">
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Radio className="h-4 w-4 text-violet-600" aria-hidden />
-          <Label htmlFor="family-broadcast" className="text-sm font-bold text-slate-900">
+    <Card
+      size="sm"
+      className="gap-0 overflow-hidden rounded-2xl border-violet-100 bg-white py-0 shadow-sm data-[size=sm]:py-0"
+    >
+      <CardContent className="space-y-1.5 p-2">
+        <div className="flex items-center gap-1">
+          <Radio className="h-3 w-3 shrink-0 text-violet-600" aria-hidden />
+          <Label
+            htmlFor="family-broadcast"
+            className="text-[11px] font-bold leading-tight text-slate-900"
+          >
             Pesan untuk semua anak
           </Label>
         </div>
@@ -41,18 +47,19 @@ export function FamilyBroadcastEditor({ initialMessage }: FamilyBroadcastEditorP
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           maxLength={280}
-          rows={3}
+          rows={2}
           placeholder="Contoh: Semangat misi hari ini, kita bangga padamu!"
-          className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-400/40"
+          className="min-h-0 w-full resize-none rounded-md border border-slate-200 bg-slate-50/50 px-1.5 py-0.5 text-[11px] leading-snug focus:outline-none focus:ring-2 focus:ring-violet-400/40"
         />
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-muted-foreground">{message.length}/280</span>
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-[9px] text-muted-foreground">{message.length}/280</span>
           <Button
             type="button"
-            size="sm"
+            size="xs"
+            data-compact
             disabled={isPending}
             onClick={handleSave}
-            className="rounded-xl font-bold cursor-pointer"
+            className="cursor-pointer rounded px-1.5 text-[9px] font-bold"
           >
             {isPending ? "Menyimpan…" : "Simpan pesan"}
           </Button>

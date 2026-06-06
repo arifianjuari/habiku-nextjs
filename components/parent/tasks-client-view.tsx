@@ -41,12 +41,23 @@ import {
 import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { cn } from "@/lib/utils";
 import { IncidentalRewardDialog } from "@/components/parent/incidental-reward-dialog";
+import { TaskRequestsPanel } from "@/components/parent/task-requests-panel";
+import type { PendingTaskRequest } from "@/lib/parent/fetch-family-page-data";
 import type { ChildProfile, Goal, Task } from "@/types/database";
+import {
+  formatMaxSubmissionsFieldLabel,
+  formatMaxSubmissionsLabel,
+  getFrequencyDisplayLabel,
+  normalizeFrequencyForParentForm,
+  PARENT_FREQUENCY_OPTIONS,
+  type ParentFrequencyType,
+} from "@/lib/tasks/mission-frequency";
 
 interface TasksClientViewProps {
   children: ChildProfile[];
   initialTasks: Task[];
   goalsByProfile: Record<string, Goal[]>;
+  initialPendingRequests?: PendingTaskRequest[];
 }
 
 const CATEGORY_STYLES = {
@@ -87,12 +98,6 @@ const CATEGORY_STYLES = {
   },
 };
 
-const FREQUENCY_LABELS = {
-  daily: "Setiap Hari",
-  weekly: "Setiap Minggu",
-  custom: "Kustom",
-};
-
 function TaskActiveSwitch({
   active,
   onToggle,
@@ -121,11 +126,18 @@ function TaskActiveSwitch({
   );
 }
 
-export function TasksClientView({ children, initialTasks, goalsByProfile }: TasksClientViewProps) {
+export function TasksClientView({
+  children,
+  initialTasks,
+  goalsByProfile,
+  initialPendingRequests = [],
+}: TasksClientViewProps) {
   const [activeChildId, setActiveChildId] = useState<string>(
     children[0]?.id || ""
   );
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [pendingRequests, setPendingRequests] =
+    useState<PendingTaskRequest[]>(initialPendingRequests);
   const [profiles, setProfiles] = useState<ChildProfile[]>(children);
   const [isOpen, setIsOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -134,7 +146,8 @@ export function TasksClientView({ children, initialTasks, goalsByProfile }: Task
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<keyof typeof CATEGORY_STYLES>("lainnya");
   const [rewardPoints, setRewardPoints] = useState("10");
-  const [frequencyType, setFrequencyType] = useState<"daily" | "weekly" | "custom">("daily");
+  const [frequencyType, setFrequencyType] = useState<ParentFrequencyType>("daily");
+  const [maxSubmissionsPerPeriod, setMaxSubmissionsPerPeriod] = useState("1");
   const [formError, setFormError] = useState<string | null>(null);
   const [rewardOpen, setRewardOpen] = useState(false);
 
@@ -146,6 +159,7 @@ export function TasksClientView({ children, initialTasks, goalsByProfile }: Task
     setCategory("lainnya");
     setRewardPoints("10");
     setFrequencyType("daily");
+    setMaxSubmissionsPerPeriod("1");
     setFormError(null);
   };
 
@@ -161,11 +175,8 @@ export function TasksClientView({ children, initialTasks, goalsByProfile }: Task
       (task.category in CATEGORY_STYLES ? task.category : "lainnya") as keyof typeof CATEGORY_STYLES,
     );
     setRewardPoints(String(task.reward_points));
-    setFrequencyType(
-      (task.frequency_type === "weekly" || task.frequency_type === "custom"
-        ? task.frequency_type
-        : "daily") as "daily" | "weekly" | "custom",
-    );
+    setFrequencyType(normalizeFrequencyForParentForm(task.frequency_type));
+    setMaxSubmissionsPerPeriod(String(task.max_submissions_per_period));
     setFormError(null);
     setIsOpen(true);
   };
@@ -180,6 +191,14 @@ export function TasksClientView({ children, initialTasks, goalsByProfile }: Task
   useEffect(() => {
     setProfiles(children);
   }, [children]);
+
+  useEffect(() => {
+    setPendingRequests(initialPendingRequests);
+  }, [initialPendingRequests]);
+
+  const handleTaskCreatedFromRequest = (task: Task) => {
+    setTasks((prev) => [task, ...prev]);
+  };
 
   const activeChild = profiles.find((c) => c.id === activeChildId);
   const childTasks = tasks.filter((t) => t.profile_id === activeChildId);
@@ -221,6 +240,7 @@ export function TasksClientView({ children, initialTasks, goalsByProfile }: Task
     formData.set("category", category);
     formData.set("rewardPoints", rewardPoints);
     formData.set("frequencyType", frequencyType);
+    formData.set("maxSubmissionsPerPeriod", maxSubmissionsPerPeriod);
 
     startTransition(async () => {
       if (isEditMode && editingTaskId) {
@@ -306,6 +326,12 @@ export function TasksClientView({ children, initialTasks, goalsByProfile }: Task
         <ParentPageHeaderSync
           title={`Daftar Misi ${activeChild?.name ?? ""}`.trim()}
           description="Kelola misi rutin, poin, dan frekuensi tugas harian."
+        />
+
+        <TaskRequestsPanel
+          requests={pendingRequests}
+          onRequestsChange={setPendingRequests}
+          onTaskCreated={handleTaskCreatedFromRequest}
         />
 
         {/* Tab Selector Anak */}
@@ -426,9 +452,14 @@ export function TasksClientView({ children, initialTasks, goalsByProfile }: Task
                             <span aria-hidden>·</span>
                             <span className="flex items-center gap-0.5 text-slate-500">
                               <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden />
-                              {FREQUENCY_LABELS[
-                                task.frequency_type as keyof typeof FREQUENCY_LABELS
-                              ] || "Rutin"}
+                              {getFrequencyDisplayLabel(task.frequency_type)}
+                            </span>
+                            <span aria-hidden>·</span>
+                            <span className="text-slate-500">
+                              {formatMaxSubmissionsLabel(
+                                task.max_submissions_per_period,
+                                task.frequency_type,
+                              )}
                             </span>
                             {isFeatured && (
                               <>
@@ -531,7 +562,7 @@ export function TasksClientView({ children, initialTasks, goalsByProfile }: Task
           </DialogTitle>
           <DialogDescription className="text-center text-xs text-slate-500">
             {isEditMode
-              ? "Ubah nama, poin, frekuensi, atau kategori misi."
+              ? "Ubah nama, poin, frekuensi, batas pengerjaan, atau kategori misi."
               : "Buat misi rutin baru yang mendidik dan seru."}
           </DialogDescription>
         </DialogHeader>
@@ -568,14 +599,38 @@ export function TasksClientView({ children, initialTasks, goalsByProfile }: Task
                   <select
                     id="frequencyType"
                     value={frequencyType}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFrequencyType(e.target.value as "daily" | "weekly" | "custom")}
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                      setFrequencyType(e.target.value as ParentFrequencyType)
+                    }
                     className="flex h-9 w-full rounded-xl border border-violet-100 bg-white px-3 text-sm ring-offset-background focus:border-transparent focus:outline-none focus:ring-2 focus:ring-violet-700"
                   >
-                    <option value="daily">Setiap Hari</option>
-                    <option value="weekly">Setiap Minggu</option>
-                    <option value="custom">Kustom</option>
+                    {PARENT_FREQUENCY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="maxSubmissionsPerPeriod" className="text-xs font-bold text-slate-800">
+                  {formatMaxSubmissionsFieldLabel(frequencyType)}
+                </Label>
+                <Input
+                  id="maxSubmissionsPerPeriod"
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={maxSubmissionsPerPeriod}
+                  onChange={(e) => setMaxSubmissionsPerPeriod(e.target.value)}
+                  className="h-9 rounded-xl border-violet-100 bg-white text-sm focus-visible:ring-violet-700"
+                  required
+                />
+                <p className="text-[10px] text-slate-400">
+                  Berapa kali anak boleh mengerjakan misi ini dalam satu{" "}
+                  {frequencyType === "weekly" ? "minggu" : "hari"}.
+                </p>
               </div>
 
               <div className="space-y-1.5">

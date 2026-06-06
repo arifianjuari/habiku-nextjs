@@ -1,26 +1,31 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import { useChildMissionsData } from "@/lib/hooks/use-child-missions-data";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
+import { ChildMissionRequestDialog } from "@/components/child/child-mission-request-dialog";
 import { motion } from "framer-motion";
 import {
   BookOpen,
   GraduationCap,
   Sparkles,
   Dumbbell,
-  Trash2,
   Droplet,
   CheckCircle,
   Clock,
   Zap,
   HelpCircle,
   ChevronRight,
-  Flame,
+  Lightbulb,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  formatMaxSubmissionsLabel,
+  getFrequencyDisplayLabel,
+} from "@/lib/tasks/mission-frequency";
 const CATEGORY_CONFIG: Record<
   string,
   {
@@ -76,23 +81,69 @@ const CATEGORY_CONFIG: Record<
 
 export function ChildMissionsView() {
   const { profileId } = useChildModeStore();
-  const { data: tasks = [], isLoading, isFetching } = useChildMissionsData(profileId);
+  const { data, isLoading, isFetching } = useChildMissionsData(profileId);
+  const [requestOpen, setRequestOpen] = useState(false);
 
-  if (!profileId || (isLoading && tasks.length === 0)) {
+  const tasks = data?.tasks ?? [];
+  const pendingRequest = data?.pendingRequest ?? null;
+
+  if (!profileId || (isLoading && tasks.length === 0 && !pendingRequest)) {
     return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
   }
 
   return (
     <div className="space-y-4" data-fetching={isFetching ? "" : undefined}>
       {/* Page Header */}
-      <div className="space-y-1">
-        <h2 className="font-heading text-xl font-black text-slate-900 tracking-tight leading-none">
-          Misi Harian Kamu 🎯
-        </h2>
-        <p className="text-xs font-medium text-slate-500">
-          Selesaikan misi harian di bawah ini untuk mendapatkan energi!
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h2 className="font-heading text-xl font-black text-slate-900 tracking-tight leading-none">
+            Misi Harian Kamu 🎯
+          </h2>
+          <p className="text-xs font-medium text-slate-500">
+            Selesaikan misi harian di bawah ini untuk mendapatkan energi!
+          </p>
+        </div>
+        {!pendingRequest ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setRequestOpen(true)}
+            className="shrink-0 rounded-xl bg-amber-500 px-3 text-[10px] font-extrabold text-white hover:bg-amber-600 h-8"
+          >
+            <Lightbulb className="mr-1 h-3.5 w-3.5" aria-hidden />
+            Ajukan
+          </Button>
+        ) : null}
       </div>
+
+      {pendingRequest ? (
+        <Card
+          size="sm"
+          className="gap-0 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/80 py-0 shadow-sm"
+        >
+          <CardContent className="flex items-start gap-2.5 p-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
+              <Clock className="h-4 w-4" aria-hidden />
+            </div>
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-[10px] font-extrabold uppercase tracking-wide text-amber-700">
+                Menunggu Ortu
+              </p>
+              <p className="text-sm font-bold text-slate-900">{pendingRequest.title}</p>
+              <p className="text-[10px] font-semibold text-amber-800">
+                +{pendingRequest.requested_reward_points} E diminta
+                {pendingRequest.note ? ` · ${pendingRequest.note}` : ""}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <ChildMissionRequestDialog
+        open={requestOpen}
+        onOpenChange={setRequestOpen}
+        profileId={profileId}
+      />
 
       {/* Missions Grid */}
       {tasks.length === 0 ? (
@@ -181,9 +232,16 @@ export function ChildMissionsView() {
                         </h3>
                         {task.frequency_type && (
                           <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-semibold">
-                            <span className="capitalize">Rutinitas: {task.frequency_type}</span>
+                            <span>
+                              Rutinitas: {getFrequencyDisplayLabel(task.frequency_type)}
+                            </span>
                             <span>•</span>
-                            <span>Maksimal: {task.max_submissions_per_period}x / hari</span>
+                            <span>
+                              {formatMaxSubmissionsLabel(
+                                task.max_submissions_per_period,
+                                task.frequency_type,
+                              )}
+                            </span>
                           </div>
                         )}
                       </div>

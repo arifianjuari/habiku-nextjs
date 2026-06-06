@@ -1,3 +1,4 @@
+import { getChildStickyMessagesAction } from "@/app/child/actions";
 import { createClient } from "@/lib/supabase/client";
 import { fetchChildEngagement } from "@/lib/child/fetch-child-engagement";
 import {
@@ -5,7 +6,7 @@ import {
   type ChildEngagementData,
 } from "@/lib/child/engagement-types";
 import { getJakartaTodayString } from "@/lib/child/jakarta-today";
-import type { ChildProfile, Goal, Task } from "@/types/database";
+import type { ChildProfile, Goal, Task, TaskRequest } from "@/types/database";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -41,6 +42,11 @@ export type TaskWithStatus = Task & {
 export type ChildTargetsData = {
   goals: Goal[];
   totalPoints: number;
+};
+
+export type ChildMissionsBundle = {
+  tasks: TaskWithStatus[];
+  pendingRequest: TaskRequest | null;
 };
 
 export async function fetchChildPoints(profileId: string): Promise<number> {
@@ -85,6 +91,8 @@ export async function fetchChildHomeData(profileId: string): Promise<ChildHomeDa
 
   const child = profileResult.data ?? null;
   const emptyEngagement: ChildEngagementData = {
+    personalStickyMessage: null,
+    familyBroadcastMessage: null,
     stickyMessage: null,
     dailyTip: null,
     siblingHighlight: null,
@@ -93,13 +101,13 @@ export async function fetchChildHomeData(profileId: string): Promise<ChildHomeDa
   };
   const engagement =
     child?.family_id != null
-      ? await fetchChildEngagement(
-          profileId,
-          child.family_id,
-          (child as ChildProfile & { parent_sticky_message?: string | null })
-            .parent_sticky_message,
-        )
+      ? await fetchChildEngagement(profileId, child.family_id)
       : emptyEngagement;
+
+  const sticky = await getChildStickyMessagesAction(profileId);
+  engagement.personalStickyMessage = sticky.personalStickyMessage;
+  engagement.familyBroadcastMessage = sticky.familyBroadcastMessage;
+  engagement.stickyMessage = sticky.stickyMessage;
 
   return {
     child,
@@ -113,11 +121,12 @@ export async function fetchChildHomeData(profileId: string): Promise<ChildHomeDa
 
 export async function fetchChildMissionsData(
   profileId: string,
-): Promise<TaskWithStatus[]> {
+): Promise<ChildMissionsBundle> {
   const supabase = createClient();
   const todayStr = getJakartaTodayString();
 
-  const [tasksResult, historyResult, featuredResult] = await Promise.all([
+  const [tasksResult, historyResult, featuredResult, pendingRequestResult] =
+    await Promise.all([
     supabase
       .from("tasks")
       .select("*")
@@ -130,6 +139,14 @@ export async function fetchChildMissionsData(
       .eq("profile_id", profileId)
       .eq("period_date", todayStr),
     callProfileRpc(supabase, "compute_featured_task", profileId),
+    supabase
+      .from("task_requests")
+      .select("*")
+      .eq("profile_id", profileId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (tasksResult.error) throw tasksResult.error;
@@ -142,7 +159,7 @@ export async function fetchChildMissionsData(
   const featuredTask =
     featuredData && featuredData.length > 0 ? featuredData[0] : null;
 
-  return (tasksResult.data ?? []).map((task) => {
+  const tasks = (tasksResult.data ?? []).map((task) => {
     const submissions = todayHistory.filter((h) => h.task_id === task.id);
     const isCompleted = submissions.some((h) => h.status === "approved");
     const isPending = submissions.some((h) => h.status === "pending");
@@ -160,6 +177,11 @@ export async function fetchChildMissionsData(
         : undefined,
     };
   });
+
+  return {
+    tasks,
+    pendingRequest: (pendingRequestResult.data as TaskRequest | null) ?? null,
+  };
 }
 
 export async function fetchChildTargetsData(

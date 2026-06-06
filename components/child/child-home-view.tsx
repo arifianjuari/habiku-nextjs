@@ -113,7 +113,16 @@ export function ChildHomeView() {
 
   const { child, activeGoal, totalPoints, checkInChain, isCheckedInToday, engagement } =
     data;
-  const { stickyMessage, dailyTip, siblingHighlight, settings } = engagement;
+  const {
+    personalStickyMessage,
+    familyBroadcastMessage,
+    dailyTip,
+    siblingHighlight,
+    settings,
+  } = engagement;
+  const heroSubtitle =
+    familyBroadcastMessage ??
+    "Kumpulkan energi, selesaikan misi, dan raih hadiah impianmu!";
   const childAccent = resolveHomeCardAccent(child?.home_card_accent, {
     gender: child?.gender,
     fallback: "#10B981",
@@ -164,7 +173,7 @@ export function ChildHomeView() {
               Hai, {firstName}! 👋
             </h2>
             <p className="text-xs font-medium leading-relaxed text-white/90">
-              Kumpulkan energi, selesaikan misi, dan raih hadiah impianmu!
+              {heroSubtitle}
             </p>
           </div>
         </div>
@@ -193,10 +202,10 @@ export function ChildHomeView() {
         </div>
       </motion.section>
 
-      {stickyMessage && profileId && (
+      {personalStickyMessage && profileId && (
         <ChildBroadcastSticky
           profileId={profileId}
-          message={stickyMessage}
+          message={personalStickyMessage}
           microAnimEnabled={microAnim}
         />
       )}

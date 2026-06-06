@@ -82,6 +82,7 @@ export type Database = {
           attr_independence: number;
           attr_care: number;
           attr_honesty: number;
+          archived_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -459,15 +460,23 @@ export type Database = {
         Row: {
           id: string;
           profile_id: string;
+          title: string;
+          note: string | null;
+          requested_reward_points: number;
           status: RequestStatus;
+          created_task_id: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["task_requests"]["Row"],
-          "id" | "created_at"
+          "id" | "created_at" | "updated_at"
         > & {
           id?: string;
           created_at?: string;
+          updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["task_requests"]["Insert"]>;
         Relationships: [];
@@ -515,5 +524,6 @@ export type Family = Database["public"]["Tables"]["families"]["Row"];
 export type FamilySettings = Database["public"]["Tables"]["family_settings"]["Row"];
 export type Goal = Database["public"]["Tables"]["goals"]["Row"];
 export type Task = Database["public"]["Tables"]["tasks"]["Row"];
+export type TaskRequest = Database["public"]["Tables"]["task_requests"]["Row"];
 export type TaskHistory = Database["public"]["Tables"]["task_history"]["Row"];
 export type Streak = Database["public"]["Tables"]["streaks"]["Row"];

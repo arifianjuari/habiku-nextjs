@@ -15,6 +15,7 @@ export function useChildHomeData(profileId: string | null) {
     queryFn: () => fetchChildHomeData(profileId!),
     enabled,
     staleTime: CHILD_STALE_MS,
+    refetchOnMount: "always",
     placeholderData: (prev) => prev,
   });
 }

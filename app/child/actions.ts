@@ -3,8 +3,14 @@
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import {
+  loadStickyMessages,
+  type StickyMessages,
+} from "@/lib/child/load-sticky-messages";
 import { analyzeEvidenceImage } from "@/lib/services/ai";
 import { sendTaskPendingWebPush } from "@/lib/push/send-task-pending-web-push";
+import { getSessionContext } from "@/lib/auth/get-session-context";
+import { RPC } from "@/lib/database/rpc";
 
 export async function checkInChildAction(profileId: string) {
   if (!profileId) {
@@ -131,6 +137,91 @@ export async function submitChildReflectionAction(
 
   revalidatePath("/child/home");
   return { success: true, reflection: data };
+}
+
+export async function getChildStickyMessagesAction(
+  profileId: string,
+): Promise<StickyMessages> {
+  if (!profileId) {
+    return {
+      personalStickyMessage: null,
+      familyBroadcastMessage: null,
+      stickyMessage: null,
+    };
+  }
+
+  const supabase = await createClient();
+  const { data: child } = await supabase
+    .from("child_profiles")
+    .select("family_id")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  return loadStickyMessages(supabase, profileId, child?.family_id);
+}
+
+function mapTaskRequestError(message: string): string {
+  if (message.includes("title_required")) {
+    return "Nama misi wajib diisi.";
+  }
+  if (message.includes("invalid_reward")) {
+    return "Energi harus minimal 1.";
+  }
+  if (message.includes("pending_exists")) {
+    return "Masih ada pengajuan misi yang menunggu persetujuan ortu.";
+  }
+  if (message.includes("profile_not_found") || message.includes("forbidden")) {
+    return "Profil anak tidak valid.";
+  }
+  return message || "Gagal mengajukan misi.";
+}
+
+export async function submitTaskRequestAction(
+  profileId: string,
+  title: string,
+  requestedRewardPoints: number,
+  note?: string,
+) {
+  const context = await getSessionContext();
+  if (!context) {
+    return { error: "Sesi tidak valid." };
+  }
+
+  if (!profileId) {
+    return { error: "ID profil anak wajib disertakan." };
+  }
+
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) {
+    return { error: "Nama misi wajib diisi." };
+  }
+
+  const reward = Math.floor(requestedRewardPoints);
+  if (!Number.isFinite(reward) || reward < 1) {
+    return { error: "Energi harus minimal 1." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await (supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: string | null; error: { message: string } | null }>;
+  }).rpc(RPC.submitTaskRequest, {
+    p_profile_id: profileId,
+    p_title: trimmedTitle,
+    p_note: note?.trim() || null,
+    p_requested_reward_points: reward,
+  });
+
+  if (error) {
+    console.error("submit_task_request:", error);
+    return { error: mapTaskRequestError(error.message) };
+  }
+
+  revalidatePath("/child/missions");
+  revalidatePath("/parent/tasks");
+  return { success: true, requestId: data };
 }
 
 export async function thankBroadcastAction(profileId: string) {

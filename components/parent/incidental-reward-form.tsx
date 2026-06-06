@@ -19,6 +19,14 @@ const CATEGORY_LABELS: Record<TaskCategory, string> = {
   lainnya: "Lainnya",
 };
 
+function parseIncidentalAmount(raw: string): number {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return 0;
+  const parsed = Number.parseInt(digits, 10);
+  if (Number.isNaN(parsed)) return 0;
+  return parsed;
+}
+
 type IncidentalRewardFormProps = {
   children: ChildProfile[];
   goalsByProfile: Record<string, Goal[]>;
@@ -40,7 +48,7 @@ export function IncidentalRewardForm({
   const [note, setNote] = useState("");
   const [category, setCategory] = useState<TaskCategory>("lainnya");
   const [hpToTarget, setHpToTarget] = useState(0);
-  const [energyOnly, setEnergyOnly] = useState(5);
+  const [energyOnly, setEnergyOnly] = useState(0);
   const [goalId, setGoalId] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -53,7 +61,7 @@ export function IncidentalRewardForm({
     setNote("");
     setCategory("lainnya");
     setHpToTarget(0);
-    setEnergyOnly(5);
+    setEnergyOnly(0);
     setGoalId("");
     setFormError(null);
   };
@@ -168,29 +176,29 @@ export function IncidentalRewardForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="inc-hp" className="text-xs font-bold text-slate-800">
-              HP ke target (0–50)
+              HP ke target
             </Label>
             <Input
               id="inc-hp"
-              type="number"
-              min={0}
-              max={50}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
               value={hpToTarget}
-              onChange={(e) => setHpToTarget(Number(e.target.value))}
+              onChange={(e) => setHpToTarget(parseIncidentalAmount(e.target.value))}
               className="h-9 rounded-xl border-amber-100 bg-white text-sm focus-visible:ring-amber-500"
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="inc-energy" className="text-xs font-bold text-slate-800">
-              Energi bebas (0–50)
+              Energi bebas
             </Label>
             <Input
               id="inc-energy"
-              type="number"
-              min={0}
-              max={50}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
               value={energyOnly}
-              onChange={(e) => setEnergyOnly(Number(e.target.value))}
+              onChange={(e) => setEnergyOnly(parseIncidentalAmount(e.target.value))}
               className="h-9 rounded-xl border-amber-100 bg-white text-sm focus-visible:ring-amber-500"
             />
           </div>
