@@ -218,7 +218,7 @@ export function ChildMissionCompleteView({ taskId }: ChildMissionCompleteViewPro
           evidenceUrl = data.publicUrl;
         }
 
-        toast.loading("Menganalisis dengan AI Gemini & mengirim misi...", { id: "submit-task" });
+        toast.loading("Mengirim misi...", { id: "submit-task" });
 
         // Submit task history record
         const res = await submitTaskEvidenceAction(
@@ -298,7 +298,7 @@ export function ChildMissionCompleteView({ taskId }: ChildMissionCompleteViewPro
             <div className="space-y-2">
               <h3 className="font-heading text-lg font-black text-slate-900">Misi Terkirim! 🚀</h3>
               <p className="text-xs font-semibold text-slate-500 max-w-[280px]">
-                Hebat sekali! Bukti misimu sedang dianalisis oleh AI Gemini dan dikirim ke Papa/Mama.
+                Hebat sekali! Bukti misimu sudah dikirim ke Papa/Mama untuk ditinjau.
               </p>
             </div>
 

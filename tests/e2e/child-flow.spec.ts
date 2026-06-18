@@ -1,8 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Habiku E2E: Alur Pengerjaan Misi Anak & Verifikasi AI Gemini", () => {
+test.describe("Habiku E2E: Alur Pengerjaan Misi Anak", () => {
   
-  test("Orang tua login -> masuk Child Mode -> anak menyelesaikan misi -> AI Gemini verifikasi -> persetujuan ortu", async ({ page }) => {
+  test("Orang tua login -> masuk Child Mode -> anak menyelesaikan misi -> persetujuan ortu", async ({ page }) => {
     // 1. Kunjungi Halaman Utama
     await page.goto("/");
     
@@ -59,7 +59,7 @@ test.describe("Habiku E2E: Alur Pengerjaan Misi Anak & Verifikasi AI Gemini", ()
       buffer: Buffer.from("fake-image-binary-payload"),
     });
 
-    // Kirim Misi (memicu kompresi canvas & pemanggilan Vertex AI Gemini)
+    // Kirim Misi (memicu kompresi canvas & upload bukti foto)
     await page.click('button:has-text("Kirim Bukti Misi")');
 
     // Verifikasi perayaan/selebrasi sukses terkirim
@@ -81,18 +81,13 @@ test.describe("Habiku E2E: Alur Pengerjaan Misi Anak & Verifikasi AI Gemini", ()
     // Kembali ke beranda orang tua
     await expect(page).toHaveURL(/\/parent/);
 
-    // 7. Buka Antrean Persetujuan (Queue) untuk Memeriksa Hasil AI Gemini
+    // 7. Buka Antrean Persetujuan (Queue) untuk meninjau misi anak
     await page.click('a[href="/parent/queue"]');
     await expect(page).toHaveURL(/\/parent\/queue/);
     
-    // Verifikasi adanya kartu ulasan "Adit" di antrean
+    // Verifikasi adanya kartu misi "Adit" di antrean
     await expect(page.locator("text=Adit")).toBeVisible();
     await expect(page.locator("text=Merapikan Tempat Tidur")).toBeVisible();
-    
-    // Verifikasi PANEL visual AI Gemini ter-render dengan keyakinan tinggi
-    await expect(page.locator("text=🤖 Verifikasi AI Gemini")).toBeVisible();
-    await expect(page.locator("text=Tingkat Kecocokan Visual")).toBeVisible();
-    await expect(page.locator("text=Sesuai")).toBeVisible();
 
     // 8. Berikan Persetujuan (Approve) Misi Anak
     await page.click('button:has-text("Setujui")');
