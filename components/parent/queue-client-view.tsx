@@ -58,33 +58,22 @@ interface QueueClientViewProps {
   initialQueueItems: QueueItem[];
 }
 
-function parseAINotes(rawNotes: string | null): {
-  childNotes: string | null;
-  aiData: { status: "matched" | "unmatched"; confidence: number; analysis: string } | null;
-} {
-  if (!rawNotes) return { childNotes: null, aiData: null };
+function stripLegacyAiTags(rawNotes: string | null): string | null {
+  if (!rawNotes) return null;
 
   const startTag = "[AI_VERIFICATION_JSON_START]";
   const endTag = "[AI_VERIFICATION_JSON_END]";
-
   const startIndex = rawNotes.indexOf(startTag);
   const endIndex = rawNotes.indexOf(endTag);
 
   if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-    try {
-      const jsonStr = rawNotes.substring(startIndex + startTag.length, endIndex);
-      const aiData = JSON.parse(jsonStr);
-      const childNotes = rawNotes
-        .replace(rawNotes.substring(startIndex, endIndex + endTag.length), "")
-        .trim();
-
-      return { childNotes: childNotes || null, aiData };
-    } catch (e) {
-      console.error("Failed to parse AI JSON from notes:", e);
-    }
+    const stripped = rawNotes
+      .replace(rawNotes.substring(startIndex, endIndex + endTag.length), "")
+      .trim();
+    return stripped || null;
   }
 
-  return { childNotes: rawNotes, aiData: null };
+  return rawNotes;
 }
 
 const CATEGORY_STYLES = {
@@ -155,7 +144,7 @@ function QueueMissionCard({
   const accentColor = resolveHomeCardAccent(item.child.home_card_accent, {
     gender: item.child.gender,
   });
-  const { childNotes, aiData } = parseAINotes(item.notes);
+  const childNotes = stripLegacyAiTags(item.notes);
 
   return (
     <article className="flex w-full min-w-0 flex-col overflow-hidden rounded-3xl bg-card shadow-sm ring-1 ring-border/60">
@@ -212,7 +201,7 @@ function QueueMissionCard({
           </div>
         </div>
 
-        {(aiData || childNotes || item.evidence_url) && (
+        {(childNotes || item.evidence_url) && (
           <div className="flex gap-3">
             {item.evidence_url ? (
               <button
@@ -233,39 +222,14 @@ function QueueMissionCard({
                 </span>
               </button>
             ) : null}
-            <div className="min-w-0 flex-1 space-y-2">
-              {aiData ? (
-                <div className="rounded-2xl border border-violet-200/70 bg-violet-50/50 px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1 text-[11px] font-bold text-violet-800">
-                      <Sparkles className="size-3.5 text-violet-600" aria-hidden />
-                      AI {aiData.confidence}%
-                    </span>
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
-                        aiData.status === "matched"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-amber-100 text-amber-800",
-                      )}
-                    >
-                      {aiData.status === "matched" ? "Sesuai" : "Perlu cek"}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs leading-snug text-muted-foreground line-clamp-3">
-                    {aiData.analysis}
-                  </p>
-                </div>
-              ) : null}
-              {childNotes ? (
-                <div className="flex gap-2 rounded-2xl border border-border/70 bg-muted/40 px-3 py-2">
-                  <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  <p className="text-xs italic leading-snug text-foreground/80 line-clamp-3">
-                    &ldquo;{childNotes}&rdquo;
-                  </p>
-                </div>
-              ) : null}
-            </div>
+            {childNotes ? (
+              <div className="flex min-w-0 flex-1 gap-2 rounded-2xl border border-border/70 bg-muted/40 px-3 py-2">
+                <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <p className="text-xs italic leading-snug text-foreground/80 line-clamp-3">
+                  &ldquo;{childNotes}&rdquo;
+                </p>
+              </div>
+            ) : null}
           </div>
         )}
 

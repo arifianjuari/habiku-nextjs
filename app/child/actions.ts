@@ -7,7 +7,6 @@ import {
   loadStickyMessages,
   type StickyMessages,
 } from "@/lib/child/load-sticky-messages";
-import { analyzeEvidenceImage } from "@/lib/services/ai";
 import { sendTaskPendingWebPush } from "@/lib/push/send-task-pending-web-push";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { RPC } from "@/lib/database/rpc";
@@ -51,36 +50,14 @@ export async function submitTaskEvidenceAction(
 
   const supabase = await createClient();
 
-  // 1. Ambil detail misi untuk dikirim ke Gemini
-  const { data: task } = await supabase
-    .from("tasks")
-    .select("title")
-    .eq("id", taskId)
-    .maybeSingle();
+  const trimmedNotes = notes ? notes.trim() : "";
 
-  // 2. Jalankan verifikasi AI Gemini jika ada bukti foto
-  let finalNotes = notes ? notes.trim() : "";
-  if (evidenceUrl && task) {
-    try {
-      const aiResult = await analyzeEvidenceImage(
-        evidenceUrl,
-        task.title,
-        null
-      );
-      const aiString = `[AI_VERIFICATION_JSON_START]${JSON.stringify(aiResult)}[AI_VERIFICATION_JSON_END]`;
-      finalNotes = finalNotes ? `${finalNotes}\n\n${aiString}` : aiString;
-    } catch (aiErr) {
-      console.error("AI verification failed in submit action:", aiErr);
-    }
-  }
-
-  // 3. Memasukkan record baru ke task_history
   const { data, error } = await supabase
     .from("task_history")
     .insert({
       task_id: taskId,
       profile_id: profileId,
-      notes: finalNotes || null,
+      notes: trimmedNotes || null,
       evidence_url: evidenceUrl,
       status: "pending",
       completed_at: new Date().toISOString(),
