@@ -6,6 +6,7 @@ import { persist } from "zustand/middleware";
 import {
   CHILD_MODE_COOKIE,
   CHILD_PROFILE_COOKIE,
+  PARENT_HOME,
   isChildModeCookieValue,
 } from "@/lib/child/child-mode-session";
 
@@ -48,6 +49,8 @@ export function syncChildModeCookieFromStore() {
   if (isActive && profileId) {
     setChildModeCookie(true);
     setChildProfileCookie(profileId);
+  } else if (isChildModeCookieActive()) {
+    setChildModeCookie(false);
   }
 }
 
@@ -71,7 +74,29 @@ function recoverChildModeFromStorage(): PersistedChildMode | null {
   return null;
 }
 
+function writePersistedChildMode(state: PersistedChildMode) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      CHILD_MODE_STORAGE_KEY,
+      JSON.stringify({ state, version: 0 }),
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function clearPersistedChildMode() {
+  writePersistedChildMode({
+    isActive: false,
+    profileId: null,
+    profileName: null,
+  });
+}
+
 function applyRecoveredChildMode() {
+  if (!isChildModeCookieActive()) return false;
+
   const recovered = recoverChildModeFromStorage();
   if (!recovered?.isActive || !recovered.profileId) return false;
   useChildModeStore.setState({
@@ -82,6 +107,31 @@ function applyRecoveredChildMode() {
   setChildModeCookie(true);
   setChildProfileCookie(recovered.profileId);
   return true;
+}
+
+function reconcileRehydratedChildMode(state: PersistedChildMode | undefined) {
+  const cookieActive = isChildModeCookieActive();
+
+  if (state?.isActive && state.profileId) {
+    if (cookieActive) {
+      setChildModeCookie(true);
+      setChildProfileCookie(state.profileId);
+      return;
+    }
+
+    // Cookie sudah dibersihkan (keluar mode anak) — jangan hidupkan lagi dari localStorage basi.
+    clearPersistedChildMode();
+    useChildModeStore.setState({
+      isActive: false,
+      profileId: null,
+      profileName: null,
+    });
+    return;
+  }
+
+  if (cookieActive) {
+    applyRecoveredChildMode();
+  }
 }
 
 type ChildModeState = {
@@ -118,6 +168,7 @@ export const useChildModeStore = create<ChildModeState>()(
       exit: () => {
         setChildModeCookie(false);
         setChildProfileCookie(null);
+        clearPersistedChildMode();
         set({ isActive: false, profileId: null, profileName: null });
       },
     }),
@@ -129,12 +180,7 @@ export const useChildModeStore = create<ChildModeState>()(
         profileName: state.profileName,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state?.isActive && state.profileId) {
-          setChildModeCookie(true);
-          setChildProfileCookie(state.profileId);
-        } else if (isChildModeCookieActive()) {
-          applyRecoveredChildMode();
-        }
+        reconcileRehydratedChildMode(state);
         markChildModeStoreHydrated();
       },
     },
@@ -182,4 +228,10 @@ export function useChildModeHydrated(): boolean {
   }, []);
 
   return hydrated;
+}
+
+/** Navigasi penuh ke dasbor ortu setelah keluar mode anak — pastikan middleware melihat cookie bersih. */
+export function navigateToParentDashboardAfterChildExit() {
+  if (typeof window === "undefined") return;
+  window.location.assign(PARENT_HOME);
 }

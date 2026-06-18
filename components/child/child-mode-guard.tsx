@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import {
   isChildModeCookieActive,
+  navigateToParentDashboardAfterChildExit,
   syncChildModeCookieFromStore,
   useChildModeHydrated,
   useChildModeStore,
@@ -14,7 +14,6 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function ChildModeGuard({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const hydrated = useChildModeHydrated();
   const isActive = useChildModeStore((s) => s.isActive);
   const profileId = useChildModeStore((s) => s.profileId);
@@ -32,8 +31,10 @@ export function ChildModeGuard({ children }: { children: React.ReactNode }) {
       toast.error("Sesi anak tidak valid. Silakan masuk kembali dari dasbor orang tua.");
     }
 
-    router.replace("/parent/profil-anak");
-  }, [hydrated, sessionReady, isActive, profileId, isValidUuid, exit, router]);
+    if (isChildModeCookieActive()) return;
+
+    navigateToParentDashboardAfterChildExit();
+  }, [hydrated, sessionReady, isActive, profileId, isValidUuid, exit]);
 
   useEffect(() => {
     if (sessionReady) {

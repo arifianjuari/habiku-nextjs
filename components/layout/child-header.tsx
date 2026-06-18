@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { useChildModeStore } from "@/lib/stores/child-mode-store";
+import {
+  navigateToParentDashboardAfterChildExit,
+  useChildModeStore,
+} from "@/lib/stores/child-mode-store";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -19,7 +21,6 @@ import { Label } from "@/components/ui/label";
 import { Lock } from "lucide-react";
 
 export function ChildHeader() {
-  const router = useRouter();
   const profileId = useChildModeStore((s) => s.profileId);
   const profileName = useChildModeStore((s) => s.profileName);
   const exit = useChildModeStore((s) => s.exit);
@@ -59,7 +60,7 @@ export function ChildHeader() {
           exit();
           toast.success("Berhasil keluar dari Mode Anak.");
           setIsOpen(false);
-          router.replace("/parent/profil-anak");
+          navigateToParentDashboardAfterChildExit();
         }
       } catch (err) {
         console.error(err);
