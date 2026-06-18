@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { RPC } from "@/lib/database/rpc";
 import { fetchFamilyChildren } from "@/lib/parent/fetch-family-page-data";
-import { projectedInterestTotal } from "@/lib/savings/interest";
+import { enrichPockets } from "@/lib/savings/enrich-pockets";
 import type {
   ChildSavingsData,
   GoalClaimPending,
@@ -10,6 +9,7 @@ import type {
   SavingsPocketWithBalance,
   SavingsWithdrawPending,
 } from "@/lib/savings/types";
+import { RPC } from "@/lib/database/rpc";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -29,66 +29,18 @@ async function rpcNumber(
   return data;
 }
 
-async function rpcBool(
-  supabase: SupabaseServer,
-  fn: string,
-  args: Record<string, unknown>,
-): Promise<boolean> {
-  const { data, error } = await (supabase as unknown as {
-    rpc: (
-      name: string,
-      args: Record<string, unknown>,
-    ) => Promise<{ data: unknown; error: { message: string } | null }>;
-  }).rpc(fn, args);
+function buildSavableByProfile(
+  profileIds: string[],
+  goalRows: { profile_id: string; current_hp: number }[] | null,
+): Record<string, number> {
+  const savableByProfile = Object.fromEntries(profileIds.map((id) => [id, 0]));
 
-  if (error || typeof data !== "boolean") return false;
-  return data;
-}
+  for (const row of goalRows ?? []) {
+    savableByProfile[row.profile_id] =
+      (savableByProfile[row.profile_id] ?? 0) + row.current_hp;
+  }
 
-async function enrichPockets(
-  supabase: SupabaseServer,
-  pockets: SavingsPocketRow[],
-): Promise<SavingsPocketWithBalance[]> {
-  return Promise.all(
-    pockets.map(async (pocket) => {
-      const [balance, reserved, isLocked] = await Promise.all([
-        rpcNumber(supabase, RPC.computeSavingsPocketBalance, {
-          p_pocket_id: pocket.id,
-        }),
-        rpcNumber(supabase, "compute_savings_reserved_balance", {
-          p_pocket_id: pocket.id,
-        }),
-        rpcBool(supabase, "pocket_is_locked", { p_pocket_id: pocket.id }),
-      ]);
-
-      const { data: depositRows } = await supabase
-        .from("savings_transactions")
-        .select("locked_until, interest_accrued, amount")
-        .eq("pocket_id", pocket.id)
-        .eq("kind", "deposit")
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      const latestDeposit = depositRows?.[0] as {
-        locked_until: string | null;
-        interest_accrued: number;
-        amount: number;
-      } | undefined;
-
-      const principal = balance > 0 ? balance : (latestDeposit?.amount ?? 0);
-      const interestAccrued = latestDeposit?.interest_accrued ?? 0;
-
-      return {
-        ...pocket,
-        balance,
-        reserved,
-        is_locked: isLocked,
-        locked_until: latestDeposit?.locked_until ?? null,
-        interest_accrued: interestAccrued,
-        projected_interest: projectedInterestTotal(principal, pocket),
-      };
-    }),
-  );
+  return savableByProfile;
 }
 
 export async function fetchParentSavingsData(
@@ -123,35 +75,36 @@ export async function fetchParentSavingsData(
 
   if (profileIds.length === 0) return empty;
 
-  const [pocketsResult, pendingResult, claimsResult, ...walletResults] =
-    await Promise.all([
-      supabase
-        .from("savings_pockets")
-        .select("*")
-        .in("profile_id", profileIds)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("savings_transactions")
-        .select(
-          "id, pocket_id, profile_id, amount, note, created_at, savings_pockets(name, emoji), child_profiles(name)",
-        )
-        .in("profile_id", profileIds)
-        .eq("kind", "withdraw")
-        .eq("withdraw_status", "pending")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("goal_claim_requests")
-        .select(
-          "id, goal_id, profile_id, created_at, goals(title, current_hp), child_profiles(name)",
-        )
-        .in("profile_id", profileIds)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false }),
-      ...profileIds.map((id) =>
-        rpcNumber(supabase, RPC.computeSavableGoalEnergy, { p_profile_id: id }),
-      ),
-    ]);
+  const [pocketsResult, pendingResult, claimsResult, goalsResult] = await Promise.all([
+    supabase
+      .from("savings_pockets")
+      .select("*")
+      .in("profile_id", profileIds)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("savings_transactions")
+      .select(
+        "id, pocket_id, profile_id, amount, note, created_at, savings_pockets(name, emoji), child_profiles(name)",
+      )
+      .in("profile_id", profileIds)
+      .eq("kind", "withdraw")
+      .eq("withdraw_status", "pending")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("goal_claim_requests")
+      .select(
+        "id, goal_id, profile_id, created_at, goals(title, current_hp), child_profiles(name)",
+      )
+      .in("profile_id", profileIds)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("goals")
+      .select("profile_id, current_hp")
+      .in("profile_id", profileIds)
+      .eq("status", "active"),
+  ]);
 
   const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];
   const enriched = await enrichPockets(supabase, pockets);
@@ -164,10 +117,10 @@ export async function fetchParentSavingsData(
     {},
   );
 
-  const savableByProfile = profileIds.reduce<Record<string, number>>((acc, id, i) => {
-    acc[id] = walletResults[i] ?? 0;
-    return acc;
-  }, {});
+  const savableByProfile = buildSavableByProfile(
+    profileIds,
+    (goalsResult.data ?? []) as { profile_id: string; current_hp: number }[],
+  );
 
   const pendingWithdrawals: SavingsWithdrawPending[] = (
     pendingResult.data ?? []

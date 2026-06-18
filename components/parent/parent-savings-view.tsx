@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -22,7 +22,11 @@ import {
 import type { ParentSavingsData, SavingsPocketWithBalance } from "@/lib/savings/types";
 import { ChildTabSelector } from "@/components/parent/child-tab-selector";
 import { SavingsPocketEmojiPicker } from "@/components/parent/savings-pocket-emoji-picker";
-import { DEFAULT_SAVINGS_POCKET_EMOJI } from "@/lib/savings/pocket-emoji";
+import {
+  DEFAULT_SAVINGS_POCKET_EMOJI,
+  resolveSavingsPocketEmoji,
+  type SavingsPocketEmoji,
+} from "@/lib/savings/pocket-emoji";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -265,6 +269,9 @@ export function ParentSavingsView({
   const router = useRouter();
   const [activeChildId, setActiveChildId] = useState(children[0]?.id ?? "");
   const [isPending, startTransition] = useTransition();
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const [withdrawals, setWithdrawals] = useState(pendingWithdrawals);
+  const [claims, setClaims] = useState(pendingGoalClaims);
   const [rejectWithdrawId, setRejectWithdrawId] = useState<string | null>(null);
   const [rejectClaimId, setRejectClaimId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -274,14 +281,23 @@ export function ParentSavingsView({
   const [editPocketType, setEditPocketType] = useState<"flexible" | "term">("flexible");
   const [createInterestPct, setCreateInterestPct] = useState("");
   const [editInterestPct, setEditInterestPct] = useState("");
-  const [createPocketEmoji, setCreatePocketEmoji] = useState(DEFAULT_SAVINGS_POCKET_EMOJI);
-  const [editPocketEmoji, setEditPocketEmoji] = useState(DEFAULT_SAVINGS_POCKET_EMOJI);
+  const [createPocketEmoji, setCreatePocketEmoji] = useState<SavingsPocketEmoji>(
+    DEFAULT_SAVINGS_POCKET_EMOJI,
+  );
+  const [editPocketEmoji, setEditPocketEmoji] = useState<SavingsPocketEmoji>(
+    DEFAULT_SAVINGS_POCKET_EMOJI,
+  );
+
+  useEffect(() => {
+    setWithdrawals(pendingWithdrawals);
+    setClaims(pendingGoalClaims);
+  }, [pendingWithdrawals, pendingGoalClaims]);
 
   const activeChild = children.find((c) => c.id === activeChildId);
   const pockets = pocketsByProfile[activeChildId] ?? [];
   const savable = savableByProfile[activeChildId] ?? 0;
   const totalPocketBalance = pockets.reduce((sum, pocket) => sum + pocket.balance, 0);
-  const pendingCount = pendingGoalClaims.length + pendingWithdrawals.length;
+  const pendingCount = claims.length + withdrawals.length;
 
   const canEditPocketStructure = (editingPocket?.balance ?? 0) === 0;
 
@@ -289,7 +305,7 @@ export function ParentSavingsView({
     setEditingPocket(pocket);
     setEditPocketType(pocket.pocket_type);
     setEditInterestPct(bpsToPercentInputValue(pocket.monthly_interest_bps));
-    setEditPocketEmoji(pocket.emoji || DEFAULT_SAVINGS_POCKET_EMOJI);
+    setEditPocketEmoji(resolveSavingsPocketEmoji(pocket.emoji));
   };
 
   const handleUpdatePocket = (formData: FormData) => {
@@ -337,51 +353,69 @@ export function ParentSavingsView({
   };
 
   const handleApproveWithdraw = (txId: string) => {
+    setWithdrawals((prev) => prev.filter((item) => item.id !== txId));
+    setPendingActionId(txId);
     startTransition(async () => {
       const res = await approveSavingsWithdrawAction(txId);
-      if (res.error) toast.error(res.error);
-      else {
-        toast.success("Penarikan disetujui.");
+      setPendingActionId(null);
+      if (res.error) {
+        toast.error(res.error);
         router.refresh();
+      } else {
+        toast.success("Penarikan disetujui.");
       }
     });
   };
 
   const handleRejectWithdraw = () => {
     if (!rejectWithdrawId) return;
+    const txId = rejectWithdrawId;
+    setWithdrawals((prev) => prev.filter((item) => item.id !== txId));
+    setRejectWithdrawId(null);
+    setPendingActionId(txId);
     startTransition(async () => {
-      const res = await rejectSavingsWithdrawAction(rejectWithdrawId, rejectReason);
-      if (res.error) toast.error(res.error);
-      else {
-        toast.success("Penarikan ditolak.");
-        setRejectWithdrawId(null);
-        setRejectReason("");
+      const res = await rejectSavingsWithdrawAction(txId, rejectReason);
+      setPendingActionId(null);
+      if (res.error) {
+        toast.error(res.error);
         router.refresh();
+      } else {
+        toast.success("Penarikan ditolak.");
+        setRejectReason("");
       }
     });
   };
 
   const handleApproveClaim = (requestId: string) => {
+    setClaims((prev) => prev.filter((item) => item.id !== requestId));
+    setPendingActionId(requestId);
     startTransition(async () => {
       const res = await approveGoalClaimAction(requestId);
-      if (res.error) toast.error(res.error);
-      else {
-        toast.success("Hadiah disetujui untuk dicairkan.");
+      setPendingActionId(null);
+      if (res.error) {
+        toast.error(res.error);
         router.refresh();
+      } else {
+        toast.success("Hadiah disetujui untuk dicairkan.");
       }
     });
   };
 
   const handleRejectClaim = () => {
     if (!rejectClaimId) return;
+    const requestId = rejectClaimId;
+    setClaims((prev) => prev.filter((item) => item.id !== requestId));
+    setRejectClaimId(null);
+    setPendingActionId(requestId);
     startTransition(async () => {
-      const res = await rejectGoalClaimAction(rejectClaimId, rejectReason);
-      if (res.error) toast.error(res.error);
-      else {
-        toast.success("Permintaan hadiah ditolak.");
-        setRejectClaimId(null);
-        setRejectReason("");
+      const res = await rejectGoalClaimAction(requestId, rejectReason);
+      setPendingActionId(null);
+      if (res.error) {
+        toast.error(res.error);
         router.refresh();
+      } else {
+        toast.success("Permintaan hadiah ditolak.");
+        setRejectReason("");
       }
     });
   };
@@ -439,7 +473,7 @@ export function ParentSavingsView({
           </div>
 
           <div className="space-y-2">
-            {pendingGoalClaims.map((claim) => (
+            {claims.map((claim) => (
               <div
                 key={claim.id}
                 className="flex flex-col gap-2.5 rounded-xl border border-violet-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -456,14 +490,14 @@ export function ParentSavingsView({
                   </p>
                 </div>
                 <ApprovalActions
-                  disabled={isPending}
+                  disabled={pendingActionId === claim.id}
                   onApprove={() => handleApproveClaim(claim.id)}
                   onReject={() => setRejectClaimId(claim.id)}
                 />
               </div>
             ))}
 
-            {pendingWithdrawals.map((withdrawal) => (
+            {withdrawals.map((withdrawal) => (
               <div
                 key={withdrawal.id}
                 className="flex flex-col gap-2.5 rounded-xl border border-amber-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -479,7 +513,7 @@ export function ParentSavingsView({
                   </p>
                 </div>
                 <ApprovalActions
-                  disabled={isPending}
+                  disabled={pendingActionId === withdrawal.id}
                   onApprove={() => handleApproveWithdraw(withdrawal.id)}
                   onReject={() => setRejectWithdrawId(withdrawal.id)}
                 />

@@ -3,14 +3,15 @@
 import {
   DEFAULT_SAVINGS_POCKET_EMOJI,
   SAVINGS_POCKET_EMOJI_OPTIONS,
+  type SavingsPocketEmoji,
 } from "@/lib/savings/pocket-emoji";
 import { cn } from "@/lib/utils";
 
 type SavingsPocketEmojiPickerProps = {
   id: string;
   name: string;
-  value: string;
-  onChange: (emoji: string) => void;
+  value: SavingsPocketEmoji;
+  onChange: (emoji: SavingsPocketEmoji) => void;
 };
 
 export function SavingsPocketEmojiPicker({

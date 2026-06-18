@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { RPC } from "@/lib/database/rpc";
-import { projectedInterestTotal } from "@/lib/savings/interest";
+import { enrichPockets } from "@/lib/savings/enrich-pockets";
 import type { ChildSavingsData, SavingsPocketRow } from "@/lib/savings/types";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
 
@@ -18,60 +18,6 @@ async function rpcNumber(
 
   if (error || typeof data !== "number") return 0;
   return data;
-}
-
-async function rpcBool(
-  supabase: AppSupabaseClient,
-  fn: string,
-  args: Record<string, unknown>,
-): Promise<boolean> {
-  const { data, error } = await (supabase as unknown as {
-    rpc: (
-      name: string,
-      args: Record<string, unknown>,
-    ) => Promise<{ data: unknown; error: { message: string } | null }>;
-  }).rpc(fn, args);
-
-  if (error || typeof data !== "boolean") return false;
-  return data;
-}
-
-async function enrichPockets(supabase: AppSupabaseClient, pockets: SavingsPocketRow[]) {
-  return Promise.all(
-    pockets.map(async (pocket) => {
-      const [balance, reserved, isLocked] = await Promise.all([
-        rpcNumber(supabase, RPC.computeSavingsPocketBalance, { p_pocket_id: pocket.id }),
-        rpcNumber(supabase, "compute_savings_reserved_balance", { p_pocket_id: pocket.id }),
-        rpcBool(supabase, "pocket_is_locked", { p_pocket_id: pocket.id }),
-      ]);
-
-      const { data: depositRows } = await supabase
-        .from("savings_transactions")
-        .select("locked_until, interest_accrued, amount")
-        .eq("pocket_id", pocket.id)
-        .eq("kind", "deposit")
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      const latestDeposit = depositRows?.[0] as {
-        locked_until: string | null;
-        interest_accrued: number;
-        amount: number;
-      } | undefined;
-
-      const principal = balance > 0 ? balance : (latestDeposit?.amount ?? 0);
-
-      return {
-        ...pocket,
-        balance,
-        reserved,
-        is_locked: isLocked,
-        locked_until: latestDeposit?.locked_until ?? null,
-        interest_accrued: latestDeposit?.interest_accrued ?? 0,
-        projected_interest: projectedInterestTotal(principal, pocket),
-      };
-    }),
-  );
 }
 
 export async function fetchChildSavingsDataClient(
