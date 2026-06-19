@@ -36,6 +36,12 @@ function mapRpcError(message: string): string {
   if (message.includes("name_required")) {
     return "Nama kantong wajib diisi.";
   }
+  if (message.includes("pocket_not_empty")) {
+    return "Kantong masih berisi saldo. Tarik dulu semua energi sebelum menghapus.";
+  }
+  if (message.includes("pending_withdrawals")) {
+    return "Masih ada permintaan penarikan yang menunggu persetujuan.";
+  }
   return message || "Terjadi kesalahan.";
 }
 
@@ -127,6 +133,23 @@ export async function updateSavingsPocketAction(formData: FormData) {
   return { ok: true as const };
 }
 
+export async function deleteSavingsPocketAction(pocketId: string) {
+  const context = await getSessionContext();
+  if (!context) return { error: "Sesi tidak valid." };
+
+  const supabase = await createClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (n: string, a: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc(RPC.deleteSavingsPocket, { p_pocket_id: pocketId });
+
+  if (error) return { error: mapRpcError(error.message) };
+
+  revalidatePath("/parent/savings");
+  revalidatePath("/child/savings");
+  revalidatePath("/child/targets");
+  return { ok: true as const };
+}
+
 export async function approveSavingsWithdrawAction(transactionId: string) {
   const context = await getSessionContext();
   if (!context) return { error: "Sesi tidak valid." };
@@ -142,6 +165,7 @@ export async function approveSavingsWithdrawAction(transactionId: string) {
   revalidatePath("/parent/ledger");
   revalidatePath("/child/savings");
   revalidatePath("/child/home");
+  revalidatePath("/child/targets");
   return { ok: true as const };
 }
 

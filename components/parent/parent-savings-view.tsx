@@ -18,6 +18,7 @@ import {
   Layers,
   Clock,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import type { ParentSavingsData, SavingsPocketWithBalance } from "@/lib/savings/types";
 import { ChildTabSelector } from "@/components/parent/child-tab-selector";
@@ -42,6 +43,7 @@ import {
 import {
   createSavingsPocketAction,
   updateSavingsPocketAction,
+  deleteSavingsPocketAction,
   approveSavingsWithdrawAction,
   rejectSavingsWithdrawAction,
   approveGoalClaimAction,
@@ -130,9 +132,13 @@ function ApprovalActions({ disabled, onApprove, onReject }: ApprovalActionsProps
 function SavingsPocketCard({
   pocket,
   onEdit,
+  onDelete,
+  canDelete,
 }: {
   pocket: SavingsPocketWithBalance;
   onEdit: () => void;
+  onDelete: () => void;
+  canDelete: boolean;
 }) {
   const progress =
     pocket.target_amount && pocket.target_amount > 0
@@ -205,6 +211,17 @@ function SavingsPocketCard({
             >
               <Pencil className="size-3.5" aria-hidden />
             </button>
+            {canDelete ? (
+              <button
+                type="button"
+                data-compact
+                onClick={onDelete}
+                aria-label={`Hapus kantong ${pocket.name}`}
+                className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-red-200/80 text-red-600 transition-colors hover:bg-red-50"
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -279,6 +296,9 @@ export function ParentSavingsView({
   const [createPocketOpen, setCreatePocketOpen] = useState(false);
   const [pocketType, setPocketType] = useState<"flexible" | "term">("flexible");
   const [editingPocket, setEditingPocket] = useState<SavingsPocketWithBalance | null>(null);
+  const [deletePocketTarget, setDeletePocketTarget] = useState<SavingsPocketWithBalance | null>(
+    null,
+  );
   const [editPocketType, setEditPocketType] = useState<"flexible" | "term">("flexible");
   const [createInterestPct, setCreateInterestPct] = useState("");
   const [editInterestPct, setEditInterestPct] = useState("");
@@ -302,6 +322,9 @@ export function ParentSavingsView({
   const pendingCount = claims.length + withdrawals.length;
 
   const canEditPocketStructure = (editingPocket?.balance ?? 0) === 0;
+
+  const canDeletePocket = (pocket: SavingsPocketWithBalance) =>
+    pocket.balance === 0 && pocket.reserved === 0 && !pocket.is_locked;
 
   const openEditPocket = (pocket: SavingsPocketWithBalance) => {
     setEditingPocket(pocket);
@@ -352,6 +375,29 @@ export function ParentSavingsView({
       } else {
         toast.success("Kantong tabungan diperbarui.");
         setEditingPocket(null);
+      }
+    });
+  };
+
+  const handleDeletePocket = () => {
+    if (!deletePocketTarget) return;
+    const pocketId = deletePocketTarget.id;
+    const profileId = deletePocketTarget.profile_id;
+
+    setPocketsByProfile((prev) => ({
+      ...prev,
+      [profileId]: (prev[profileId] ?? []).filter((pocket) => pocket.id !== pocketId),
+    }));
+    setDeletePocketTarget(null);
+    if (editingPocket?.id === pocketId) setEditingPocket(null);
+
+    startTransition(async () => {
+      const res = await deleteSavingsPocketAction(pocketId);
+      if (res.error) {
+        toast.error(res.error);
+        router.refresh();
+      } else {
+        toast.success("Kantong tabungan dihapus.");
       }
     });
   };
@@ -439,7 +485,7 @@ export function ParentSavingsView({
         toast.error(res.error);
         router.refresh();
       } else {
-        toast.success("Penarikan disetujui.");
+        toast.success("Penarikan disetujui. Energi kembali ke target aktif anak.");
       }
     });
   };
@@ -672,6 +718,8 @@ export function ParentSavingsView({
                 key={pocket.id}
                 pocket={pocket}
                 onEdit={() => openEditPocket(pocket)}
+                onDelete={() => setDeletePocketTarget(pocket)}
+                canDelete={canDeletePocket(pocket)}
               />
             ))}
           </div>
@@ -1062,7 +1110,22 @@ export function ParentSavingsView({
                 </label>
 
                 <input type="hidden" name="accentColor" value={editingPocket.accent_color} />
-                <DialogFooter>
+                <DialogFooter className="flex-col gap-2 sm:flex-col">
+                  {canDeletePocket(editingPocket) ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isPending}
+                      onClick={() => {
+                        setDeletePocketTarget(editingPocket);
+                        setEditingPocket(null);
+                      }}
+                      className="h-10 w-full rounded-xl border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                      Hapus kantong
+                    </Button>
+                  ) : null}
                   <Button
                     type="submit"
                     disabled={isPending}
@@ -1074,6 +1137,48 @@ export function ParentSavingsView({
               </form>
             </>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!deletePocketTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeletePocketTarget(null);
+        }}
+      >
+        <DialogContent className="rounded-3xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-base">Hapus kantong?</DialogTitle>
+            <DialogDescription className="text-xs text-pretty">
+              {deletePocketTarget ? (
+                <>
+                  Kantong <strong>{deletePocketTarget.emoji} {deletePocketTarget.name}</strong>{" "}
+                  ({deletePocketTarget.pocket_type === "term" ? "deposito" : "akumulatif"}) akan
+                  dihapus permanen. Hanya kantong kosong tanpa penarikan tertunda yang bisa
+                  dihapus.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending}
+              onClick={() => setDeletePocketTarget(null)}
+              className="h-10 w-full rounded-xl"
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              disabled={isPending}
+              onClick={handleDeletePocket}
+              className="h-10 w-full rounded-xl bg-red-600 font-bold hover:bg-red-700"
+            >
+              {isPending ? "Menghapus…" : "Ya, hapus kantong"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
