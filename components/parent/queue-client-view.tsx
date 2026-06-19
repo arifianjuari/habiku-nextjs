@@ -337,7 +337,7 @@ export function QueueClientView({
     if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = window.setTimeout(() => {
       router.refresh();
-    }, 350);
+    }, 1200);
   }, [router]);
 
   useFamilyRealtime({

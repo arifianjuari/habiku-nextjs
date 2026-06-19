@@ -43,8 +43,6 @@ export function ParentBottomNav({ familyId }: ParentBottomNavProps) {
               <Link
                 href={href}
                 prefetch={true}
-                onMouseEnter={() => warmTab(href)}
-                onFocus={() => warmTab(href)}
                 onTouchStart={() => warmTab(href)}
                 className={cn(
                   "flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 px-2 py-2 text-xs transition-colors",
