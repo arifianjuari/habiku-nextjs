@@ -194,7 +194,7 @@ export async function fetchChildSavingsData(
 ): Promise<ChildSavingsData> {
   const supabase = await createClient();
 
-  const [pocketsResult, settingsResult, savableBalance] = await Promise.all([
+  const [pocketsResult, settingsResult, savableBalance, walletBalance] = await Promise.all([
     supabase
       .from("savings_pockets")
       .select("*")
@@ -207,6 +207,7 @@ export async function fetchChildSavingsData(
       .eq("family_id", familyId)
       .maybeSingle(),
     rpcNumber(supabase, RPC.computeSavableGoalEnergy, { p_profile_id: profileId }),
+    rpcNumber(supabase, RPC.computeWalletBalance, { p_profile_id: profileId }),
   ]);
 
   const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];
@@ -215,6 +216,7 @@ export async function fetchChildSavingsData(
   return {
     pockets: enriched,
     savableBalance,
+    walletBalance,
     savingsEnabled: settingsResult.data?.savings_enabled ?? true,
     goalSaveEnabled: settingsResult.data?.goal_save_enabled ?? true,
   };

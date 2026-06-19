@@ -36,7 +36,7 @@ export async function fetchChildSavingsDataClient(
     throw new Error("Profil anak tidak ditemukan.");
   }
 
-  const [pocketsResult, settingsResult, savableBalance] = await Promise.all([
+  const [pocketsResult, settingsResult, savableBalance, walletBalance] = await Promise.all([
     client
       .from("savings_pockets")
       .select("*")
@@ -49,6 +49,7 @@ export async function fetchChildSavingsDataClient(
       .eq("family_id", child.family_id)
       .maybeSingle(),
     rpcNumber(client, RPC.computeSavableGoalEnergy, { p_profile_id: profileId }),
+    rpcNumber(client, RPC.computeWalletBalance, { p_profile_id: profileId }),
   ]);
 
   const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];
@@ -57,6 +58,7 @@ export async function fetchChildSavingsDataClient(
   return {
     pockets: enriched,
     savableBalance,
+    walletBalance,
     savingsEnabled: settingsResult.data?.savings_enabled ?? true,
     goalSaveEnabled: settingsResult.data?.goal_save_enabled ?? true,
   };
