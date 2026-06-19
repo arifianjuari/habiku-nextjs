@@ -53,7 +53,6 @@ import {
   bpsToPercentInputValue,
   effectiveMonthlyBps,
   formatInterestBps,
-  MONTHLY_INTEREST_ABS_MAX_BPS,
   parseInterestPercentInput,
   sanitizeInterestPercentInput,
 } from "@/lib/savings/interest";
@@ -868,7 +867,7 @@ export function ParentSavingsView({
                   className="h-10 tabular-nums"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Min. 0% · maks. {MONTHLY_INTEREST_ABS_MAX_BPS / 100}% · 2 desimal
+                  Min. 0% · hingga 2 angka desimal
                 </p>
               </div>
               {pocketType === "term" ? (
@@ -1055,7 +1054,7 @@ export function ParentSavingsView({
                       className="h-10 tabular-nums disabled:opacity-50"
                     />
                     <p className="text-[10px] text-muted-foreground">
-                      Min. 0% · maks. {MONTHLY_INTEREST_ABS_MAX_BPS / 100}% · 2 desimal
+                      Min. 0% · hingga 2 angka desimal
                     </p>
                   </div>
                   {editPocketType === "term" ? (
