@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { PiggyBank, ArrowDownToLine, ArrowUpFromLine, Lock } from "lucide-react";
@@ -29,35 +29,75 @@ export function ChildSavingsView() {
   const invalidateSavings = useInvalidateChildSavings(profileId ?? "");
   const invalidateTargets = useInvalidateChildTargets(profileId ?? "");
   const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [depositFeedback, setDepositFeedback] = useState<string | null>(null);
   const [activePocketId, setActivePocketId] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState("5");
   const [withdrawAmount, setWithdrawAmount] = useState("5");
   const [withdrawNote, setWithdrawNote] = useState("");
 
+  const effectivePocketId =
+    activePocketId ?? data?.pockets[0]?.id ?? null;
+
+  useEffect(() => {
+    if (data?.pockets.length && activePocketId === null) {
+      setActivePocketId(data.pockets[0].id);
+    }
+  }, [data?.pockets, activePocketId]);
+
   const handleDeposit = () => {
-    if (!activePocketId) return;
+    setDepositFeedback(null);
+    const pocketId = effectivePocketId;
+    if (!pocketId) {
+      const message = "Pilih kantong tabungan dulu.";
+      setDepositFeedback(message);
+      toast.error(message);
+      return;
+    }
     const amount = Number(depositAmount);
     if (!Number.isFinite(amount) || amount < 1) {
-      toast.error("Masukkan jumlah energi minimal 1.");
+      const message = "Masukkan jumlah energi minimal 1.";
+      setDepositFeedback(message);
+      toast.error(message);
       return;
     }
-    if (amount > savable) {
-      toast.error(`Maksimal ${savable} energi dari target aktif.`);
+    const savableBalance = data?.savableBalance ?? 0;
+    const walletBalance = data?.walletBalance ?? 0;
+    const maxDeposit = Math.min(savableBalance, walletBalance, 500);
+    if (amount > maxDeposit) {
+      const message =
+        walletBalance < savableBalance
+          ? `Maksimal ${walletBalance} energi (saldo dompet).`
+          : `Maksimal ${savableBalance} energi dari target aktif.`;
+      setDepositFeedback(message);
+      toast.error(message);
       return;
     }
+    setIsSubmitting(true);
     startTransition(async () => {
-      const res = await depositToSavingsAction(activePocketId, amount);
-      if (res.error) toast.error(res.error);
-      else {
-        toast.success("Berhasil menabung!");
-        invalidateSavings();
-        invalidateTargets();
+      try {
+        const res = await depositToSavingsAction(pocketId, amount);
+        if (res.error) {
+          setDepositFeedback(res.error);
+          toast.error(res.error);
+        } else {
+          setDepositFeedback("Berhasil menabung!");
+          toast.success("Berhasil menabung!");
+          invalidateSavings();
+          invalidateTargets();
+        }
+      } catch {
+        const message = "Gagal menabung. Periksa koneksi lalu coba lagi.";
+        setDepositFeedback(message);
+        toast.error(message);
+      } finally {
+        setIsSubmitting(false);
       }
     });
   };
 
   const handleWithdraw = () => {
-    if (!activePocketId) return;
+    if (!effectivePocketId) return;
     const amount = Number(withdrawAmount);
     if (!Number.isFinite(amount) || amount < 1) {
       toast.error("Masukkan jumlah energi minimal 1.");
@@ -65,7 +105,7 @@ export function ChildSavingsView() {
     }
     startTransition(async () => {
       const res = await requestSavingsWithdrawAction(
-        activePocketId,
+        effectivePocketId,
         amount,
         withdrawNote,
       );
@@ -121,7 +161,9 @@ export function ChildSavingsView() {
   const termPocketFull =
     activePocket?.pocket_type === "term" && (activePocket?.balance ?? 0) > 0;
   const savable = data.savableBalance;
-  const canDeposit = activePocket && !termPocketFull && savable > 0;
+  const wallet = data.walletBalance;
+  const maxDepositable = Math.min(savable, wallet, 500);
+  const canDeposit = activePocket && !termPocketFull && maxDepositable > 0;
   const canWithdraw = activePocket && !activePocket.is_locked && availableInPocket > 0;
 
   return (
@@ -135,6 +177,7 @@ export function ChildSavingsView() {
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           Hanya energi di target aktif yang bisa ditabung ke kantong
+          {wallet < savable ? ` · saldo dompet ${wallet} ⚡` : ""}
         </p>
       </div>
 
@@ -232,20 +275,50 @@ export function ChildSavingsView() {
                       <Input
                         type="number"
                         min={1}
-                        max={Math.min(500, savable)}
+                        max={maxDepositable}
                         value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
+                        onChange={(e) => {
+                          setDepositAmount(e.target.value);
+                          setDepositFeedback(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleDeposit();
+                          }
+                        }}
                         aria-label="Jumlah nabung"
                       />
-                      <Button disabled={isPending} onClick={handleDeposit}>
-                        Nabung
+                      <Button
+                        type="button"
+                        disabled={isPending || isSubmitting}
+                        onClick={handleDeposit}
+                      >
+                        {isPending || isSubmitting ? "Menabung…" : "Nabung"}
                       </Button>
                     </div>
+                    {depositFeedback ? (
+                      <p
+                        role="status"
+                        className={
+                          depositFeedback.startsWith("Berhasil")
+                            ? "text-xs font-medium text-emerald-700"
+                            : "text-xs font-medium text-destructive"
+                        }
+                      >
+                        {depositFeedback}
+                      </p>
+                    ) : null}
                   </CardContent>
                 </Card>
               ) : termPocketFull ? (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-800">
                   Kantong deposito ini sudah berisi setoran. Buat kantong baru untuk menabung lagi.
+                </p>
+              ) : savable > 0 && wallet < 1 ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-800">
+                  Ada {savable} energi di target, tetapi saldo dompet kosong. Selesaikan misi dulu
+                  agar energi masuk dompet.
                 </p>
               ) : null}
 
@@ -277,9 +350,10 @@ export function ChildSavingsView() {
                     />
                   </div>
                   <Button
+                    type="button"
                     variant="outline"
                     className="w-full border-violet-300"
-                    disabled={isPending || !canWithdraw}
+                    disabled={isPending || isSubmitting || !canWithdraw}
                     onClick={handleWithdraw}
                   >
                     {activePocket.is_locked ? "Masih terkunci" : "Ajukan penarikan"}
