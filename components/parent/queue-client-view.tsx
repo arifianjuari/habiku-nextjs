@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -293,6 +293,54 @@ function QueueMissionCard({
   );
 }
 
+const MemoizedQueueMissionCard = memo(QueueMissionCard);
+
+type QueueItemRowProps = {
+  item: QueueItem;
+  selectedGoalId: string;
+  isPending: boolean;
+  onGoalChange: (itemId: string, goalId: string) => void;
+  onReject: (itemId: string) => void;
+  onApprove: (item: QueueItem) => void;
+  onPreviewEvidence: (url: string) => void;
+};
+
+const QueueItemRow = memo(function QueueItemRow({
+  item,
+  selectedGoalId,
+  isPending,
+  onGoalChange,
+  onReject,
+  onApprove,
+  onPreviewEvidence,
+}: QueueItemRowProps) {
+  const handleGoalChange = useCallback(
+    (goalId: string) => onGoalChange(item.id, goalId),
+    [item.id, onGoalChange],
+  );
+  const handleReject = useCallback(() => onReject(item.id), [item.id, onReject]);
+  const handleApprove = useCallback(() => onApprove(item), [item, onApprove]);
+
+  return (
+    <MemoizedQueueMissionCard
+      item={item}
+      selectedGoalId={selectedGoalId}
+      isPending={isPending}
+      onGoalChange={handleGoalChange}
+      onReject={handleReject}
+      onApprove={handleApprove}
+      onPreviewEvidence={onPreviewEvidence}
+    />
+  );
+});
+
+function restoreQueueItem(items: QueueItem[], removedItem: QueueItem): QueueItem[] {
+  if (items.some((i) => i.id === removedItem.id)) return items;
+  return [...items, removedItem].toSorted(
+    (a, b) => new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime(),
+  );
+}
+
 export function QueueClientView({
   initialQueueItems,
   familyId,
@@ -300,18 +348,38 @@ export function QueueClientView({
 }: QueueClientViewProps) {
   const router = useRouter();
   const refreshTimerRef = useRef<number | null>(null);
+  const mutatingRef = useRef(0);
+  const pendingIdsRef = useRef(new Set<string>());
   const [items, setItems] = useParentListCache<QueueItem[]>(
     parentQueryKeys.queue(familyId),
     initialQueueItems,
   );
-  const [isPending, startTransition] = useTransition();
+  const [pendingItemIds, setPendingItemIds] = useState<ReadonlySet<string>>(() => new Set());
   const [selectedGoalIds, setSelectedGoalIds] = useState<Record<string, string>>({});
   const [rejectingItemId, setRejectingItemId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectionError, setRejectionError] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
+  const setItemPending = useCallback((itemId: string, pending: boolean) => {
+    if (pending) {
+      pendingIdsRef.current.add(itemId);
+    } else {
+      pendingIdsRef.current.delete(itemId);
+    }
+    setPendingItemIds(new Set(pendingIdsRef.current));
+  }, []);
+
+  const beginMutation = useCallback(() => {
+    mutatingRef.current += 1;
+  }, []);
+
+  const endMutation = useCallback(() => {
+    mutatingRef.current = Math.max(0, mutatingRef.current - 1);
+  }, []);
+
   useEffect(() => {
+    if (mutatingRef.current > 0) return;
     setItems(initialQueueItems);
   }, [initialQueueItems, setItems]);
 
@@ -334,6 +402,7 @@ export function QueueClientView({
   }, [initialQueueItems]);
 
   const handleFamilyDataChange = useCallback(() => {
+    if (mutatingRef.current > 0) return;
     if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = window.setTimeout(() => {
       router.refresh();
@@ -346,27 +415,48 @@ export function QueueClientView({
     onFamilyDataChange: handleFamilyDataChange,
   });
 
-  const handleApprove = (itemId: string, childGoals: Goal[]) => {
-    const activeGoals = childGoals.filter((g) => g.status === "active");
-    const chosenGoalId = selectedGoalIds[itemId] || (activeGoals.length > 0 ? activeGoals[0].id : null);
+  const handleGoalChange = useCallback((itemId: string, goalId: string) => {
+    setSelectedGoalIds((prev) => ({ ...prev, [itemId]: goalId }));
+  }, []);
 
-    if (activeGoals.length > 0 && !chosenGoalId) {
-      toast.error("Silakan pilih target hadiah terlebih dahulu.");
-      return;
-    }
+  const handleRejectClick = useCallback((itemId: string) => {
+    setRejectingItemId(itemId);
+    setRejectionReason("");
+    setRejectionError(null);
+  }, []);
 
-    setItems((prev) => prev.filter((i) => i.id !== itemId));
+  const handleApprove = useCallback(
+    (item: QueueItem) => {
+      const itemId = item.id;
+      const activeGoals = item.childGoals.filter((g) => g.status === "active");
+      const chosenGoalId =
+        selectedGoalIds[itemId] || (activeGoals.length > 0 ? activeGoals[0].id : null);
 
-    startTransition(async () => {
-      const res = await approveTaskHistoryAction(itemId, chosenGoalId);
-      if (res?.error) {
-        toast.error(res.error);
-        router.refresh();
-      } else {
-        toast.success("Misi disetujui! Poin energi disalurkan.");
+      if (activeGoals.length > 0 && !chosenGoalId) {
+        toast.error("Silakan pilih target hadiah terlebih dahulu.");
+        return;
       }
-    });
-  };
+
+      beginMutation();
+      setItemPending(itemId, true);
+      setItems((prev) => prev.filter((i) => i.id !== itemId));
+      toast.success("Misi disetujui! Poin energi disalurkan.");
+
+      void (async () => {
+        try {
+          const res = await approveTaskHistoryAction(itemId, chosenGoalId);
+          if (res?.error) {
+            toast.error(res.error);
+            setItems((prev) => restoreQueueItem(prev, item));
+          }
+        } finally {
+          endMutation();
+          setItemPending(itemId, false);
+        }
+      })();
+    },
+    [selectedGoalIds, setItems, beginMutation, endMutation, setItemPending],
+  );
 
   const handleRejectSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -377,20 +467,31 @@ export function QueueClientView({
     }
 
     const itemId = rejectingItemId;
+    const removedItem = items.find((i) => i.id === itemId);
+    if (!removedItem) return;
+
+    beginMutation();
+    setItemPending(itemId, true);
     setItems((prev) => prev.filter((i) => i.id !== itemId));
     setRejectingItemId(null);
+    toast.success("Misi ditolak. Anak akan mendapatkan notifikasi revisi.");
 
-    startTransition(async () => {
-      const res = await rejectTaskHistoryAction(itemId, rejectionReason);
-      if (res?.error) {
-        toast.error(res.error);
-        router.refresh();
-      } else {
-        toast.success("Misi ditolak. Anak akan mendapatkan notifikasi revisi.");
+    const reason = rejectionReason;
+    setRejectionReason("");
+    setRejectionError(null);
+
+    void (async () => {
+      try {
+        const res = await rejectTaskHistoryAction(itemId, reason);
+        if (res?.error) {
+          toast.error(res.error);
+          setItems((prev) => restoreQueueItem(prev, removedItem));
+        }
+      } finally {
+        endMutation();
+        setItemPending(itemId, false);
       }
-      setRejectionReason("");
-      setRejectionError(null);
-    });
+    })();
   };
 
   return (
@@ -418,19 +519,13 @@ export function QueueClientView({
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {items.map((item) => (
             <li key={item.id} className="min-w-0">
-              <QueueMissionCard
+              <QueueItemRow
                 item={item}
                 selectedGoalId={selectedGoalIds[item.id] || ""}
-                isPending={isPending}
-                onGoalChange={(goalId) =>
-                  setSelectedGoalIds((prev) => ({ ...prev, [item.id]: goalId }))
-                }
-                onReject={() => {
-                  setRejectingItemId(item.id);
-                  setRejectionReason("");
-                  setRejectionError(null);
-                }}
-                onApprove={() => handleApprove(item.id, item.childGoals)}
+                isPending={pendingItemIds.has(item.id)}
+                onGoalChange={handleGoalChange}
+                onReject={handleRejectClick}
+                onApprove={handleApprove}
                 onPreviewEvidence={setPreviewImageUrl}
               />
             </li>
