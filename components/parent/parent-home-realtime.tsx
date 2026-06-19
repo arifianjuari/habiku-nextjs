@@ -22,7 +22,7 @@ export function ParentHomeRealtime({
     if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = window.setTimeout(() => {
       router.refresh();
-    }, 400);
+    }, 1500);
   }, [router]);
 
   useFamilyRealtime({

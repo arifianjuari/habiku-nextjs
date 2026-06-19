@@ -1,6 +1,7 @@
-import { getChildStickyMessagesAction } from "@/app/child/actions";
+import { loadStickyMessages } from "@/lib/child/load-sticky-messages";
 import { createClient } from "@/lib/supabase/client";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
+import { RPC } from "@/lib/database/rpc";
 import { fetchChildEngagement } from "@/lib/child/fetch-child-engagement";
 import {
   DEFAULT_CHILD_ENGAGEMENT_SETTINGS,
@@ -23,6 +24,21 @@ function callProfileRpc(supabase: AppSupabaseClient, fn: string, profileId: stri
     ) => Promise<{ data: unknown; error: unknown }>;
   };
   return client.rpc(fn, { p_profile_id: profileId });
+}
+
+async function fetchWalletBalance(
+  supabase: AppSupabaseClient,
+  profileId: string,
+): Promise<number> {
+  const { data, error } = await (supabase as unknown as {
+    rpc: (
+      name: string,
+      args: { p_profile_id: string },
+    ) => Promise<{ data: unknown; error: unknown }>;
+  }).rpc(RPC.computeWalletBalance, { p_profile_id: profileId });
+
+  if (error || typeof data !== "number") return 0;
+  return data;
 }
 
 export type ChildHomeData = {
@@ -57,12 +73,7 @@ export type ChildMissionsBundle = {
 
 export async function fetchChildPoints(profileId: string): Promise<number> {
   const supabase = createClient();
-  const { data: ledger } = await supabase
-    .from("point_ledger")
-    .select("amount")
-    .eq("profile_id", profileId);
-
-  return ledger?.reduce((sum, entry) => sum + entry.amount, 0) ?? 0;
+  return fetchWalletBalance(supabase, profileId);
 }
 
 export async function fetchChildHomeData(
@@ -72,10 +83,10 @@ export async function fetchChildHomeData(
   const client = supabase ?? createClient();
   const todayStr = getJakartaTodayString();
 
-  const [profileResult, ledgerResult, goalResult, chainResult, checkInResult] =
+  const [profileResult, totalPoints, goalResult, chainResult, checkInResult] =
     await Promise.all([
       client.from("child_profiles").select("*").eq("id", profileId).maybeSingle(),
-      client.from("point_ledger").select("amount").eq("profile_id", profileId),
+      fetchWalletBalance(client, profileId),
       client
         .from("goals")
         .select("*")
@@ -91,9 +102,6 @@ export async function fetchChildHomeData(
         .maybeSingle(),
     ]);
 
-  const totalPoints =
-    ledgerResult.data?.reduce((sum, entry) => sum + entry.amount, 0) ?? 0;
-
   const chainData = chainResult.data;
   const checkInChain =
     !chainResult.error && typeof chainData === "number" ? chainData : 0;
@@ -108,20 +116,23 @@ export async function fetchChildHomeData(
     goalCountdowns: [],
     settings: { ...DEFAULT_CHILD_ENGAGEMENT_SETTINGS },
   };
-  const engagement =
-    child?.family_id != null
-      ? await fetchChildEngagement(profileId, child.family_id)
-      : emptyEngagement;
 
-  const sticky = await getChildStickyMessagesAction(profileId);
-  engagement.personalStickyMessage = sticky.personalStickyMessage;
-  engagement.familyBroadcastMessage = sticky.familyBroadcastMessage;
-  engagement.stickyMessage = sticky.stickyMessage;
-
-  const sharedFamilyGoal =
+  const [engagementBase, sticky, sharedFamilyGoal] = await Promise.all([
     child?.family_id != null
-      ? await fetchFamilySharedGoal(child.family_id, client)
-      : EMPTY_FAMILY_SHARED_GOAL;
+      ? fetchChildEngagement(profileId, child.family_id)
+      : Promise.resolve(emptyEngagement),
+    loadStickyMessages(client, profileId, child?.family_id),
+    child?.family_id != null
+      ? fetchFamilySharedGoal(child.family_id, client)
+      : Promise.resolve(EMPTY_FAMILY_SHARED_GOAL),
+  ]);
+
+  const engagement = {
+    ...engagementBase,
+    personalStickyMessage: sticky.personalStickyMessage,
+    familyBroadcastMessage: sticky.familyBroadcastMessage,
+    stickyMessage: sticky.stickyMessage,
+  };
 
   return {
     child,
@@ -210,13 +221,13 @@ export async function fetchChildTargetsData(
     .eq("id", profileId)
     .maybeSingle();
 
-  const [goalsResult, ledgerResult, settingsResult] = await Promise.all([
+  const [goalsResult, totalPoints, settingsResult] = await Promise.all([
     client
       .from("goals")
       .select("*")
       .eq("profile_id", profileId)
       .order("created_at", { ascending: false }),
-    client.from("point_ledger").select("amount").eq("profile_id", profileId),
+    fetchWalletBalance(client, profileId),
     child?.family_id
       ? client
           .from("family_settings")
@@ -225,9 +236,6 @@ export async function fetchChildTargetsData(
           .maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
-
-  const totalPoints =
-    ledgerResult.data?.reduce((sum, entry) => sum + entry.amount, 0) ?? 0;
 
   return {
     goals: goalsResult.data ?? [],

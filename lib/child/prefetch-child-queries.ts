@@ -12,52 +12,53 @@ import { CHILD_STALE_MS } from "@/lib/query/constants";
 import { createClient } from "@/lib/supabase/client";
 import type { Task } from "@/types/database";
 
-export function prefetchChildHome(queryClient: QueryClient, profileId: string) {
+function isQueryFresh(queryClient: QueryClient, queryKey: readonly unknown[]) {
+  const state = queryClient.getQueryState(queryKey);
+  if (!state?.dataUpdatedAt) return false;
+  return Date.now() - state.dataUpdatedAt < CHILD_STALE_MS;
+}
+
+function prefetchIfStale(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  queryFn: () => Promise<unknown>,
+) {
+  if (isQueryFresh(queryClient, queryKey)) return Promise.resolve();
   return queryClient.prefetchQuery({
-    queryKey: childQueryKeys.home(profileId),
-    queryFn: () => fetchChildHomeData(profileId),
+    queryKey,
+    queryFn,
     staleTime: CHILD_STALE_MS,
   });
+}
+
+export function prefetchChildHome(queryClient: QueryClient, profileId: string) {
+  const queryKey = childQueryKeys.home(profileId);
+  return prefetchIfStale(queryClient, queryKey, () => fetchChildHomeData(profileId));
 }
 
 export function prefetchChildMissions(queryClient: QueryClient, profileId: string) {
-  return queryClient.prefetchQuery({
-    queryKey: childQueryKeys.missions(profileId),
-    queryFn: () => fetchChildMissionsData(profileId),
-    staleTime: CHILD_STALE_MS,
-  });
+  const queryKey = childQueryKeys.missions(profileId);
+  return prefetchIfStale(queryClient, queryKey, () => fetchChildMissionsData(profileId));
 }
 
 export function prefetchChildTargets(queryClient: QueryClient, profileId: string) {
-  return queryClient.prefetchQuery({
-    queryKey: childQueryKeys.targets(profileId),
-    queryFn: () => fetchChildTargetsData(profileId),
-    staleTime: CHILD_STALE_MS,
-  });
+  const queryKey = childQueryKeys.targets(profileId);
+  return prefetchIfStale(queryClient, queryKey, () => fetchChildTargetsData(profileId));
 }
 
 export function prefetchChildSavings(queryClient: QueryClient, profileId: string) {
-  return queryClient.prefetchQuery({
-    queryKey: childQueryKeys.savings(profileId),
-    queryFn: () => fetchChildSavingsDataClient(profileId),
-    staleTime: CHILD_STALE_MS,
-  });
+  const queryKey = childQueryKeys.savings(profileId);
+  return prefetchIfStale(queryClient, queryKey, () => fetchChildSavingsDataClient(profileId));
 }
 
 export function prefetchChildGarden(queryClient: QueryClient, profileId: string) {
-  return queryClient.prefetchQuery({
-    queryKey: childQueryKeys.garden(profileId),
-    queryFn: () => fetchChildGardenGoals(profileId),
-    staleTime: CHILD_STALE_MS,
-  });
+  const queryKey = childQueryKeys.garden(profileId);
+  return prefetchIfStale(queryClient, queryKey, () => fetchChildGardenGoals(profileId));
 }
 
 export function prefetchChildBadges(queryClient: QueryClient, profileId: string) {
-  return queryClient.prefetchQuery({
-    queryKey: childQueryKeys.badges(profileId),
-    queryFn: () => fetchChildBadgeKeys(profileId),
-    staleTime: CHILD_STALE_MS,
-  });
+  const queryKey = childQueryKeys.badges(profileId);
+  return prefetchIfStale(queryClient, queryKey, () => fetchChildBadgeKeys(profileId));
 }
 
 export async function fetchChildTaskClient(taskId: string): Promise<Task | null> {

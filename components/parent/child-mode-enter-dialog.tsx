@@ -77,7 +77,7 @@ export function ChildModeEnterDialog({
         setIsOpen(false);
         reset();
         toast.success(`Mode Anak aktif untuk ${childName}`);
-        await navigateToChildHomeAfterEnter(queryClient, profileId, router);
+        navigateToChildHomeAfterEnter(queryClient, profileId, router);
       } catch {
         setError("Terjadi kesalahan sistem.");
       }

@@ -1,19 +1,17 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
-import { prefetchAllChildTabs } from "@/lib/child/prefetch-child-queries";
+import { prefetchChildHome } from "@/lib/child/prefetch-child-queries";
 
-export async function warmChildModeData(
-  queryClient: QueryClient,
-  profileId: string,
-) {
-  await prefetchAllChildTabs(queryClient, profileId);
+/** Prefetch beranda anak di background — jangan blok navigasi. */
+export function warmChildHomeData(queryClient: QueryClient, profileId: string) {
+  void prefetchChildHome(queryClient, profileId);
 }
 
-export async function navigateToChildHomeAfterEnter(
+export function navigateToChildHomeAfterEnter(
   queryClient: QueryClient,
   profileId: string,
   router: Pick<AppRouterInstance, "push">,
 ) {
-  await warmChildModeData(queryClient, profileId);
+  warmChildHomeData(queryClient, profileId);
   router.push("/child/home");
 }
