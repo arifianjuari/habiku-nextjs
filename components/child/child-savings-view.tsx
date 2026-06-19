@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { PiggyBank, ArrowDownToLine, ArrowUpFromLine, Lock } from "lucide-react";
@@ -34,19 +34,29 @@ export function ChildSavingsView() {
   const [withdrawAmount, setWithdrawAmount] = useState("5");
   const [withdrawNote, setWithdrawNote] = useState("");
 
+  const effectivePocketId =
+    activePocketId ?? data?.pockets[0]?.id ?? null;
+
+  useEffect(() => {
+    if (data?.pockets.length && activePocketId === null) {
+      setActivePocketId(data.pockets[0].id);
+    }
+  }, [data?.pockets, activePocketId]);
+
   const handleDeposit = () => {
-    if (!activePocketId) return;
+    if (!effectivePocketId) return;
     const amount = Number(depositAmount);
     if (!Number.isFinite(amount) || amount < 1) {
       toast.error("Masukkan jumlah energi minimal 1.");
       return;
     }
-    if (amount > savable) {
-      toast.error(`Maksimal ${savable} energi dari target aktif.`);
+    const savableBalance = data?.savableBalance ?? 0;
+    if (amount > savableBalance) {
+      toast.error(`Maksimal ${savableBalance} energi dari target aktif.`);
       return;
     }
     startTransition(async () => {
-      const res = await depositToSavingsAction(activePocketId, amount);
+      const res = await depositToSavingsAction(effectivePocketId, amount);
       if (res.error) toast.error(res.error);
       else {
         toast.success("Berhasil menabung!");
@@ -57,7 +67,7 @@ export function ChildSavingsView() {
   };
 
   const handleWithdraw = () => {
-    if (!activePocketId) return;
+    if (!effectivePocketId) return;
     const amount = Number(withdrawAmount);
     if (!Number.isFinite(amount) || amount < 1) {
       toast.error("Masukkan jumlah energi minimal 1.");
@@ -65,7 +75,7 @@ export function ChildSavingsView() {
     }
     startTransition(async () => {
       const res = await requestSavingsWithdrawAction(
-        activePocketId,
+        effectivePocketId,
         amount,
         withdrawNote,
       );
