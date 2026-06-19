@@ -20,7 +20,7 @@ export default async function ParentSavingsPage() {
     <>
       <ParentPageHeaderSync
         title="Tabungan digital"
-        description="Kantong tabungan per anak — setor energi dan setujui penarikan."
+        description="Kantong akumulatif & deposito per anak — setor energi dan setujui penarikan."
       />
       <ParentSavingsView {...data} />
     </>

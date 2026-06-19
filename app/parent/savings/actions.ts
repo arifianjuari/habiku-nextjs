@@ -19,7 +19,7 @@ function mapRpcError(message: string): string {
     return "Fitur tabungan dinonaktifkan di pengaturan keluarga.";
   }
   if (message.includes("interest_rate_too_high")) {
-    return "Bunga melebihi batas maksimum 20% per bulan.";
+    return "Persentase bunga tidak valid.";
   }
   if (message.includes("lock_months_required")) {
     return "Deposito membutuhkan durasi kunci (bulan).";

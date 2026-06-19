@@ -1,8 +1,5 @@
 import type { SavingsPocketRow } from "@/lib/savings/types";
 
-/** Plafon kolom `monthly_interest_bps` / `max_monthly_interest_bps` (2000 = 20%/bulan). */
-export const MONTHLY_INTEREST_ABS_MAX_BPS = 2000;
-
 /** Basis poin per 10.000 (500 = 5%/bulan). */
 export function effectiveMonthlyBps(pocket: Pick<SavingsPocketRow, "monthly_interest_bps" | "lock_bonus_coefficient">): number {
   return Math.floor(pocket.monthly_interest_bps * Number(pocket.lock_bonus_coefficient));
@@ -53,10 +50,8 @@ export function sanitizeInterestPercentInput(raw: string, previous = ""): string
 
 export function parseInterestPercentInput(
   raw: string,
-  maxBps: number = MONTHLY_INTEREST_ABS_MAX_BPS,
 ): { ok: true; bps: number } | { ok: false; error: string } {
   const trimmed = raw.trim().replace(",", ".");
-  const maxPct = maxBps / 100;
 
   if (!trimmed) {
     return { ok: true, bps: 0 };
@@ -71,9 +66,10 @@ export function parseInterestPercentInput(
     return { ok: false, error: "Bunga tidak boleh negatif." };
   }
 
-  if (pct > maxPct) {
-    return { ok: false, error: `Bunga maksimal ${maxPct}% per bulan.` };
+  const bps = Math.round(pct * 100);
+  if (bps > 2_147_483_647) {
+    return { ok: false, error: "Angka bunga terlalu besar." };
   }
 
-  return { ok: true, bps: Math.round(pct * 100) };
+  return { ok: true, bps };
 }
