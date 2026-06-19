@@ -1,7 +1,10 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
+import { navigateToChildHomeAfterEnter } from "@/lib/child/enter-child-mode-navigation";
 import { Button } from "@/components/ui/button";
 import { Zap, Target, Play, ChevronRight } from "lucide-react";
 import type { ChildProfile, Goal } from "@/types/database";
@@ -47,7 +50,9 @@ export function ChildCard({
   compact = false,
 }: ChildCardProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const enter = useChildModeStore((s) => s.enter);
+  const [navPending, startNav] = useTransition();
   const age = getAge(child.date_of_birth);
   const accentColor = resolveHomeCardAccent(child.home_card_accent, {
     gender: child.gender,
@@ -59,8 +64,16 @@ export function ChildCard({
     : 0;
 
   const handleEnterChildModeDirect = () => {
-    enter(child.id, child.name);
-    router.push("/child/home");
+    startNav(async () => {
+      enter(child.id, child.name);
+      await navigateToChildHomeAfterEnter(queryClient, child.id, router);
+    });
+  };
+
+  const navigateTo = (href: string) => {
+    startNav(() => {
+      router.push(href);
+    });
   };
 
   return (
@@ -190,7 +203,8 @@ export function ChildCard({
         ) : (
           <button
             type="button"
-            onClick={() => router.push("/parent/targets")}
+            onClick={() => navigateTo("/parent/targets")}
+            disabled={navPending}
             className={cn(
               "flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-border text-left transition-colors hover:bg-muted/40",
               compact ? "px-2.5 py-2" : "rounded-2xl px-3 py-3",
@@ -222,6 +236,7 @@ export function ChildCard({
           type="button"
           size="sm"
           data-compact={compact || undefined}
+          disabled={navPending}
           onClick={handleEnterChildModeDirect}
           className={cn(
             "border-0 font-bold text-white shadow-sm",
@@ -230,20 +245,21 @@ export function ChildCard({
           style={{ backgroundColor: accentRgb }}
         >
           <Play className={cn("fill-white", compact ? "size-3" : "size-4")} aria-hidden />
-          Mode Anak
+          {navPending ? "Membuka…" : "Mode Anak"}
         </Button>
         <Button
           type="button"
           variant="outline"
           size="sm"
           data-compact={compact || undefined}
-          onClick={() => router.push(`/parent/goal/${child.id}`)}
+          disabled={navPending}
+          onClick={() => navigateTo(`/parent/goal/${child.id}`)}
           className={cn(
             "bg-card font-bold",
             compact ? "h-8 rounded-lg px-2 text-[11px]" : "h-11 rounded-xl text-sm",
           )}
         >
-          {compact ? "Detail" : "Lihat detail"}
+          {navPending ? "Membuka…" : compact ? "Detail" : "Lihat detail"}
         </Button>
       </div>
     </article>

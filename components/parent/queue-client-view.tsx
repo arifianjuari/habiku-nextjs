@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 import {
   Check,
   X,
@@ -34,6 +33,7 @@ import { approveTaskHistoryAction, rejectTaskHistoryAction } from "@/app/parent/
 import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { SupabaseImage } from "@/components/shared/supabase-image";
 import { useParentListCache } from "@/lib/hooks/use-parent-list-cache";
+import { useFamilyRealtime } from "@/lib/hooks/use-family-realtime";
 import { parentQueryKeys } from "@/lib/parent/query-keys";
 import {
   buildParentChildCardHeaderWash,
@@ -56,6 +56,8 @@ interface QueueItem {
 
 interface QueueClientViewProps {
   initialQueueItems: QueueItem[];
+  familyId: string;
+  childProfileIds: string[];
 }
 
 function stripLegacyAiTags(rawNotes: string | null): string | null {
@@ -291,9 +293,13 @@ function QueueMissionCard({
   );
 }
 
-export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
+export function QueueClientView({
+  initialQueueItems,
+  familyId,
+  childProfileIds,
+}: QueueClientViewProps) {
   const router = useRouter();
-  const familyId = initialQueueItems[0]?.child.family_id ?? "default";
+  const refreshTimerRef = useRef<number | null>(null);
   const [items, setItems] = useParentListCache<QueueItem[]>(
     parentQueryKeys.queue(familyId),
     initialQueueItems,
@@ -327,21 +333,18 @@ export function QueueClientView({ initialQueueItems }: QueueClientViewProps) {
     });
   }, [initialQueueItems]);
 
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel("task-queue-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "task_history" },
-        () => router.refresh(),
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
+  const handleFamilyDataChange = useCallback(() => {
+    if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = window.setTimeout(() => {
+      router.refresh();
+    }, 350);
   }, [router]);
+
+  useFamilyRealtime({
+    childProfileIds,
+    accountId: null,
+    onFamilyDataChange: handleFamilyDataChange,
+  });
 
   const handleApprove = (itemId: string, childGoals: Goal[]) => {
     const activeGoals = childGoals.filter((g) => g.status === "active");

@@ -260,7 +260,7 @@ function SavingsPocketCard({
 
 export function ParentSavingsView({
   children,
-  pocketsByProfile,
+  pocketsByProfile: initialPocketsByProfile,
   savableByProfile,
   pendingWithdrawals,
   pendingGoalClaims,
@@ -268,6 +268,7 @@ export function ParentSavingsView({
 }: ParentSavingsViewProps) {
   const router = useRouter();
   const [activeChildId, setActiveChildId] = useState(children[0]?.id ?? "");
+  const [pocketsByProfile, setPocketsByProfile] = useState(initialPocketsByProfile);
   const [isPending, startTransition] = useTransition();
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [withdrawals, setWithdrawals] = useState(pendingWithdrawals);
@@ -289,9 +290,10 @@ export function ParentSavingsView({
   );
 
   useEffect(() => {
+    setPocketsByProfile(initialPocketsByProfile);
     setWithdrawals(pendingWithdrawals);
     setClaims(pendingGoalClaims);
-  }, [pendingWithdrawals, pendingGoalClaims]);
+  }, [initialPocketsByProfile, pendingWithdrawals, pendingGoalClaims]);
 
   const activeChild = children.find((c) => c.id === activeChildId);
   const pockets = pocketsByProfile[activeChildId] ?? [];
@@ -318,13 +320,38 @@ export function ParentSavingsView({
       return;
     }
     formData.set("monthlyInterestBps", String(parsedInterest.bps));
+    const pocketId = editingPocket.id;
+    const nextName = String(formData.get("name") ?? editingPocket.name);
+    const nextEmoji = String(formData.get("emoji") ?? editingPocket.emoji);
+    const nextAccent = String(formData.get("accentColor") ?? editingPocket.accent_color);
+    const targetRaw = String(formData.get("targetAmount") ?? "");
+    const nextTarget = targetRaw ? Number(targetRaw) : null;
+
+    setPocketsByProfile((prev) => ({
+      ...prev,
+      [editingPocket.profile_id]: (prev[editingPocket.profile_id] ?? []).map((pocket) =>
+        pocket.id === pocketId
+          ? {
+              ...pocket,
+              name: nextName,
+              emoji: nextEmoji,
+              accent_color: nextAccent,
+              target_amount: nextTarget,
+              pocket_type: editPocketType,
+              monthly_interest_bps: parsedInterest.bps,
+            }
+          : pocket,
+      ),
+    }));
+
     startTransition(async () => {
       const res = await updateSavingsPocketAction(formData);
-      if (res.error) toast.error(res.error);
-      else {
+      if (res.error) {
+        toast.error(res.error);
+        router.refresh();
+      } else {
         toast.success("Kantong tabungan diperbarui.");
         setEditingPocket(null);
-        router.refresh();
       }
     });
   };
@@ -338,16 +365,66 @@ export function ParentSavingsView({
       return;
     }
     formData.set("monthlyInterestBps", String(parsedInterest.bps));
+    const optimisticId = `optimistic-${Date.now()}`;
+    const nextName = String(formData.get("name") ?? "");
+    const nextEmoji = String(formData.get("emoji") ?? createPocketEmoji);
+    const nextAccent = String(formData.get("accentColor") ?? "#8B5CF6");
+    const targetRaw = String(formData.get("targetAmount") ?? "");
+    const nextTarget = targetRaw ? Number(targetRaw) : null;
+    const lockMonthsRaw = String(formData.get("lockMonths") ?? "");
+    const lockMonths = lockMonthsRaw ? Number(lockMonthsRaw) : null;
+
+    const optimisticPocket: SavingsPocketWithBalance = {
+      id: optimisticId,
+      profile_id: activeChildId,
+      name: nextName,
+      emoji: nextEmoji,
+      accent_color: nextAccent,
+      target_amount: nextTarget,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      pocket_type: pocketType,
+      monthly_interest_bps: parsedInterest.bps,
+      lock_months: lockMonths,
+      lock_bonus_coefficient: Number(formData.get("lockBonusCoefficient") ?? 1),
+      default_for_goal_save: formData.get("defaultForGoalSave") === "on",
+      balance: 0,
+      reserved: 0,
+      is_locked: pocketType === "term",
+      locked_until: null,
+      interest_accrued: 0,
+      projected_interest: 0,
+    };
+
+    setPocketsByProfile((prev) => ({
+      ...prev,
+      [activeChildId]: [...(prev[activeChildId] ?? []), optimisticPocket],
+    }));
+
     startTransition(async () => {
       const res = await createSavingsPocketAction(formData);
-      if (res.error) toast.error(res.error);
-      else {
+      if (res.error) {
+        toast.error(res.error);
+        setPocketsByProfile((prev) => ({
+          ...prev,
+          [activeChildId]: (prev[activeChildId] ?? []).filter((p) => p.id !== optimisticId),
+        }));
+      } else {
         toast.success("Kantong tabungan dibuat.");
         setCreatePocketOpen(false);
         setPocketType("flexible");
         setCreateInterestPct("");
         setCreatePocketEmoji(DEFAULT_SAVINGS_POCKET_EMOJI);
-        router.refresh();
+        if (res.pocketId) {
+          setPocketsByProfile((prev) => ({
+            ...prev,
+            [activeChildId]: (prev[activeChildId] ?? []).map((pocket) =>
+              pocket.id === optimisticId ? { ...pocket, id: res.pocketId! } : pocket,
+            ),
+          }));
+        } else {
+          router.refresh();
+        }
       }
     });
   };

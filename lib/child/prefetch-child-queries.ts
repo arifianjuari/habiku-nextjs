@@ -9,6 +9,8 @@ import { fetchChildGardenGoals } from "@/lib/child/fetch-child-garden";
 import { fetchChildSavingsDataClient } from "@/lib/child/fetch-child-savings-client";
 import { fetchChildBadgeKeys } from "@/lib/child/fetch-child-badges";
 import { CHILD_STALE_MS } from "@/lib/query/constants";
+import { createClient } from "@/lib/supabase/client";
+import type { Task } from "@/types/database";
 
 export function prefetchChildHome(queryClient: QueryClient, profileId: string) {
   return queryClient.prefetchQuery({
@@ -58,6 +60,26 @@ export function prefetchChildBadges(queryClient: QueryClient, profileId: string)
   });
 }
 
+export async function fetchChildTaskClient(taskId: string): Promise<Task | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("id", taskId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export function prefetchChildTask(queryClient: QueryClient, taskId: string) {
+  return queryClient.prefetchQuery({
+    queryKey: childQueryKeys.task(taskId),
+    queryFn: () => fetchChildTaskClient(taskId),
+    staleTime: CHILD_STALE_MS,
+  });
+}
+
 export function prefetchAllChildTabs(queryClient: QueryClient, profileId: string) {
   return Promise.all([
     prefetchChildHome(queryClient, profileId),
@@ -65,6 +87,7 @@ export function prefetchAllChildTabs(queryClient: QueryClient, profileId: string
     prefetchChildSavings(queryClient, profileId),
     prefetchChildTargets(queryClient, profileId),
     prefetchChildGarden(queryClient, profileId),
+    prefetchChildBadges(queryClient, profileId),
   ]);
 }
 

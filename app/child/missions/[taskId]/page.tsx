@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
+import { createClient } from "@/lib/supabase/server";
 import { ChildMissionCompleteView } from "@/components/child/child-mission-complete-view";
 
 interface ChildMissionCompletePageProps {
@@ -21,6 +22,13 @@ export default async function ChildMissionCompletePage({ params }: ChildMissionC
   }
 
   const { taskId } = await params;
+  const supabase = await createClient();
 
-  return <ChildMissionCompleteView taskId={taskId} />;
+  const { data: initialTask } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("id", taskId)
+    .maybeSingle();
+
+  return <ChildMissionCompleteView taskId={taskId} initialTask={initialTask} />;
 }

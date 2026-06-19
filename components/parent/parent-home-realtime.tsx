@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useFamilyRealtime } from "@/lib/hooks/use-family-realtime";
 
@@ -16,9 +16,13 @@ export function ParentHomeRealtime({
   children,
 }: ParentHomeRealtimeProps) {
   const router = useRouter();
+  const refreshTimerRef = useRef<number | null>(null);
 
   const handleFamilyDataChange = useCallback(() => {
-    router.refresh();
+    if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = window.setTimeout(() => {
+      router.refresh();
+    }, 400);
   }, [router]);
 
   useFamilyRealtime({

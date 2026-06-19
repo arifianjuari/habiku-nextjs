@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
+import { childQueryKeys } from "@/lib/child/query-keys";
+import { fetchChildTaskClient } from "@/lib/child/prefetch-child-queries";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +22,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { submitTaskEvidenceAction } from "@/app/child/actions";
 import type { Task } from "@/types/database";
 import {
@@ -28,14 +32,19 @@ import {
 
 interface ChildMissionCompleteViewProps {
   taskId: string;
+  initialTask?: Task | null;
 }
 
-export function ChildMissionCompleteView({ taskId }: ChildMissionCompleteViewProps) {
+export function ChildMissionCompleteView({
+  taskId,
+  initialTask = null,
+}: ChildMissionCompleteViewProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { profileId } = useChildModeStore();
-  
-  const [task, setTask] = useState<Task | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const [task, setTask] = useState<Task | null>(initialTask);
+  const [loading, setLoading] = useState(!initialTask);
   const [notes, setNotes] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -49,18 +58,27 @@ export function ChildMissionCompleteView({ taskId }: ChildMissionCompleteViewPro
 
   useEffect(() => {
     if (!taskId) return;
+    if (initialTask) {
+      setTask(initialTask);
+      setLoading(false);
+      return;
+    }
+
+    const cached = queryClient.getQueryData<Task>(childQueryKeys.task(taskId));
+    if (cached) {
+      setTask(cached);
+      setLoading(false);
+      return;
+    }
 
     async function loadTaskDetails() {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("tasks")
-          .select("*")
-          .eq("id", taskId)
-          .maybeSingle();
-
-        if (error) throw error;
-        if (data) setTask(data);
+        const data = await fetchChildTaskClient(taskId);
+        if (data) {
+          setTask(data);
+          queryClient.setQueryData(childQueryKeys.task(taskId), data);
+        }
       } catch (err) {
         console.error("Error loading task details:", err);
         toast.error("Gagal memuat detail misi.");
@@ -69,8 +87,8 @@ export function ChildMissionCompleteView({ taskId }: ChildMissionCompleteViewPro
       }
     }
 
-    loadTaskDetails();
-  }, [taskId]);
+    void loadTaskDetails();
+  }, [taskId, initialTask, queryClient]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -233,10 +251,9 @@ export function ChildMissionCompleteView({ taskId }: ChildMissionCompleteViewPro
         } else {
           toast.success("Misi berhasil dikirim! 🚀", { id: "submit-task" });
           setIsSuccess(true);
-          // Wait 2 seconds for the success animation before navigating back
           setTimeout(() => {
             router.push("/child/missions");
-          }, 2200);
+          }, 900);
         }
       } catch (err: any) {
         console.error("Error submitting mission:", err);
@@ -246,12 +263,7 @@ export function ChildMissionCompleteView({ taskId }: ChildMissionCompleteViewPro
   };
 
   if (loading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
-        <span className="text-xs font-semibold text-emerald-800">Menyiapkan Lembar Misi…</span>
-      </div>
-    );
+    return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
   }
 
   if (!task) {

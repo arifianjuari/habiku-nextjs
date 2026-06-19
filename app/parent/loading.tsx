@@ -1,4 +1,6 @@
-/** Parent tab cache di klien; loading route minimal agar transisi lebih halus. */
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
+
+/** Skeleton ringan agar transisi tab ortu terasa responsif. */
 export default function ParentLoading() {
-  return null;
+  return <PageLoadingSkeleton variant="parent" className="min-h-[40vh]" />;
 }

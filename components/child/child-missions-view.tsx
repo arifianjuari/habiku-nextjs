@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
+import { prefetchChildTask } from "@/lib/child/prefetch-child-queries";
 import { useChildMissionsData } from "@/lib/hooks/use-child-missions-data";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
@@ -82,9 +84,14 @@ const CATEGORY_CONFIG: Record<
 };
 
 export function ChildMissionsView() {
+  const queryClient = useQueryClient();
   const { profileId } = useChildModeStore();
   const { data, isLoading, isFetching } = useChildMissionsData(profileId);
   const [requestOpen, setRequestOpen] = useState(false);
+
+  const warmTask = (taskId: string) => {
+    void prefetchChildTask(queryClient, taskId);
+  };
 
   const tasks = data?.tasks ?? [];
   const pendingRequests = data?.pendingRequests ?? [];
@@ -285,6 +292,9 @@ export function ChildMissionsView() {
                           <Link
                             href={`/child/missions/${task.id}`}
                             className="inline-flex"
+                            onMouseEnter={() => warmTask(task.id)}
+                            onFocus={() => warmTask(task.id)}
+                            onTouchStart={() => warmTask(task.id)}
                           >
                             <Button
                               size="xs"

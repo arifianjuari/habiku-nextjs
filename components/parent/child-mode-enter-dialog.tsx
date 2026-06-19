@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Play, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
+import { navigateToChildHomeAfterEnter } from "@/lib/child/enter-child-mode-navigation";
 import { createClient } from "@/lib/supabase/client";
 import { verifyChildProfilePin } from "@/lib/supabase/rpc";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,7 @@ export function ChildModeEnterDialog({
   className,
 }: ChildModeEnterDialogProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const enter = useChildModeStore((s) => s.enter);
   const [isOpen, setIsOpen] = useState(false);
   const [pin, setPin] = useState("");
@@ -74,7 +77,7 @@ export function ChildModeEnterDialog({
         setIsOpen(false);
         reset();
         toast.success(`Mode Anak aktif untuk ${childName}`);
-        router.push("/child/home");
+        await navigateToChildHomeAfterEnter(queryClient, profileId, router);
       } catch {
         setError("Terjadi kesalahan sistem.");
       }

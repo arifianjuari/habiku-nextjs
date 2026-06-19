@@ -19,8 +19,7 @@ export default async function ParentQueuePage() {
   const { family } = context;
   const supabase = await createClient();
 
-  // 1. Fetch children profiles
-  const { data: childrenRaw, error: childrenError } = await supabase
+  const { data: childrenRaw } = await supabase
     .from("child_profiles")
     .select("*")
     .eq("family_id", family.id)
@@ -38,34 +37,25 @@ export default async function ParentQueuePage() {
     );
   }
 
-  // 2. Fetch pending task history entries
-  const { data: historyRaw } = await supabase
-    .from("task_history")
-    .select("*")
-    .in("profile_id", childIds)
-    .eq("status", "pending")
-    .order("created_at", { ascending: true });
+  const [historyResult, tasksResult, goalsResult] = await Promise.all([
+    supabase
+      .from("task_history")
+      .select("*")
+      .in("profile_id", childIds)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true }),
+    supabase.from("tasks").select("*").in("profile_id", childIds),
+    supabase
+      .from("goals")
+      .select("*")
+      .in("profile_id", childIds)
+      .eq("status", "active"),
+  ]);
 
-  const history = historyRaw || [];
+  const history = historyResult.data || [];
+  const tasks = tasksResult.data || [];
+  const goals = goalsResult.data || [];
 
-  // 3. Fetch all tasks for these children (for mapping)
-  const { data: tasksRaw } = await supabase
-    .from("tasks")
-    .select("*")
-    .in("profile_id", childIds);
-
-  const tasks = tasksRaw || [];
-
-  // 4. Fetch all active goals for these children
-  const { data: goalsRaw } = await supabase
-    .from("goals")
-    .select("*")
-    .in("profile_id", childIds)
-    .eq("status", "active");
-
-  const goals = goalsRaw || [];
-
-  // 5. Map and combine data
   const queueItems = history
     .map((item) => {
       const child = children.find((c) => c.id === item.profile_id);
@@ -84,7 +74,13 @@ export default async function ParentQueuePage() {
         childGoals,
       };
     })
-    .filter((item) => item.child && item.task); // defensive exclusion
+    .filter((item) => item.child && item.task);
 
-  return <QueueClientView initialQueueItems={queueItems} />;
+  return (
+    <QueueClientView
+      initialQueueItems={queueItems}
+      familyId={family.id}
+      childProfileIds={childIds}
+    />
+  );
 }

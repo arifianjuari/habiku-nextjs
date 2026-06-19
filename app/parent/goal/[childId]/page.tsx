@@ -47,10 +47,10 @@ export default async function ChildDetailPage({ params }: PageProps) {
     redirect("/parent");
   }
 
-  // 2. Fetch point ledger entries with task history & tasks details
-  const { data: ledgerRaw, error: ledgerError } = await supabase
-    .from("point_ledger")
-    .select(`
+  const [ledgerResult, streaksResult, goalsResult] = await Promise.all([
+    supabase
+      .from("point_ledger")
+      .select(`
       id,
       profile_id,
       amount,
@@ -64,27 +64,19 @@ export default async function ChildDetailPage({ params }: PageProps) {
         )
       )
     `)
-    .eq("profile_id", childId)
-    .order("created_at", { ascending: false });
+      .eq("profile_id", childId)
+      .order("created_at", { ascending: false }),
+    supabase.from("streaks").select("*").eq("profile_id", childId),
+    supabase
+      .from("goals")
+      .select("*")
+      .eq("profile_id", childId)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const ledgerEntries = (ledgerRaw || []) as any[];
-
-  // 3. Fetch streaks
-  const { data: streaksRaw } = await supabase
-    .from("streaks")
-    .select("*")
-    .eq("profile_id", childId);
-
-  const streaks = streaksRaw || [];
-
-  // 4. Fetch all goals
-  const { data: goalsRaw } = await supabase
-    .from("goals")
-    .select("*")
-    .eq("profile_id", childId)
-    .order("created_at", { ascending: false });
-
-  const goals = goalsRaw || [];
+  const ledgerEntries = (ledgerResult.data || []) as any[];
+  const streaks = streaksResult.data || [];
+  const goals = goalsResult.data || [];
 
   // Calculate sum of points ledger for total energy
   const totalPoints = ledgerEntries.reduce((sum, entry) => sum + entry.amount, 0);

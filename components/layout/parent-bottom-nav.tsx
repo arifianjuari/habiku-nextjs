@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Home, ListTodo, Target, Users, PiggyBank } from "lucide-react";
+import { prefetchParentTabData } from "@/lib/parent/prefetch-parent-queries";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -13,8 +15,18 @@ const items = [
   { href: "/parent/profil-anak", label: "Anak", icon: Users },
 ] as const;
 
-export function ParentBottomNav() {
+type ParentBottomNavProps = {
+  familyId: string | null;
+};
+
+export function ParentBottomNav({ familyId }: ParentBottomNavProps) {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
+
+  const warmTab = (href: string) => {
+    if (!familyId) return;
+    void prefetchParentTabData(queryClient, familyId, href);
+  };
 
   return (
     <nav
@@ -31,6 +43,9 @@ export function ParentBottomNav() {
               <Link
                 href={href}
                 prefetch={true}
+                onMouseEnter={() => warmTab(href)}
+                onFocus={() => warmTab(href)}
+                onTouchStart={() => warmTab(href)}
                 className={cn(
                   "flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 px-2 py-2 text-xs transition-colors",
                   active

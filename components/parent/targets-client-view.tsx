@@ -41,6 +41,8 @@ import { GoalVisualStateBadge } from "@/components/shared/goal-visual-state-badg
 import { getGoalVisualStateMeta } from "@/lib/goals/visual-state";
 import { IncidentalRewardDialog } from "@/components/parent/incidental-reward-dialog";
 import { cn } from "@/lib/utils";
+import { useParentListCache } from "@/lib/hooks/use-parent-list-cache";
+import { parentQueryKeys } from "@/lib/parent/query-keys";
 
 interface TargetsClientViewProps {
   children: ChildProfile[];
@@ -145,7 +147,11 @@ export function TargetsClientView({
   activeChildId,
   onActiveChildIdChange,
 }: TargetsClientViewProps) {
-  const [goals, setGoals] = useState<Goal[]>(initialGoals);
+  const familyId = children[0]?.family_id ?? "default";
+  const [goals, setGoals] = useParentListCache<Goal[]>(
+    parentQueryKeys.targets(familyId),
+    initialGoals,
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();

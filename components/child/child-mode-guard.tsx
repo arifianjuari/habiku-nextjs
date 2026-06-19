@@ -8,6 +8,7 @@ import {
   useChildModeHydrated,
   useChildModeStore,
 } from "@/lib/stores/child-mode-store";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { toast } from "sonner";
 
 const UUID_REGEX =
@@ -43,18 +44,15 @@ export function ChildModeGuard({ children }: { children: React.ReactNode }) {
   }, [sessionReady]);
 
   if (!hydrated) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center p-6 text-center text-slate-500 font-semibold">
-        Memuat mode anak…
-      </div>
-    );
+    return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
   }
 
   if (!sessionReady) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center p-6 text-center text-slate-500 font-semibold">
-        {isChildModeCookieActive() ? "Memulihkan sesi anak…" : "Mengalihkan ke dasbor orang tua…"}
-      </div>
+      <PageLoadingSkeleton
+        variant="child"
+        className="min-h-[50vh]"
+      />
     );
   }
 
