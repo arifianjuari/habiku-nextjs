@@ -1,4 +1,4 @@
--- Bebaskan penetapan bunga tabungan: hapus plafon 20% (2000 bps).
+-- Bebaskan penetapan bunga kantong (akumulatif & deposito): hapus plafon 20% (2000 bps).
 
 alter table public.savings_pockets
   drop constraint if exists savings_pockets_monthly_interest_bps_check;

@@ -77,14 +77,19 @@ function SummaryStat({ icon, label, value, suffix, tone = "slate" }: SummaryStat
         : "text-foreground";
 
   return (
-    <div className="min-w-0 rounded-xl border border-border/60 bg-card px-2.5 py-2 shadow-sm">
+    <div className="min-w-0 rounded-xl border border-border/60 bg-card px-2.5 py-2.5 shadow-sm sm:px-3">
       <div className="flex items-center gap-1.5">
         <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60">
           {icon}
         </span>
-        <p className="truncate text-[10px] font-medium text-muted-foreground">{label}</p>
+        <p className="min-w-0 truncate text-[10px] font-medium text-muted-foreground">{label}</p>
       </div>
-      <p className={cn("mt-1 font-heading text-lg font-black tabular-nums leading-none", valueTone)}>
+      <p
+        className={cn(
+          "mt-1.5 font-heading text-base font-black tabular-nums leading-none sm:text-lg",
+          valueTone,
+        )}
+      >
         {value}
         {suffix ? (
           <span className="ml-0.5 text-xs font-bold text-muted-foreground">{suffix}</span>
@@ -163,20 +168,21 @@ function SavingsPocketCard({
   if (pocket.reserved > 0) metaParts.push(`${pocket.reserved} E pending`);
 
   return (
-    <article className="rounded-xl border border-border/60 bg-card shadow-sm">
-      <div className="space-y-1.5 px-2.5 py-2">
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-lg leading-none" aria-hidden>
-            {pocket.emoji}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <h3 className="truncate font-heading text-xs font-bold text-foreground">
-                {pocket.name}
-              </h3>
+    <article className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+      <div className="flex items-start gap-2 p-2.5">
+        <span className="mt-0.5 shrink-0 text-lg leading-none" aria-hidden>
+          {pocket.emoji}
+        </span>
+
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="space-y-1">
+            <h3 className="font-heading text-xs font-bold leading-snug break-words text-foreground [overflow-wrap:anywhere]">
+              {pocket.name}
+            </h3>
+            <div className="flex flex-wrap items-center gap-1.5">
               <span
                 className={cn(
-                  "shrink-0 rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
+                  "rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
                   pocket.pocket_type === "term"
                     ? "bg-amber-100 text-amber-800"
                     : "bg-slate-100 text-slate-600",
@@ -185,90 +191,91 @@ function SavingsPocketCard({
                 {pocket.pocket_type === "term" ? "Deposito" : "Akumulatif"}
               </span>
               {pocket.default_for_goal_save ? (
-                <span className="shrink-0 rounded bg-violet-100 px-1.5 py-px text-[9px] font-bold text-violet-700">
+                <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold text-violet-700">
                   Default
+                </span>
+              ) : null}
+              <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-200/50 bg-amber-50 px-1.5 py-0.5 text-[10px] font-extrabold tabular-nums text-amber-950">
+                {pocket.balance}
+                <Zap className="size-2.5 fill-amber-400 text-amber-500" aria-hidden />
+              </span>
+              {progress !== null ? (
+                <span className="text-[10px] font-black tabular-nums text-violet-600">
+                  {progress}%
                 </span>
               ) : null}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {progress !== null ? (
-              <span className="text-[10px] font-black tabular-nums text-violet-600">
-                {progress}%
-              </span>
-            ) : null}
-            <span className="flex items-center gap-0.5 font-heading text-base font-black tabular-nums text-violet-700">
-              {pocket.balance}
-              <Zap className="size-3.5 fill-amber-400 text-amber-500" aria-hidden />
-            </span>
+
+          {metaParts.length > 0 ? (
+            <p className="text-[10px] leading-relaxed break-words text-muted-foreground [overflow-wrap:anywhere]">
+              {metaParts.map((part, i) => (
+                <span key={part}>
+                  {i > 0 ? <span className="text-border"> · </span> : null}
+                  <span
+                    className={cn(
+                      part.startsWith("Bunga") && "text-emerald-700",
+                      (part.startsWith("Kunci") || part.includes("pending")) && "text-amber-700",
+                    )}
+                  >
+                    {part.startsWith("Kunci") ? (
+                      <>
+                        <Lock className="mr-0.5 inline size-2.5 -translate-y-px" aria-hidden />
+                        {part}
+                      </>
+                    ) : part.includes("pending") ? (
+                      <>
+                        <Clock className="mr-0.5 inline size-2.5 -translate-y-px" aria-hidden />
+                        {part}
+                      </>
+                    ) : (
+                      part
+                    )}
+                  </span>
+                </span>
+              ))}
+            </p>
+          ) : null}
+
+          {progress !== null ? (
+            <div
+              className="h-1.5 w-full overflow-hidden rounded-full bg-violet-100"
+              role="progressbar"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Progres kantong ${pocket.name}`}
+            >
+              <div
+                className="h-full rounded-full bg-linear-to-r from-violet-500 to-indigo-500 transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-1 self-start">
+          <button
+            type="button"
+            data-compact
+            onClick={onEdit}
+            aria-label={`Ubah kantong ${pocket.name}`}
+            className="flex size-7 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          >
+            <Pencil className="size-3.5" aria-hidden />
+          </button>
+          {canDelete ? (
             <button
               type="button"
               data-compact
-              onClick={onEdit}
-              aria-label={`Ubah kantong ${pocket.name}`}
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              onClick={onDelete}
+              aria-label={`Hapus kantong ${pocket.name}`}
+              className="flex size-7 items-center justify-center rounded-lg border border-red-200/80 text-red-600 transition-colors hover:bg-red-50"
             >
-              <Pencil className="size-3.5" aria-hidden />
+              <Trash2 className="size-3.5" aria-hidden />
             </button>
-            {canDelete ? (
-              <button
-                type="button"
-                data-compact
-                onClick={onDelete}
-                aria-label={`Hapus kantong ${pocket.name}`}
-                className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-red-200/80 text-red-600 transition-colors hover:bg-red-50"
-              >
-                <Trash2 className="size-3.5" aria-hidden />
-              </button>
-            ) : null}
-          </div>
+          ) : null}
         </div>
-
-        {metaParts.length > 0 ? (
-          <p className="truncate pl-[calc(1.125rem+0.5rem)] text-[10px] leading-tight text-muted-foreground">
-            {metaParts.map((part, i) => (
-              <span key={part}>
-                {i > 0 ? <span className="text-border"> · </span> : null}
-                <span
-                  className={cn(
-                    part.startsWith("Bunga") && "text-emerald-700",
-                    (part.startsWith("Kunci") || part.includes("pending")) && "text-amber-700",
-                  )}
-                >
-                  {part.startsWith("Kunci") ? (
-                    <>
-                      <Lock className="mr-0.5 inline size-2.5 -translate-y-px" aria-hidden />
-                      {part}
-                    </>
-                  ) : part.includes("pending") ? (
-                    <>
-                      <Clock className="mr-0.5 inline size-2.5 -translate-y-px" aria-hidden />
-                      {part}
-                    </>
-                  ) : (
-                    part
-                  )}
-                </span>
-              </span>
-            ))}
-          </p>
-        ) : null}
-
-        {progress !== null ? (
-          <div
-            className="h-1 w-full overflow-hidden rounded-full bg-violet-100"
-            role="progressbar"
-            aria-valuenow={progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`Progres kantong ${pocket.name}`}
-          >
-            <div
-              className="h-full rounded-full bg-linear-to-r from-violet-500 to-indigo-500 transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        ) : null}
       </div>
     </article>
   );
@@ -578,7 +585,7 @@ export function ParentSavingsView({
   }
 
   return (
-    <div className="space-y-3.5 pb-20">
+    <div className="space-y-3.5 pb-12">
       {pendingCount > 0 ? (
         <section
           className="space-y-2 rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3 shadow-sm"
@@ -653,7 +660,7 @@ export function ParentSavingsView({
 
       {activeChild ? (
         <section
-          className="grid grid-cols-3 gap-2"
+          className="grid grid-cols-3 gap-1.5 sm:gap-2"
           aria-label={`Ringkasan tabungan ${activeChild.name}`}
         >
           <SummaryStat
@@ -680,11 +687,11 @@ export function ParentSavingsView({
       ) : null}
 
       <section className="space-y-2" aria-label="Daftar kantong tabungan">
-        <div className="flex items-center justify-between gap-2 px-0.5">
+        <div className="flex flex-col gap-1 px-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
           <h2 className="text-xs font-bold text-muted-foreground">Kantong tabungan</h2>
           {activeChild ? (
-            <p className="text-[10px] text-muted-foreground">
-              Energi di target aktif bisa ditabung ke kantong
+            <p className="text-[10px] leading-snug text-muted-foreground text-pretty sm:text-right">
+              Energi di target aktif bisa ditabung ke kantong akumulatif atau deposito
             </p>
           ) : null}
         </div>
@@ -725,8 +732,8 @@ export function ParentSavingsView({
         )}
       </section>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.5rem)] z-50">
-        <div className="pointer-events-auto mx-auto flex max-w-lg items-center justify-center gap-2 px-4">
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.75rem)] z-40">
+        <div className="pointer-events-auto mx-auto flex w-full max-w-lg items-center justify-center gap-2 px-4">
           <Link
             href="/parent/ledger"
             data-compact
@@ -759,13 +766,14 @@ export function ParentSavingsView({
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl sm:max-w-md">
+        <DialogContent className="max-h-[min(90vh,100dvh)] overflow-y-auto rounded-3xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-heading text-base">
               Kantong untuk {activeChild?.name}
             </DialogTitle>
             <DialogDescription className="text-xs text-pretty">
-              Atur tipe, bunga, dan kunci. Deposito hanya menerima satu setoran.
+              Atur tipe (akumulatif atau deposito), bunga, dan kunci. Deposito hanya menerima satu
+              setoran.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -847,7 +855,7 @@ export function ParentSavingsView({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="monthly-interest" className="text-xs font-bold">
                   Bunga (%/bulan)
@@ -866,8 +874,8 @@ export function ParentSavingsView({
                   }
                   className="h-10 tabular-nums"
                 />
-                <p className="text-[10px] text-muted-foreground">
-                  Min. 0% · hingga 2 angka desimal
+                <p className="text-[10px] text-muted-foreground text-pretty">
+                  Berlaku akumulatif &amp; deposito · min. 0% · hingga 2 desimal
                 </p>
               </div>
               {pocketType === "term" ? (
@@ -937,7 +945,7 @@ export function ParentSavingsView({
           if (!open) setEditingPocket(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl sm:max-w-md">
+        <DialogContent className="max-h-[min(90vh,100dvh)] overflow-y-auto rounded-3xl sm:max-w-md">
           {editingPocket ? (
             <>
               <DialogHeader>
@@ -1033,7 +1041,7 @@ export function ParentSavingsView({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="edit-monthly-interest" className="text-xs font-bold">
                       Bunga (%/bulan)
@@ -1053,8 +1061,8 @@ export function ParentSavingsView({
                       disabled={!canEditPocketStructure}
                       className="h-10 tabular-nums disabled:opacity-50"
                     />
-                    <p className="text-[10px] text-muted-foreground">
-                      Min. 0% · hingga 2 angka desimal
+                    <p className="text-[10px] text-muted-foreground text-pretty">
+                      Berlaku akumulatif &amp; deposito · min. 0% · hingga 2 desimal
                     </p>
                   </div>
                   {editPocketType === "term" ? (
