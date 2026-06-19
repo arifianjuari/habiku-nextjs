@@ -326,7 +326,7 @@ export function ChildSavingsView() {
                 <CardContent className="space-y-3 pt-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-violet-900">
                     <ArrowUpFromLine className="size-4" aria-hidden />
-                    Tarik ke dompet (butuh OK ortu)
+                    Tarik ke target aktif (butuh OK ortu)
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Tersedia ditarik: {availableInPocket} ⚡
