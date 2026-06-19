@@ -21,8 +21,8 @@ There is no Docker Compose or monorepo. Optional: Supabase CLI for `supabase db 
 
 ### Lint / test / build
 
-See root `package.json`: `pnpm lint`, `pnpm build`, `pnpm start`. ESLint currently reports many pre-existing issues in the repo (not introduced by env setup). Playwright E2E lives in `tests/e2e/` but is not wired in `package.json` scripts or dependencies.
+See root `package.json`: `pnpm lint`, `pnpm build`, `pnpm start`. ESLint currently reports many pre-existing issues in the repo (not introduced by env setup). `pnpm build` compiles but currently FAILS the TypeScript type-check step on a pre-existing error in `components/parent/parent-savings-view.tsx` (`DEFAULT_SAVINGS_POCKET_EMOJI` is inferred as the literal `"🐷"`, so `setEditPocketEmoji(string)` is rejected). This is a source bug, not an env issue — `pnpm dev` (Turbopack) runs fine and is what the dev environment uses. Playwright E2E lives in `tests/e2e/` but is not wired in `package.json` scripts or dependencies.
 
 ### Auth / E2E seed
 
-Full parent→child flows need a Supabase project with migrations applied and seed users (E2E spec expects `parent@habiku.id` — may not exist on a fresh project). For smoke tests without credentials: homepage, `/login`, and unauthenticated `/parent` → `/login?next=%2Fparent`.
+A linked Supabase project already exists: ref `ohnmeatnujnxeeeaaywv` (name "habiku", region ap-southeast-1) with all migrations applied and seed data. Pull `NEXT_PUBLIC_SUPABASE_URL` + anon/publishable key via the Supabase MCP (`get_project_url`, `get_publishable_keys`) into `.env.local`. Email auth is set to auto-confirm, so `sign up` returns a session immediately (no email step) — a fresh `/sign-up` → `/onboarding` (creates a family + first child) → `/parent` flow works end-to-end without pre-seeded credentials. The E2E spec's `parent@habiku.id` may still not exist on this project. For smoke tests without credentials: homepage, `/login`, and unauthenticated `/parent` → `/login?next=%2Fparent`.
