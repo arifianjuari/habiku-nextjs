@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -21,9 +22,12 @@ export async function approveTaskHistoryAction(taskHistoryId: string, goalId: st
     return { error: error.message || "Gagal menyetujui misi anak." };
   }
 
-  revalidatePath("/parent");
-  revalidatePath("/parent/queue");
-  revalidatePath("/parent/targets");
+  after(() => {
+    revalidatePath("/parent/queue");
+    revalidatePath("/parent");
+    revalidatePath("/parent/targets");
+  });
+
   return { success: true };
 }
 
@@ -48,7 +52,10 @@ export async function rejectTaskHistoryAction(taskHistoryId: string, reason: str
     return { error: error.message || "Gagal menolak misi anak." };
   }
 
-  revalidatePath("/parent");
-  revalidatePath("/parent/queue");
+  after(() => {
+    revalidatePath("/parent/queue");
+    revalidatePath("/parent");
+  });
+
   return { success: true };
 }
