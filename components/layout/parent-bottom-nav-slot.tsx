@@ -1,10 +1,18 @@
 import { Suspense } from "react";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { ParentBottomNav } from "@/components/layout/parent-bottom-nav";
+import { ParentTabPrefetch } from "@/components/parent/parent-tab-prefetch";
 
 async function ParentBottomNavWithFamily() {
   const context = await getSessionContext();
-  return <ParentBottomNav familyId={context?.family.id ?? null} />;
+  const familyId = context?.family.id ?? null;
+
+  return (
+    <>
+      <ParentTabPrefetch familyId={familyId} />
+      <ParentBottomNav familyId={familyId} />
+    </>
+  );
 }
 
 function ParentBottomNavFallback() {

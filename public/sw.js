@@ -1,20 +1,13 @@
-const CACHE_NAME = "habiku-pwa-cache-v6";
+const CACHE_NAME = "habiku-pwa-cache-v7";
 const OFFLINE_URL = "/offline";
 
+/** Hanya aset statis — jangan pre-cache route HTML (memicu auth + RSC berat saat install PWA). */
 const PRE_CACHE_RESOURCES = [
   OFFLINE_URL,
   "/manifest.webmanifest",
-  "/globe.svg",
-  "/window.svg",
-  "/file.svg",
   "/icons/192",
   "/icons/512",
   "/icons/maskable",
-  "/child/home",
-  "/child/missions",
-  "/child/savings",
-  "/child/targets",
-  "/child/garden",
 ];
 
 // Install Event: Pre-cache shell and offline assets (jangan gagal total jika satu aset 404)

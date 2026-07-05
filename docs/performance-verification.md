@@ -58,7 +58,15 @@ pnpm build && pnpm start
 
 Jalankan Lighthouse (mobile) pada `/parent` dan `/child/home`. Simpan skor Performance sebelum/sesudah.
 
-## 6. Build sanity check
+## 7. PWA — cek khusus
+
+Setelah update client-first parent tabs:
+
+1. **Uninstall + reinstall PWA** (atau hard refresh) agar service worker v7 aktif — versi lama pre-cache route HTML yang membebani install.
+2. Buka `/parent`, tunggu ~2 detik (prefetch idle), lalu klik tab **Misi / Tabungan / Target** — seharusnya **tanpa skeleton panjang** jika cache sudah warm.
+3. Di Network, filter `supabase.co` saat pindah tab: request data dari **browser langsung**, bukan menunggu RSC page fetch berat.
+
+**Catatan:** Loading **pertama kali** setelah buka PWA tetap ada overhead middleware auth + hydrate — itu normal. Yang harus membaik adalah **tab switch berikutnya** dan **buka ulang dalam 60 detik** (React Query + router staleTimes).
 
 ```bash
 pnpm build

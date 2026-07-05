@@ -12,7 +12,7 @@ import {
 
 const CHILD_MODE_STORAGE_KEY = "habiku-child-mode";
 const CHILD_MODE_COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 7;
-const HYDRATION_FALLBACK_MS = 400;
+const HYDRATION_FALLBACK_MS = 150;
 
 export function setChildModeCookie(active: boolean) {
   if (typeof document === "undefined") return;
@@ -192,7 +192,15 @@ export const useChildModeStore = create<ChildModeState>()(
  * Ada fallback timeout agar tidak hang selamanya di layar loading.
  */
 export function useChildModeHydrated(): boolean {
-  const [hydrated, setHydrated] = useState(false);
+  const [hydrated, setHydrated] = useState(() => {
+    if (typeof window === "undefined") return false;
+    if (childModeStoreHydrated) return true;
+    if (isChildModeCookieActive()) {
+      applyRecoveredChildMode();
+      return true;
+    }
+    return false;
+  });
 
   useEffect(() => {
     if (childModeStoreHydrated) {

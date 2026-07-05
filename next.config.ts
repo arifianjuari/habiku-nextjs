@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion"],
+    staleTimes: {
+      dynamic: 60,
+      static: 300,
+    },
   },
   images: {
     minimumCacheTTL: 3600,

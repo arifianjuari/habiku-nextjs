@@ -1,44 +1,52 @@
 import type { QueryClient } from "@tanstack/react-query";
 import {
-  fetchFamilyChildrenClient,
-  fetchFamilyGoalsClient,
-  fetchFamilyTasksClient,
-  fetchParentSavingsDataClient,
-  fetchPendingTaskRequestsClient,
-} from "@/lib/parent/fetch-family-page-data-client";
+  fetchParentSavingsPageData,
+  fetchParentTargetsPageData,
+  fetchParentTasksPageData,
+} from "@/lib/parent/fetch-parent-tab-page-data";
+import { parentSavingsPageQueryKey } from "@/lib/hooks/use-parent-savings-data";
+import { parentTargetsPageQueryKey } from "@/lib/hooks/use-parent-targets-data";
+import { parentTasksPageQueryKey } from "@/lib/hooks/use-parent-tasks-data";
 import { parentQueryKeys } from "@/lib/parent/query-keys";
 import { seedParentListCache } from "@/lib/parent/seed-parent-list-cache";
-import type { Goal } from "@/types/database";
+
+export { goalsByProfileFromList } from "@/lib/parent/fetch-parent-tab-page-data";
 
 export function prefetchParentTasks(queryClient: QueryClient, familyId: string) {
-  return fetchFamilyChildrenClient(familyId).then((children) => {
-    const childIds = children.map((c) => c.id);
-    return Promise.all([
-      fetchFamilyTasksClient(familyId, childIds).then((tasks) => {
-        seedParentListCache(queryClient, parentQueryKeys.tasks(familyId), tasks);
-      }),
-      fetchPendingTaskRequestsClient(familyId, children).then((requests) => {
+  return queryClient.prefetchQuery({
+    queryKey: parentTasksPageQueryKey(familyId),
+    queryFn: () =>
+      fetchParentTasksPageData(familyId).then((data) => {
+        seedParentListCache(queryClient, parentQueryKeys.tasks(familyId), data.tasks);
         seedParentListCache(
           queryClient,
           [...parentQueryKeys.tasks(familyId), "pending-requests"],
-          requests,
+          data.pendingTaskRequests,
         );
+        return data;
       }),
-    ]);
   });
 }
 
 export function prefetchParentTargets(queryClient: QueryClient, familyId: string) {
-  return fetchFamilyChildrenClient(familyId).then((children) =>
-    fetchFamilyGoalsClient(familyId, children.map((c) => c.id)).then((goals) => {
-      seedParentListCache(queryClient, parentQueryKeys.targets(familyId), goals);
-    }),
-  );
+  return queryClient.prefetchQuery({
+    queryKey: parentTargetsPageQueryKey(familyId),
+    queryFn: () =>
+      fetchParentTargetsPageData(familyId).then((data) => {
+        seedParentListCache(queryClient, parentQueryKeys.targets(familyId), data.goals);
+        return data;
+      }),
+  });
 }
 
 export function prefetchParentSavings(queryClient: QueryClient, familyId: string) {
-  return fetchParentSavingsDataClient(familyId).then((data) => {
-    seedParentListCache(queryClient, parentQueryKeys.savings(familyId), data);
+  return queryClient.prefetchQuery({
+    queryKey: parentSavingsPageQueryKey(familyId),
+    queryFn: () =>
+      fetchParentSavingsPageData(familyId).then((data) => {
+        seedParentListCache(queryClient, parentQueryKeys.savings(familyId), data);
+        return data;
+      }),
   });
 }
 
@@ -56,18 +64,5 @@ export function prefetchParentTabData(
   if (href.startsWith("/parent/targets")) {
     return prefetchParentTargets(queryClient, familyId);
   }
-  if (href.startsWith("/parent/profil-anak")) {
-    return Promise.resolve();
-  }
   return Promise.resolve();
-}
-
-export function goalsByProfileFromList(
-  children: { id: string }[],
-  goals: Goal[],
-): Record<string, Goal[]> {
-  return children.reduce<Record<string, Goal[]>>((acc, child) => {
-    acc[child.id] = goals.filter((g) => g.profile_id === child.id);
-    return acc;
-  }, {});
 }

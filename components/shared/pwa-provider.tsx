@@ -57,6 +57,15 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
+    const scheduleRegister = () => {
+      const schedule =
+        typeof requestIdleCallback === "function"
+          ? requestIdleCallback
+          : (cb: () => void) => window.setTimeout(cb, 1500);
+
+      schedule(handleRegister);
+    };
+
     const syncBeforeHide = () => {
       syncChildModeCookieFromStore();
     };
@@ -66,14 +75,14 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (document.readyState === "complete") {
-      handleRegister();
+      scheduleRegister();
     } else {
-      window.addEventListener("load", handleRegister);
+      window.addEventListener("load", scheduleRegister);
     }
 
     return () => {
       window.removeEventListener("pagehide", syncBeforeHide);
-      window.removeEventListener("load", handleRegister);
+      window.removeEventListener("load", scheduleRegister);
       removeFocusListener?.();
     };
   }, []);
