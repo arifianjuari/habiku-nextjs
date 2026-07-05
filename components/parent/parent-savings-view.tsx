@@ -327,6 +327,7 @@ export function ParentSavingsView({
   const pendingCount = claims.length + withdrawals.length;
 
   const canEditPocketStructure = (editingPocket?.balance ?? 0) === 0;
+  const canCorrectInterest = (editingPocket?.balance ?? 0) > 0;
 
   const canDeletePocket = (pocket: SavingsPocketWithBalance) =>
     pocket.balance === 0 && pocket.reserved === 0 && !pocket.is_locked;
@@ -354,6 +355,9 @@ export function ParentSavingsView({
     const nextAccent = String(formData.get("accentColor") ?? editingPocket.accent_color);
     const targetRaw = String(formData.get("targetAmount") ?? "");
     const nextTarget = targetRaw ? Number(targetRaw) : null;
+    const nextLockBonusCoefficient = Number(
+      formData.get("lockBonusCoefficient") ?? editingPocket.lock_bonus_coefficient,
+    );
     const previousPockets = pocketsByProfile;
 
     setPocketsByProfile((prev) => ({
@@ -366,8 +370,10 @@ export function ParentSavingsView({
               emoji: nextEmoji,
               accent_color: nextAccent,
               target_amount: nextTarget,
-              pocket_type: editPocketType,
+              pocket_type: canEditPocketStructure ? editPocketType : pocket.pocket_type,
               monthly_interest_bps: parsedInterest.bps,
+              lock_bonus_coefficient:
+                editPocketType === "term" ? nextLockBonusCoefficient : pocket.lock_bonus_coefficient,
             }
           : pocket,
       ),
@@ -962,7 +968,7 @@ export function ParentSavingsView({
                 <DialogDescription className="text-xs text-pretty">
                   {canEditPocketStructure
                     ? "Kantong masih kosong — semua pengaturan bisa diubah."
-                    : "Kantong sudah berisi saldo — hanya nama, emoji, target, dan default yang bisa diubah."}
+                    : "Kantong sudah berisi saldo — bunga dan koefisien bisa dikoreksi (berlaku bulan berikutnya). Tipe dan durasi kunci tidak bisa diubah."}
                 </DialogDescription>
               </DialogHeader>
               <form
@@ -1065,11 +1071,12 @@ export function ParentSavingsView({
                           sanitizeInterestPercentInput(e.target.value, prev),
                         )
                       }
-                      disabled={!canEditPocketStructure}
-                      className="h-10 tabular-nums disabled:opacity-50"
+                      disabled={false}
+                      className="h-10 tabular-nums"
                     />
                     <p className="text-[10px] text-muted-foreground">
                       Min. 0% · maks. {MONTHLY_INTEREST_ABS_MAX_BPS / 100}% · 2 desimal
+                      {canCorrectInterest ? " · bunga lama tidak berubah" : ""}
                     </p>
                   </div>
                   {editPocketType === "term" ? (
@@ -1105,9 +1112,13 @@ export function ParentSavingsView({
                       max={5}
                       step={0.1}
                       defaultValue={editingPocket.lock_bonus_coefficient}
-                      disabled={!canEditPocketStructure}
-                      className="h-10 disabled:opacity-50"
+                      className="h-10"
                     />
+                    <p className="text-[10px] text-muted-foreground text-pretty">
+                      {canCorrectInterest
+                        ? "Koreksi berlaku untuk akrual bunga berikutnya."
+                        : "Semakin tinggi, bunga efektif lebih besar selama masa kunci."}
+                    </p>
                   </div>
                 ) : (
                   <input type="hidden" name="lockBonusCoefficient" value="1" />
