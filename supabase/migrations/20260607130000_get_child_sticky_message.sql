@@ -1,3 +1,10 @@
+-- Kolom yang dibutuhkan fungsi (ditambahkan di sini agar urutan migrasi lokal konsisten).
+alter table public.families
+  add column if not exists family_broadcast_message text;
+
+alter table public.child_profiles
+  add column if not exists parent_sticky_message text;
+
 -- Baca pesan sticky yang dilihat anak (parent_sticky_message > family_broadcast_message).
 create or replace function public.get_child_sticky_message (p_profile_id uuid)
 returns text
