@@ -50,6 +50,15 @@ export const RPC = {
   computeWalletBalance: "compute_wallet_balance",
   computeSavableGoalEnergy: "compute_savable_goal_energy",
   computeSavingsPocketBalance: "compute_savings_pocket_balance",
+  computeGoldBalance: "compute_gold_balance",
+  updateGoldPrices: "update_gold_prices",
+  requestGoldBuy: "request_gold_buy",
+  requestGoldSell: "request_gold_sell",
+  approveGoldTransaction: "approve_gold_transaction",
+  rejectGoldTransaction: "reject_gold_transaction",
+  computeGoldReservedSellMilli: "compute_gold_reserved_sell_milli",
+  computeGoldPendingBuyEnergy: "compute_gold_pending_buy_energy",
+  computeGoldAvailableMilli: "compute_gold_available_milli",
 } as const;
 
 export type RpcName = (typeof RPC)[keyof typeof RPC];

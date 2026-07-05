@@ -23,8 +23,8 @@ export function ParentSavingsPageClient({ familyId }: ParentSavingsPageClientPro
   return (
     <>
       <ParentPageHeaderSync
-        title="Tabungan digital"
-        description="Kantong tabungan per anak — setor energi dan setujui penarikan."
+        title="Tabungan"
+        description="Kantong tabungan energi dan Tabung Emas virtual per anak."
       />
       <DynamicParentSavingsView {...data} />
     </>

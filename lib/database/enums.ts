@@ -33,6 +33,8 @@ export const LEDGER_TYPES = [
   "savings_withdraw",
   "savings_interest",
   "goal_redeem_spend",
+  "gold_buy",
+  "gold_sell",
 ] as const;
 
 export const SAVINGS_POCKET_TYPES = ["flexible", "term"] as const;

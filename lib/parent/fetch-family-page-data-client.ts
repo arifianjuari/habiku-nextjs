@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ChildProfile, Goal, Task } from "@/types/database";
 import type { PendingTaskRequest } from "@/lib/parent/fetch-family-page-data";
 import { enrichPockets } from "@/lib/savings/enrich-pockets";
+import { fetchParentGoldSavingsData } from "@/lib/gold/fetch-gold";
 import type {
   GoalClaimPending,
   ParentSavingsData,
@@ -147,7 +148,7 @@ export async function fetchParentSavingsDataClient(
   const [settingsResult] = await Promise.all([
     supabase
       .from("family_settings")
-      .select("savings_enabled, goal_save_enabled, max_monthly_interest_bps")
+      .select("savings_enabled, goal_save_enabled, max_monthly_interest_bps, gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label")
       .eq("family_id", familyId)
       .maybeSingle(),
   ]);
@@ -165,11 +166,12 @@ export async function fetchParentSavingsDataClient(
     savingsEnabled,
     goalSaveEnabled,
     maxMonthlyInterestBps,
+    gold: await fetchParentGoldSavingsData(supabase, familyId, [], settingsResult.data),
   };
 
   if (profileIds.length === 0) return empty;
 
-  const [pocketsResult, pendingResult, claimsResult, goalsResult] = await Promise.all([
+  const [pocketsResult, pendingResult, claimsResult, goalsResult, gold] = await Promise.all([
     supabase
       .from("savings_pockets")
       .select("*")
@@ -198,6 +200,7 @@ export async function fetchParentSavingsDataClient(
       .select("profile_id, current_hp")
       .in("profile_id", profileIds)
       .eq("status", "active"),
+    fetchParentGoldSavingsData(supabase, familyId, profileIds, settingsResult.data),
   ]);
 
   const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];
@@ -279,5 +282,6 @@ export async function fetchParentSavingsDataClient(
     savingsEnabled,
     goalSaveEnabled,
     maxMonthlyInterestBps,
+    gold,
   };
 }

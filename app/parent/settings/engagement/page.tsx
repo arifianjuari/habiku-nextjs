@@ -38,6 +38,7 @@ export default async function ParentEngagementSettingsPage() {
     savings_enabled: true,
     goal_save_enabled: true,
     savings_interest_enabled: true,
+    gold_savings_enabled: false,
   };
 
   return (

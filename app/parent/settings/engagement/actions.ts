@@ -13,6 +13,7 @@ export async function updateFamilySettingsAction(
   savingsEnabled: boolean,
   goalSaveEnabled: boolean,
   savingsInterestEnabled: boolean,
+  goldSavingsEnabled: boolean,
 ) {
   const supabase = await createClient();
 
@@ -45,6 +46,7 @@ export async function updateFamilySettingsAction(
       savings_enabled: savingsEnabled,
       goal_save_enabled: goalSaveEnabled,
       savings_interest_enabled: savingsInterestEnabled,
+      gold_savings_enabled: goldSavingsEnabled,
       updated_by: user.id,
     })
     .eq("family_id", account.family_id);

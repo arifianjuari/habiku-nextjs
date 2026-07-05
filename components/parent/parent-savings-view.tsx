@@ -18,8 +18,11 @@ import {
   Clock,
   Pencil,
   Trash2,
+  Coins,
 } from "lucide-react";
 import type { ParentSavingsData, SavingsPocketWithBalance } from "@/lib/savings/types";
+import type { GoldTradePending } from "@/lib/gold/types";
+import { formatGoldQuantity } from "@/lib/gold/units";
 import { ChildTabSelector } from "@/components/parent/child-tab-selector";
 import { SavingsPocketEmojiPicker } from "@/components/parent/savings-pocket-emoji-picker";
 import {
@@ -47,7 +50,10 @@ import {
   rejectSavingsWithdrawAction,
   approveGoalClaimAction,
   rejectGoalClaimAction,
+  approveGoldTransactionAction,
+  rejectGoldTransactionAction,
 } from "@/app/parent/savings/actions";
+import { ParentGoldSavingsSection } from "@/components/parent/parent-gold-savings-section";
 import {
   bpsToPercentInputValue,
   effectiveMonthlyBps,
@@ -288,6 +294,7 @@ export function ParentSavingsView({
   pendingWithdrawals,
   pendingGoalClaims,
   savingsEnabled,
+  gold,
 }: ParentSavingsViewProps) {
   const [activeChildId, setActiveChildId] = useState(children[0]?.id ?? "");
   const [pocketsByProfile, setPocketsByProfile] = useState(initialPocketsByProfile);
@@ -295,8 +302,10 @@ export function ParentSavingsView({
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [withdrawals, setWithdrawals] = useState(pendingWithdrawals);
   const [claims, setClaims] = useState(pendingGoalClaims);
+  const [goldTrades, setGoldTrades] = useState<GoldTradePending[]>(gold.pendingTrades);
   const [rejectWithdrawId, setRejectWithdrawId] = useState<string | null>(null);
   const [rejectClaimId, setRejectClaimId] = useState<string | null>(null);
+  const [rejectGoldTradeId, setRejectGoldTradeId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [createPocketOpen, setCreatePocketOpen] = useState(false);
   const [pocketType, setPocketType] = useState<"flexible" | "term">("flexible");
@@ -318,13 +327,14 @@ export function ParentSavingsView({
     setPocketsByProfile(initialPocketsByProfile);
     setWithdrawals(pendingWithdrawals);
     setClaims(pendingGoalClaims);
-  }, [initialPocketsByProfile, pendingWithdrawals, pendingGoalClaims]);
+    setGoldTrades(gold.pendingTrades);
+  }, [initialPocketsByProfile, pendingWithdrawals, pendingGoalClaims, gold.pendingTrades]);
 
   const activeChild = children.find((c) => c.id === activeChildId);
   const pockets = pocketsByProfile[activeChildId] ?? [];
   const savable = savableByProfile[activeChildId] ?? 0;
   const totalPocketBalance = pockets.reduce((sum, pocket) => sum + pocket.balance, 0);
-  const pendingCount = claims.length + withdrawals.length;
+  const pendingCount = claims.length + withdrawals.length + goldTrades.length;
 
   const canEditPocketStructure = (editingPocket?.balance ?? 0) === 0;
   const canCorrectInterest = (editingPocket?.balance ?? 0) > 0;
@@ -355,6 +365,8 @@ export function ParentSavingsView({
     const nextAccent = String(formData.get("accentColor") ?? editingPocket.accent_color);
     const targetRaw = String(formData.get("targetAmount") ?? "");
     const nextTarget = targetRaw ? Number(targetRaw) : null;
+    const lockMonthsRaw = String(formData.get("lockMonths") ?? "");
+    const nextLockMonths = lockMonthsRaw ? Number(lockMonthsRaw) : editingPocket.lock_months;
     const nextLockBonusCoefficient = Number(
       formData.get("lockBonusCoefficient") ?? editingPocket.lock_bonus_coefficient,
     );
@@ -372,6 +384,8 @@ export function ParentSavingsView({
               target_amount: nextTarget,
               pocket_type: canEditPocketStructure ? editPocketType : pocket.pocket_type,
               monthly_interest_bps: parsedInterest.bps,
+              lock_months:
+                editPocketType === "term" ? nextLockMonths : pocket.lock_months,
               lock_bonus_coefficient:
                 editPocketType === "term" ? nextLockBonusCoefficient : pocket.lock_bonus_coefficient,
             }
@@ -563,108 +577,310 @@ export function ParentSavingsView({
     });
   };
 
-  if (!savingsEnabled) {
-    return (
-      <Card className="rounded-2xl border border-dashed border-violet-200 bg-violet-50/30">
-        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-violet-100">
-            <PiggyBank className="size-7 text-violet-400" aria-hidden />
+  const handleApproveGoldTrade = (txId: string) => {
+    const previousGoldTrades = goldTrades;
+    setGoldTrades((prev) => prev.filter((item) => item.id !== txId));
+    setPendingActionId(txId);
+    startTransition(async () => {
+      const res = await approveGoldTransactionAction(txId);
+      setPendingActionId(null);
+      if (res.error) {
+        toast.error(res.error);
+        setGoldTrades(previousGoldTrades);
+      } else {
+        toast.success("Transaksi emas disetujui.");
+      }
+    });
+  };
+
+  const handleRejectGoldTrade = () => {
+    if (!rejectGoldTradeId) return;
+    const txId = rejectGoldTradeId;
+    const previousGoldTrades = goldTrades;
+    setGoldTrades((prev) => prev.filter((item) => item.id !== txId));
+    setRejectGoldTradeId(null);
+    setPendingActionId(txId);
+    startTransition(async () => {
+      const res = await rejectGoldTransactionAction(txId, rejectReason);
+      setPendingActionId(null);
+      if (res.error) {
+        toast.error(res.error);
+        setGoldTrades(previousGoldTrades);
+      } else {
+        toast.success("Transaksi emas ditolak.");
+        setRejectReason("");
+      }
+    });
+  };
+
+  const pendingApprovalsSection =
+    pendingCount > 0 ? (
+      <section
+        className="space-y-2 rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3 shadow-sm"
+        aria-label="Permintaan menunggu persetujuan"
+      >
+        <div className="flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-amber-100">
+            <Clock className="size-4 text-amber-700" aria-hidden />
+          </span>
+          <div>
+            <p className="text-xs font-bold text-amber-950">Perlu persetujuan</p>
+            <p className="text-[10px] text-amber-800/80">{pendingCount} permintaan menunggu</p>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-foreground">Tabungan digital nonaktif</p>
-            <p className="max-w-xs text-xs text-muted-foreground text-pretty">
-              Aktifkan fitur tabungan agar anak bisa menabung energi dari target hadiah.
-            </p>
+        </div>
+
+        <div className="space-y-2">
+          {claims.map((claim) => (
+            <div
+              key={claim.id}
+              className="flex flex-col gap-2.5 rounded-xl border border-violet-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                  <Gift className="size-4 shrink-0 text-violet-600" aria-hidden />
+                  <span className="truncate">
+                    {claim.child_name} · {claim.goal_title}
+                  </span>
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Cair hadiah · {claim.amount} E
+                </p>
+              </div>
+              <ApprovalActions
+                disabled={pendingActionId === claim.id}
+                onApprove={() => handleApproveClaim(claim.id)}
+                onReject={() => setRejectClaimId(claim.id)}
+              />
+            </div>
+          ))}
+
+          {withdrawals.map((withdrawal) => (
+            <div
+              key={withdrawal.id}
+              className="flex flex-col gap-2.5 rounded-xl border border-amber-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-foreground">
+                  <span aria-hidden>{withdrawal.pocket_emoji} </span>
+                  {withdrawal.child_name} · {withdrawal.pocket_name}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Penarikan {withdrawal.amount} E
+                  {withdrawal.note ? ` — ${withdrawal.note}` : ""}
+                </p>
+              </div>
+              <ApprovalActions
+                disabled={pendingActionId === withdrawal.id}
+                onApprove={() => handleApproveWithdraw(withdrawal.id)}
+                onReject={() => setRejectWithdrawId(withdrawal.id)}
+              />
+            </div>
+          ))}
+
+          {goldTrades.map((trade) => (
+            <div
+              key={trade.id}
+              className="flex flex-col gap-2.5 rounded-xl border border-amber-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                  <Coins className="size-4 shrink-0 text-amber-600" aria-hidden />
+                  <span className="truncate">
+                    {trade.child_name} · {trade.kind === "buy" ? "Beli emas" : "Jual emas"}
+                  </span>
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {formatGoldQuantity(trade.quantityMilli, gold.prices.unitLabel)} ·{" "}
+                  {trade.energy_amount} E
+                </p>
+              </div>
+              <ApprovalActions
+                disabled={pendingActionId === trade.id}
+                onApprove={() => handleApproveGoldTrade(trade.id)}
+                onReject={() => setRejectGoldTradeId(trade.id)}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+    ) : null;
+
+  const approvalRejectDialogs = (
+    <>
+      <Dialog open={!!rejectWithdrawId} onOpenChange={(o) => !o && setRejectWithdrawId(null)}>
+        <DialogContent className="rounded-3xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-base">Tolak penarikan</DialogTitle>
+            <DialogDescription className="text-xs">
+              Beri alasan singkat agar anak mengerti (opsional).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="reject-withdraw-reason" className="text-xs font-bold">
+              Alasan
+            </Label>
+            <Input
+              id="reject-withdraw-reason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Mis. nabung dulu sampai kunci habis"
+              className="h-10"
+            />
           </div>
-          <Link
-            href="/parent/settings/engagement"
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-violet-200 bg-white px-4 text-xs font-bold text-violet-800 shadow-sm transition-colors hover:bg-violet-50"
-          >
-            <Settings2 className="size-4" aria-hidden />
-            Pengaturan Engagement
-          </Link>
-        </CardContent>
-      </Card>
-    );
-  }
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRejectWithdrawId(null)} className="rounded-xl">
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isPending}
+              onClick={handleRejectWithdraw}
+              className="rounded-xl"
+            >
+              Tolak penarikan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!rejectClaimId} onOpenChange={(o) => !o && setRejectClaimId(null)}>
+        <DialogContent className="rounded-3xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-base">Tolak cair hadiah</DialogTitle>
+            <DialogDescription className="text-xs text-pretty">
+              Anak masih bisa memilih menabung energinya ke kantong.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="reject-claim-reason" className="text-xs font-bold">
+              Alasan
+            </Label>
+            <Input
+              id="reject-claim-reason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Mis. nabung dulu untuk hadiah yang lebih besar"
+              className="h-10"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRejectClaimId(null)} className="rounded-xl">
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isPending}
+              onClick={handleRejectClaim}
+              className="rounded-xl"
+            >
+              Tolak permintaan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!rejectGoldTradeId} onOpenChange={(o) => !o && setRejectGoldTradeId(null)}>
+        <DialogContent className="rounded-3xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-base">Tolak transaksi emas</DialogTitle>
+            <DialogDescription className="text-xs text-pretty">
+              Anak akan mendapat notifikasi jika permintaan beli/jual emas ditolak.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="reject-gold-reason" className="text-xs font-bold">
+              Alasan
+            </Label>
+            <Input
+              id="reject-gold-reason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Mis. diskusi dulu soal tabungan emas"
+              className="h-10"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRejectGoldTradeId(null)} className="rounded-xl">
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isPending}
+              onClick={handleRejectGoldTrade}
+              className="rounded-xl"
+            >
+              Tolak transaksi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 
   if (children.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-8 text-center">
-        <p className="text-sm font-medium text-muted-foreground">
-          Tambahkan profil anak terlebih dahulu.
-        </p>
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-8 text-center">
+          <p className="text-sm font-medium text-muted-foreground">
+            Tambahkan profil anak terlebih dahulu.
+          </p>
+        </div>
+        <ParentGoldSavingsSection gold={gold} children={children} activeChildId="" />
+      </div>
+    );
+  }
+
+  const savingsDisabledCard = !savingsEnabled ? (
+    <Card className="rounded-2xl border border-dashed border-violet-200 bg-violet-50/30">
+      <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-violet-100">
+          <PiggyBank className="size-7 text-violet-400" aria-hidden />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-bold text-foreground">Tabungan digital nonaktif</p>
+          <p className="max-w-xs text-xs text-muted-foreground text-pretty">
+            Aktifkan fitur tabungan agar anak bisa menabung energi dari target hadiah.
+          </p>
+        </div>
+        <Link
+          href="/parent/settings/engagement"
+          className="inline-flex h-9 items-center gap-2 rounded-xl border border-violet-200 bg-white px-4 text-xs font-bold text-violet-800 shadow-sm transition-colors hover:bg-violet-50"
+        >
+          <Settings2 className="size-4" aria-hidden />
+          Pengaturan Engagement
+        </Link>
+      </CardContent>
+    </Card>
+  ) : null;
+
+  if (!savingsEnabled && !gold.goldSavingsEnabled) {
+    return (
+      <div className="space-y-4">
+        {savingsDisabledCard}
+        <ParentGoldSavingsSection gold={gold} children={children} activeChildId={activeChildId} />
+      </div>
+    );
+  }
+
+  if (!savingsEnabled) {
+    return (
+      <div className="min-w-0 space-y-3.5 overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom))]">
+        {savingsDisabledCard}
+        {pendingApprovalsSection}
+        <ChildTabSelector
+          profiles={children}
+          activeChildId={activeChildId}
+          onActiveChildIdChange={setActiveChildId}
+        />
+        <ParentGoldSavingsSection gold={gold} children={children} activeChildId={activeChildId} />
+        {approvalRejectDialogs}
       </div>
     );
   }
 
   return (
     <div className="min-w-0 space-y-3.5 overflow-x-clip pb-[calc(7.5rem+env(safe-area-inset-bottom))]">
-      {pendingCount > 0 ? (
-        <section
-          className="space-y-2 rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3 shadow-sm"
-          aria-label="Permintaan menunggu persetujuan"
-        >
-          <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-amber-100">
-              <Clock className="size-4 text-amber-700" aria-hidden />
-            </span>
-            <div>
-              <p className="text-xs font-bold text-amber-950">Perlu persetujuan</p>
-              <p className="text-[10px] text-amber-800/80">{pendingCount} permintaan menunggu</p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {claims.map((claim) => (
-              <div
-                key={claim.id}
-                className="flex flex-col gap-2.5 rounded-xl border border-violet-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                    <Gift className="size-4 shrink-0 text-violet-600" aria-hidden />
-                    <span className="truncate">
-                      {claim.child_name} · {claim.goal_title}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Cair hadiah · {claim.amount} E
-                  </p>
-                </div>
-                <ApprovalActions
-                  disabled={pendingActionId === claim.id}
-                  onApprove={() => handleApproveClaim(claim.id)}
-                  onReject={() => setRejectClaimId(claim.id)}
-                />
-              </div>
-            ))}
-
-            {withdrawals.map((withdrawal) => (
-              <div
-                key={withdrawal.id}
-                className="flex flex-col gap-2.5 rounded-xl border border-amber-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-foreground">
-                    <span aria-hidden>{withdrawal.pocket_emoji} </span>
-                    {withdrawal.child_name} · {withdrawal.pocket_name}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Penarikan {withdrawal.amount} E
-                    {withdrawal.note ? ` — ${withdrawal.note}` : ""}
-                  </p>
-                </div>
-                <ApprovalActions
-                  disabled={pendingActionId === withdrawal.id}
-                  onApprove={() => handleApproveWithdraw(withdrawal.id)}
-                  onReject={() => setRejectWithdrawId(withdrawal.id)}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {pendingApprovalsSection}
 
       <ChildTabSelector
         profiles={children}
@@ -745,6 +961,8 @@ export function ParentSavingsView({
           </div>
         )}
       </section>
+
+      <ParentGoldSavingsSection gold={gold} children={children} activeChildId={activeChildId} />
 
       <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.5rem)] z-50">
         <div className="pointer-events-auto mx-auto flex w-full max-w-lg items-center justify-center gap-2 px-4">
@@ -968,7 +1186,7 @@ export function ParentSavingsView({
                 <DialogDescription className="text-xs text-pretty">
                   {canEditPocketStructure
                     ? "Kantong masih kosong — semua pengaturan bisa diubah."
-                    : "Kantong sudah berisi saldo — bunga dan koefisien bisa dikoreksi (berlaku bulan berikutnya). Tipe dan durasi kunci tidak bisa diubah."}
+                    : "Kantong sudah berisi saldo — bunga, kunci, dan koefisien bisa dikoreksi. Tipe kantong tidak bisa diubah."}
                 </DialogDescription>
               </DialogHeader>
               <form
@@ -1091,10 +1309,14 @@ export function ParentSavingsView({
                         min={1}
                         max={36}
                         defaultValue={editingPocket.lock_months ?? 3}
-                        required={canEditPocketStructure}
-                        disabled={!canEditPocketStructure}
-                        className="h-10 disabled:opacity-50"
+                        required
+                        className="h-10"
                       />
+                      {canCorrectInterest ? (
+                        <p className="text-[10px] text-muted-foreground text-pretty">
+                          Jatuh tempo dihitung ulang dari tanggal setoran awal.
+                        </p>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -1207,77 +1429,7 @@ export function ParentSavingsView({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!rejectWithdrawId} onOpenChange={(o) => !o && setRejectWithdrawId(null)}>
-        <DialogContent className="rounded-3xl sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-heading text-base">Tolak penarikan</DialogTitle>
-            <DialogDescription className="text-xs">
-              Beri alasan singkat agar anak mengerti (opsional).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <Label htmlFor="reject-withdraw-reason" className="text-xs font-bold">
-              Alasan
-            </Label>
-            <Input
-              id="reject-withdraw-reason"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Mis. nabung dulu sampai kunci habis"
-              className="h-10"
-            />
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setRejectWithdrawId(null)} className="rounded-xl">
-              Batal
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isPending}
-              onClick={handleRejectWithdraw}
-              className="rounded-xl"
-            >
-              Tolak penarikan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!rejectClaimId} onOpenChange={(o) => !o && setRejectClaimId(null)}>
-        <DialogContent className="rounded-3xl sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-heading text-base">Tolak cair hadiah</DialogTitle>
-            <DialogDescription className="text-xs text-pretty">
-              Anak masih bisa memilih menabung energinya ke kantong.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <Label htmlFor="reject-claim-reason" className="text-xs font-bold">
-              Alasan
-            </Label>
-            <Input
-              id="reject-claim-reason"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Mis. nabung dulu untuk hadiah yang lebih besar"
-              className="h-10"
-            />
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setRejectClaimId(null)} className="rounded-xl">
-              Batal
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isPending}
-              onClick={handleRejectClaim}
-              className="rounded-xl"
-            >
-              Tolak permintaan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {approvalRejectDialogs}
     </div>
   );
 }

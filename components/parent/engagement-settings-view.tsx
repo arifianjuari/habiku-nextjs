@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Sparkles, PiggyBank } from "lucide-react";
+import { Sparkles, PiggyBank, Coins } from "lucide-react";
 import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ interface EngagementSettingsViewProps {
     savings_enabled: boolean;
     goal_save_enabled?: boolean;
     savings_interest_enabled?: boolean;
+    gold_savings_enabled?: boolean;
   };
 }
 
@@ -80,6 +81,9 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
   const [savingsInterestEnabled, setSavingsInterestEnabled] = useState(
     initialSettings.savings_interest_enabled ?? true,
   );
+  const [goldSavingsEnabled, setGoldSavingsEnabled] = useState(
+    initialSettings.gold_savings_enabled ?? false,
+  );
 
   const handleSave = () => {
     startTransition(async () => {
@@ -93,6 +97,7 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
         savingsEnabled,
         goalSaveEnabled,
         savingsInterestEnabled,
+        goldSavingsEnabled,
       );
 
       if (res?.error) {
@@ -250,7 +255,7 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
             />
           </div>
 
-          <div className="flex items-start justify-between gap-4 py-2">
+          <div className="flex items-start justify-between gap-4 py-2 border-b border-slate-100">
             <div className="space-y-0.5 max-w-[80%]">
               <span className="text-xs font-bold text-slate-900 block">Bunga Tabungan</span>
               <span className="text-[9px] text-slate-500 block leading-relaxed">
@@ -260,6 +265,23 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
             <SettingsSwitch
               checked={savingsInterestEnabled}
               onToggle={() => setSavingsInterestEnabled(!savingsInterestEnabled)}
+              accent="violet"
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-4 py-2">
+            <div className="space-y-0.5 max-w-[80%]">
+              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <Coins className="h-4 w-4 text-amber-500" aria-hidden />
+                Tabung Emas
+              </span>
+              <span className="text-[9px] text-slate-500 block leading-relaxed">
+                Anak bisa beli/jual emas virtual dengan energi; ortu tentukan harga beli dan jual.
+              </span>
+            </div>
+            <SettingsSwitch
+              checked={goldSavingsEnabled}
+              onToggle={() => setGoldSavingsEnabled(!goldSavingsEnabled)}
               accent="violet"
             />
           </div>

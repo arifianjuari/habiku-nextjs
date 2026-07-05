@@ -1,5 +1,6 @@
 import type { ChildProfile } from "@/types/database";
 import type { SavingsPocketType } from "@/lib/database/enums";
+import type { ChildGoldSavingsData, ParentGoldSavingsData } from "@/lib/gold/types";
 
 export type SavingsPocketRow = {
   id: string;
@@ -58,6 +59,7 @@ export type ParentSavingsData = {
   savingsEnabled: boolean;
   goalSaveEnabled: boolean;
   maxMonthlyInterestBps: number;
+  gold: ParentGoldSavingsData;
 };
 
 export type ChildSavingsData = {
@@ -68,4 +70,5 @@ export type ChildSavingsData = {
   walletBalance: number;
   savingsEnabled: boolean;
   goalSaveEnabled: boolean;
+  gold: ChildGoldSavingsData;
 };

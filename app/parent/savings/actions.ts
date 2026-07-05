@@ -42,6 +42,24 @@ function mapRpcError(message: string): string {
   if (message.includes("pending_withdrawals")) {
     return "Masih ada permintaan penarikan yang menunggu persetujuan.";
   }
+  if (message.includes("invalid_gold_spread")) {
+    return "Harga beli harus lebih rendah dari harga jual.";
+  }
+  if (message.includes("price_required")) {
+    return "Harga emas wajib diisi (minimal 1 energi).";
+  }
+  if (message.includes("gold_savings_disabled")) {
+    return "Tabung Emas dinonaktifkan di pengaturan keluarga.";
+  }
+  if (message.includes("insufficient_gold")) {
+    return "Saldo emas tidak cukup.";
+  }
+  if (message.includes("quantity_required")) {
+    return "Jumlah butir emas minimal 1.";
+  }
+  if (message.includes("invalid_transaction")) {
+    return "Transaksi tidak valid atau sudah diproses.";
+  }
   return message || "Terjadi kesalahan.";
 }
 
@@ -211,5 +229,61 @@ export async function rejectGoalClaimAction(requestId: string, reason: string) {
   if (error) return { error: mapRpcError(error.message) };
 
   revalidatePath("/parent/savings");
+  return { ok: true as const };
+}
+
+export async function updateGoldPricesAction(sellPrice: number, buyPrice: number) {
+  const context = await getSessionContext();
+  if (!context) return { error: "Sesi tidak valid." };
+
+  const supabase = await createClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (n: string, a: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc(RPC.updateGoldPrices, {
+    p_sell_price: sellPrice,
+    p_buy_price: buyPrice,
+  });
+
+  if (error) return { error: mapRpcError(error.message) };
+
+  revalidatePath("/parent/savings");
+  revalidatePath("/child/savings");
+  return { ok: true as const };
+}
+
+export async function approveGoldTransactionAction(transactionId: string) {
+  const context = await getSessionContext();
+  if (!context) return { error: "Sesi tidak valid." };
+
+  const supabase = await createClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (n: string, a: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc(RPC.approveGoldTransaction, { p_transaction_id: transactionId });
+
+  if (error) return { error: mapRpcError(error.message) };
+
+  revalidatePath("/parent/savings");
+  revalidatePath("/parent/ledger");
+  revalidatePath("/child/savings");
+  revalidatePath("/child/home");
+  return { ok: true as const };
+}
+
+export async function rejectGoldTransactionAction(transactionId: string, reason: string) {
+  const context = await getSessionContext();
+  if (!context) return { error: "Sesi tidak valid." };
+
+  const supabase = await createClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (n: string, a: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc(RPC.rejectGoldTransaction, {
+    p_transaction_id: transactionId,
+    p_reason: reason,
+  });
+
+  if (error) return { error: mapRpcError(error.message) };
+
+  revalidatePath("/parent/savings");
+  revalidatePath("/child/savings");
   return { ok: true as const };
 }

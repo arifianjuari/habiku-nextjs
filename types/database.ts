@@ -349,6 +349,10 @@ export type Database = {
           goal_save_enabled: boolean;
           savings_interest_enabled: boolean;
           max_monthly_interest_bps: number;
+          gold_savings_enabled: boolean;
+          gold_sell_price_energy: number;
+          gold_buy_price_energy: number;
+          gold_unit_label: string;
           daily_check_in_bonus: number;
           shared_family_goal_title: string | null;
           shared_family_goal_target_points: number | null;
@@ -519,6 +523,39 @@ export type Database = {
         >;
         Relationships: [];
       };
+      gold_holdings: {
+        Row: {
+          profile_id: string;
+          quantity_milli: number;
+          updated_at: string;
+        };
+        Insert: Database["public"]["Tables"]["gold_holdings"]["Row"];
+        Update: Partial<Database["public"]["Tables"]["gold_holdings"]["Insert"]>;
+        Relationships: [];
+      };
+      gold_transactions: {
+        Row: {
+          id: string;
+          profile_id: string;
+          kind: "buy" | "sell";
+          quantity_milli: number;
+          energy_amount: number;
+          unit_price_energy: number;
+          ledger_id: string | null;
+          status: "pending" | "approved" | "rejected";
+          reviewed_by_account_id: string | null;
+          reviewed_at: string | null;
+          note: string | null;
+          created_by_account_id: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["gold_transactions"]["Row"],
+          "id" | "created_at"
+        > & { id?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["gold_transactions"]["Insert"]>;
+        Relationships: [];
+      };
       goal_hp_transfers: {
         Row: {
           id: string;
@@ -551,6 +588,8 @@ export type Database = {
       task_history_status: TaskHistoryStatus;
       notification_recipient_type: NotificationRecipientType;
       reflection_mood: ReflectionMood;
+      gold_tx_kind: "buy" | "sell";
+      gold_tx_status: "pending" | "approved" | "rejected";
     };
   };
 };

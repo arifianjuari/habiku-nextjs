@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchFamilyChildren } from "@/lib/parent/fetch-family-page-data";
 import { enrichPockets } from "@/lib/savings/enrich-pockets";
+import { fetchParentGoldSavingsData, fetchChildGoldSavingsData } from "@/lib/gold/fetch-gold";
 import type {
   ChildSavingsData,
   GoalClaimPending,
@@ -52,7 +53,7 @@ export async function fetchParentSavingsData(
     fetchFamilyChildren(familyId),
     supabase
       .from("family_settings")
-      .select("savings_enabled, goal_save_enabled, max_monthly_interest_bps")
+      .select("savings_enabled, goal_save_enabled, max_monthly_interest_bps, gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label")
       .eq("family_id", familyId)
       .maybeSingle(),
   ]);
@@ -71,11 +72,12 @@ export async function fetchParentSavingsData(
     savingsEnabled,
     goalSaveEnabled,
     maxMonthlyInterestBps,
+    gold: await fetchParentGoldSavingsData(supabase, familyId, [], settingsResult.data),
   };
 
   if (profileIds.length === 0) return empty;
 
-  const [pocketsResult, pendingResult, claimsResult, goalsResult] = await Promise.all([
+  const [pocketsResult, pendingResult, claimsResult, goalsResult, gold] = await Promise.all([
     supabase
       .from("savings_pockets")
       .select("*")
@@ -104,6 +106,7 @@ export async function fetchParentSavingsData(
       .select("profile_id, current_hp")
       .in("profile_id", profileIds)
       .eq("status", "active"),
+    fetchParentGoldSavingsData(supabase, familyId, profileIds, settingsResult.data),
   ]);
 
   const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];
@@ -185,6 +188,7 @@ export async function fetchParentSavingsData(
     savingsEnabled,
     goalSaveEnabled,
     maxMonthlyInterestBps,
+    gold,
   };
 }
 
@@ -194,7 +198,7 @@ export async function fetchChildSavingsData(
 ): Promise<ChildSavingsData> {
   const supabase = await createClient();
 
-  const [pocketsResult, settingsResult, savableBalance, walletBalance] = await Promise.all([
+  const [pocketsResult, settingsResult, savableBalance, walletBalance, gold] = await Promise.all([
     supabase
       .from("savings_pockets")
       .select("*")
@@ -203,11 +207,12 @@ export async function fetchChildSavingsData(
       .order("created_at", { ascending: false }),
     supabase
       .from("family_settings")
-      .select("savings_enabled, goal_save_enabled")
+      .select("savings_enabled, goal_save_enabled, gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label")
       .eq("family_id", familyId)
       .maybeSingle(),
     rpcNumber(supabase, RPC.computeSavableGoalEnergy, { p_profile_id: profileId }),
     rpcNumber(supabase, RPC.computeWalletBalance, { p_profile_id: profileId }),
+    fetchChildGoldSavingsData(supabase, profileId, familyId),
   ]);
 
   const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];
@@ -219,5 +224,6 @@ export async function fetchChildSavingsData(
     walletBalance,
     savingsEnabled: settingsResult.data?.savings_enabled ?? true,
     goalSaveEnabled: settingsResult.data?.goal_save_enabled ?? true,
+    gold,
   };
 }
