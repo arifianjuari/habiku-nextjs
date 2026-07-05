@@ -76,6 +76,36 @@ export async function fetchChildPoints(profileId: string): Promise<number> {
   return fetchWalletBalance(supabase, profileId);
 }
 
+type FamilySettingsHomeRow = {
+  micro_anim_enabled?: boolean;
+  daily_tip_enabled?: boolean;
+  show_sibling_highlight?: boolean;
+  family_garden_enabled?: boolean;
+  shared_family_goal_title?: string | null;
+  shared_family_goal_target_points?: number | null;
+  shared_family_goal_celebration_dismissed?: boolean;
+};
+
+async function fetchFamilyHomeSettings(
+  client: AppSupabaseClient,
+  familyId: string,
+): Promise<FamilySettingsHomeRow | null> {
+  const { data, error } = await client
+    .from("family_settings")
+    .select(
+      "micro_anim_enabled, daily_tip_enabled, show_sibling_highlight, family_garden_enabled, shared_family_goal_title, shared_family_goal_target_points, shared_family_goal_celebration_dismissed",
+    )
+    .eq("family_id", familyId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("fetchFamilyHomeSettings:", error);
+    return null;
+  }
+
+  return data as FamilySettingsHomeRow | null;
+}
+
 export async function fetchChildHomeData(
   profileId: string,
   supabase?: AppSupabaseClient,
@@ -117,15 +147,32 @@ export async function fetchChildHomeData(
     settings: { ...DEFAULT_CHILD_ENGAGEMENT_SETTINGS },
   };
 
-  const [engagementBase, sticky, sharedFamilyGoal] = await Promise.all([
-    child?.family_id != null
-      ? fetchChildEngagement(profileId, child.family_id)
-      : Promise.resolve(emptyEngagement),
-    loadStickyMessages(client, profileId, child?.family_id),
-    child?.family_id != null
-      ? fetchFamilySharedGoal(child.family_id, client)
-      : Promise.resolve(EMPTY_FAMILY_SHARED_GOAL),
-  ]);
+  const [engagementBase, sticky, sharedFamilyGoal] = await (async () => {
+    if (!child?.family_id) {
+      return [emptyEngagement, await loadStickyMessages(client, profileId, null), EMPTY_FAMILY_SHARED_GOAL] as const;
+    }
+
+    const familyId = child.family_id;
+    const [settingsRow, siblingsResult] = await Promise.all([
+      fetchFamilyHomeSettings(client, familyId),
+      client
+        .from("child_profiles")
+        .select("id")
+        .eq("family_id", familyId)
+        .is("archived_at", null),
+    ]);
+
+    const childIds = (siblingsResult.data ?? []).map((row) => row.id);
+
+    return Promise.all([
+      fetchChildEngagement(profileId, familyId, client, { settingsRow }),
+      loadStickyMessages(client, profileId, familyId),
+      fetchFamilySharedGoal(familyId, client, {
+        childIds,
+        settingsRow,
+      }),
+    ] as const);
+  })();
 
   const engagement = {
     ...engagementBase,

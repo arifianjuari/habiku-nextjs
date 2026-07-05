@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useTransition, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import {
@@ -283,7 +282,6 @@ export function ParentSavingsView({
   pendingGoalClaims,
   savingsEnabled,
 }: ParentSavingsViewProps) {
-  const router = useRouter();
   const [activeChildId, setActiveChildId] = useState(children[0]?.id ?? "");
   const [pocketsByProfile, setPocketsByProfile] = useState(initialPocketsByProfile);
   const [isPending, startTransition] = useTransition();
@@ -349,6 +347,7 @@ export function ParentSavingsView({
     const nextAccent = String(formData.get("accentColor") ?? editingPocket.accent_color);
     const targetRaw = String(formData.get("targetAmount") ?? "");
     const nextTarget = targetRaw ? Number(targetRaw) : null;
+    const previousPockets = pocketsByProfile;
 
     setPocketsByProfile((prev) => ({
       ...prev,
@@ -371,7 +370,7 @@ export function ParentSavingsView({
       const res = await updateSavingsPocketAction(formData);
       if (res.error) {
         toast.error(res.error);
-        router.refresh();
+        setPocketsByProfile(previousPockets);
       } else {
         toast.success("Kantong tabungan diperbarui.");
         setEditingPocket(null);
@@ -383,6 +382,7 @@ export function ParentSavingsView({
     if (!deletePocketTarget) return;
     const pocketId = deletePocketTarget.id;
     const profileId = deletePocketTarget.profile_id;
+    const previousPockets = pocketsByProfile;
 
     setPocketsByProfile((prev) => ({
       ...prev,
@@ -395,7 +395,7 @@ export function ParentSavingsView({
       const res = await deleteSavingsPocketAction(pocketId);
       if (res.error) {
         toast.error(res.error);
-        router.refresh();
+        setPocketsByProfile(previousPockets);
       } else {
         toast.success("Kantong tabungan dihapus.");
       }
@@ -469,13 +469,17 @@ export function ParentSavingsView({
             ),
           }));
         } else {
-          router.refresh();
+          setPocketsByProfile((prev) => ({
+            ...prev,
+            [activeChildId]: (prev[activeChildId] ?? []).filter((p) => p.id !== optimisticId),
+          }));
         }
       }
     });
   };
 
   const handleApproveWithdraw = (txId: string) => {
+    const previousWithdrawals = withdrawals;
     setWithdrawals((prev) => prev.filter((item) => item.id !== txId));
     setPendingActionId(txId);
     startTransition(async () => {
@@ -483,7 +487,7 @@ export function ParentSavingsView({
       setPendingActionId(null);
       if (res.error) {
         toast.error(res.error);
-        router.refresh();
+        setWithdrawals(previousWithdrawals);
       } else {
         toast.success("Penarikan disetujui. Energi kembali ke target aktif anak.");
       }
@@ -493,6 +497,7 @@ export function ParentSavingsView({
   const handleRejectWithdraw = () => {
     if (!rejectWithdrawId) return;
     const txId = rejectWithdrawId;
+    const previousWithdrawals = withdrawals;
     setWithdrawals((prev) => prev.filter((item) => item.id !== txId));
     setRejectWithdrawId(null);
     setPendingActionId(txId);
@@ -501,7 +506,7 @@ export function ParentSavingsView({
       setPendingActionId(null);
       if (res.error) {
         toast.error(res.error);
-        router.refresh();
+        setWithdrawals(previousWithdrawals);
       } else {
         toast.success("Penarikan ditolak.");
         setRejectReason("");
@@ -510,6 +515,7 @@ export function ParentSavingsView({
   };
 
   const handleApproveClaim = (requestId: string) => {
+    const previousClaims = claims;
     setClaims((prev) => prev.filter((item) => item.id !== requestId));
     setPendingActionId(requestId);
     startTransition(async () => {
@@ -517,7 +523,7 @@ export function ParentSavingsView({
       setPendingActionId(null);
       if (res.error) {
         toast.error(res.error);
-        router.refresh();
+        setClaims(previousClaims);
       } else {
         toast.success("Hadiah disetujui untuk dicairkan.");
       }
@@ -527,6 +533,7 @@ export function ParentSavingsView({
   const handleRejectClaim = () => {
     if (!rejectClaimId) return;
     const requestId = rejectClaimId;
+    const previousClaims = claims;
     setClaims((prev) => prev.filter((item) => item.id !== requestId));
     setRejectClaimId(null);
     setPendingActionId(requestId);
@@ -535,7 +542,7 @@ export function ParentSavingsView({
       setPendingActionId(null);
       if (res.error) {
         toast.error(res.error);
-        router.refresh();
+        setClaims(previousClaims);
       } else {
         toast.success("Permintaan hadiah ditolak.");
         setRejectReason("");

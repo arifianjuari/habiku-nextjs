@@ -1,15 +1,26 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { createClient } from "@/lib/supabase/server";
-import { QueueClientView } from "@/components/parent/queue-client-view";
+import { getFamilyChildren } from "@/lib/parent/parent-home-data";
+import { DynamicQueueClientView } from "@/components/parent/parent-dynamic-views";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 
 export const metadata: Metadata = {
   title: "Antrean Persetujuan — Habiku",
   robots: { index: false },
 };
 
-export default async function ParentQueuePage() {
+export default function ParentQueuePage() {
+  return (
+    <Suspense fallback={<PageLoadingSkeleton variant="parent" />}>
+      <ParentQueueContent />
+    </Suspense>
+  );
+}
+
+async function ParentQueueContent() {
   const context = await getSessionContext();
 
   if (!context) {
@@ -17,15 +28,7 @@ export default async function ParentQueuePage() {
   }
 
   const { family } = context;
-  const supabase = await createClient();
-
-  const { data: childrenRaw } = await supabase
-    .from("child_profiles")
-    .select("*")
-    .eq("family_id", family.id)
-    .order("name", { ascending: true });
-
-  const children = childrenRaw || [];
+  const children = await getFamilyChildren(family.id);
   const childIds = children.map((c) => c.id);
 
   if (childIds.length === 0) {
@@ -37,6 +40,7 @@ export default async function ParentQueuePage() {
     );
   }
 
+  const supabase = await createClient();
   const [historyResult, tasksResult, goalsResult] = await Promise.all([
     supabase
       .from("task_history")
@@ -77,7 +81,7 @@ export default async function ParentQueuePage() {
     .filter((item) => item.child && item.task);
 
   return (
-    <QueueClientView
+    <DynamicQueueClientView
       initialQueueItems={queueItems}
       familyId={family.id}
       childProfileIds={childIds}

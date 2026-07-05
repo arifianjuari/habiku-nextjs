@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useTransition, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChildAvatar } from "@/components/shared/child-avatar";
+import { usePrefetchChildAvatarUrls } from "@/lib/hooks/use-prefetch-child-avatar-urls";
 import { ChildStickyEditor } from "@/components/parent/child-sticky-editor";
 import { ChildModeEnterDialog } from "@/components/parent/child-mode-enter-dialog";
 import {
@@ -68,6 +69,12 @@ export function ChildProfilesList({
   const [childrenList, setChildrenList] = useState<ChildProfile[]>(initialChildren);
   const [archivedList, setArchivedList] = useState<ChildProfile[]>(initialArchivedChildren);
   const [isPending, startTransition] = useTransition();
+
+  const avatarPaths = useMemo(
+    () => [...childrenList, ...archivedList].map((child) => child.avatar_url),
+    [childrenList, archivedList],
+  );
+  usePrefetchChildAvatarUrls(avatarPaths);
 
   // Create Form States
   const [name, setName] = useState("");

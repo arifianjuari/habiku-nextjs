@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { fetchFamilyChildren } from "@/lib/parent/fetch-family-page-data";
 import { fetchFamilyLedgerEntries } from "@/lib/parent/fetch-family-ledger";
 import { ParentLedgerView } from "@/components/parent/parent-ledger-view";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import type { LedgerEntryRow } from "@/lib/parent/ledger-display";
 
 export const metadata: Metadata = {
@@ -11,7 +13,15 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default async function ParentLedgerPage() {
+export default function ParentLedgerPage() {
+  return (
+    <Suspense fallback={<PageLoadingSkeleton variant="parent" />}>
+      <ParentLedgerContent />
+    </Suspense>
+  );
+}
+
+async function ParentLedgerContent() {
   const context = await getSessionContext();
 
   if (!context) {

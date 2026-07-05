@@ -84,8 +84,6 @@ export async function createSavingsPocketAction(formData: FormData) {
   if (error) return { error: mapRpcError(error.message) };
 
   revalidatePath("/parent/savings");
-  revalidatePath("/child/savings");
-  revalidatePath("/child/targets");
   return { ok: true as const, pocketId: data };
 }
 
@@ -128,8 +126,6 @@ export async function updateSavingsPocketAction(formData: FormData) {
   if (error) return { error: mapRpcError(error.message) };
 
   revalidatePath("/parent/savings");
-  revalidatePath("/child/savings");
-  revalidatePath("/child/targets");
   return { ok: true as const };
 }
 
@@ -145,8 +141,6 @@ export async function deleteSavingsPocketAction(pocketId: string) {
   if (error) return { error: mapRpcError(error.message) };
 
   revalidatePath("/parent/savings");
-  revalidatePath("/child/savings");
-  revalidatePath("/child/targets");
   return { ok: true as const };
 }
 
@@ -163,9 +157,6 @@ export async function approveSavingsWithdrawAction(transactionId: string) {
 
   revalidatePath("/parent/savings");
   revalidatePath("/parent/ledger");
-  revalidatePath("/child/savings");
-  revalidatePath("/child/home");
-  revalidatePath("/child/targets");
   return { ok: true as const };
 }
 
@@ -187,7 +178,6 @@ export async function rejectSavingsWithdrawAction(
   if (error) return { error: mapRpcError(error.message) };
 
   revalidatePath("/parent/savings");
-  revalidatePath("/child/savings");
   return { ok: true as const };
 }
 
@@ -203,7 +193,6 @@ export async function approveGoalClaimAction(requestId: string) {
   if (error) return { error: mapRpcError(error.message) };
 
   revalidatePath("/parent/savings");
-  revalidatePath("/child/targets");
   return { ok: true as const };
 }
 
@@ -222,6 +211,5 @@ export async function rejectGoalClaimAction(requestId: string, reason: string) {
   if (error) return { error: mapRpcError(error.message) };
 
   revalidatePath("/parent/savings");
-  revalidatePath("/child/targets");
   return { ok: true as const };
 }

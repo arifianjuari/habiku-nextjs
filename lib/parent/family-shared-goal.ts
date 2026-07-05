@@ -57,7 +57,15 @@ type LedgerEarnRow = { amount: number; type: string };
 export async function fetchFamilySharedGoal(
   familyId: string,
   supabase: AppSupabaseClient,
-  options?: { ledger?: LedgerEarnRow[] | null; childIds?: string[] },
+  options?: {
+    ledger?: LedgerEarnRow[] | null;
+    childIds?: string[];
+    settingsRow?: {
+      shared_family_goal_title?: string | null;
+      shared_family_goal_target_points?: number | null;
+      shared_family_goal_celebration_dismissed?: boolean;
+    } | null;
+  },
 ): Promise<FamilySharedGoal> {
   let childIds = options?.childIds;
 
@@ -82,13 +90,15 @@ export async function fetchFamilySharedGoal(
           .from("point_ledger")
           .select("amount, type")
           .in("profile_id", childIds),
-    supabase
-      .from("family_settings")
-      .select(
-        "shared_family_goal_title, shared_family_goal_target_points, shared_family_goal_celebration_dismissed",
-      )
-      .eq("family_id", familyId)
-      .maybeSingle(),
+    options?.settingsRow !== undefined
+      ? Promise.resolve({ data: options.settingsRow, error: null })
+      : supabase
+          .from("family_settings")
+          .select(
+            "shared_family_goal_title, shared_family_goal_target_points, shared_family_goal_celebration_dismissed",
+          )
+          .eq("family_id", familyId)
+          .maybeSingle(),
   ]);
 
   if (settingsResult.error) {

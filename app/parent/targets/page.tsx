@@ -1,15 +1,25 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { fetchFamilyChildrenAndGoals } from "@/lib/parent/fetch-family-page-data";
 import { TargetsPageRoot } from "@/components/parent/targets-page-root";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 
 export const metadata: Metadata = {
   title: "Kelola Target — Habiku",
   robots: { index: false },
 };
 
-export default async function ParentTargetsPage() {
+export default function ParentTargetsPage() {
+  return (
+    <Suspense fallback={<PageLoadingSkeleton variant="parent" />}>
+      <ParentTargetsContent />
+    </Suspense>
+  );
+}
+
+async function ParentTargetsContent() {
   const context = await getSessionContext();
 
   if (!context) {

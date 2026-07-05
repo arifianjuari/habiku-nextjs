@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import {
   Check,
@@ -34,6 +33,7 @@ import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-con
 import { SupabaseImage } from "@/components/shared/supabase-image";
 import { useParentListCache } from "@/lib/hooks/use-parent-list-cache";
 import { useFamilyRealtime } from "@/lib/hooks/use-family-realtime";
+import { usePrefetchChildAvatarUrls } from "@/lib/hooks/use-prefetch-child-avatar-urls";
 import { parentQueryKeys } from "@/lib/parent/query-keys";
 import {
   buildParentChildCardHeaderWash,
@@ -298,8 +298,6 @@ export function QueueClientView({
   familyId,
   childProfileIds,
 }: QueueClientViewProps) {
-  const router = useRouter();
-  const refreshTimerRef = useRef<number | null>(null);
   const [items, setItems] = useParentListCache<QueueItem[]>(
     parentQueryKeys.queue(familyId),
     initialQueueItems,
@@ -310,6 +308,12 @@ export function QueueClientView({
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectionError, setRejectionError] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+  const avatarPaths = useMemo(
+    () => items.map((item) => item.child.avatar_url),
+    [items],
+  );
+  usePrefetchChildAvatarUrls(avatarPaths);
 
   useEffect(() => {
     setItems(initialQueueItems);
@@ -333,17 +337,9 @@ export function QueueClientView({
     });
   }, [initialQueueItems]);
 
-  const handleFamilyDataChange = useCallback(() => {
-    if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
-    refreshTimerRef.current = window.setTimeout(() => {
-      router.refresh();
-    }, 1200);
-  }, [router]);
-
   useFamilyRealtime({
     childProfileIds,
     accountId: null,
-    onFamilyDataChange: handleFamilyDataChange,
   });
 
   const handleApprove = (itemId: string, childGoals: Goal[]) => {
@@ -355,13 +351,16 @@ export function QueueClientView({
       return;
     }
 
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return;
+
     setItems((prev) => prev.filter((i) => i.id !== itemId));
 
     startTransition(async () => {
       const res = await approveTaskHistoryAction(itemId, chosenGoalId);
       if (res?.error) {
         toast.error(res.error);
-        router.refresh();
+        setItems((prev) => [...prev, item]);
       } else {
         toast.success("Misi disetujui! Poin energi disalurkan.");
       }
@@ -377,6 +376,7 @@ export function QueueClientView({
     }
 
     const itemId = rejectingItemId;
+    const item = items.find((i) => i.id === itemId);
     setItems((prev) => prev.filter((i) => i.id !== itemId));
     setRejectingItemId(null);
 
@@ -384,7 +384,7 @@ export function QueueClientView({
       const res = await rejectTaskHistoryAction(itemId, rejectionReason);
       if (res?.error) {
         toast.error(res.error);
-        router.refresh();
+        if (item) setItems((prev) => [...prev, item]);
       } else {
         toast.success("Misi ditolak. Anak akan mendapatkan notifikasi revisi.");
       }

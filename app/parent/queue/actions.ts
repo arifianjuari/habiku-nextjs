@@ -21,9 +21,7 @@ export async function approveTaskHistoryAction(taskHistoryId: string, goalId: st
     return { error: error.message || "Gagal menyetujui misi anak." };
   }
 
-  revalidatePath("/parent");
   revalidatePath("/parent/queue");
-  revalidatePath("/parent/targets");
   return { success: true };
 }
 
@@ -48,7 +46,6 @@ export async function rejectTaskHistoryAction(taskHistoryId: string, reason: str
     return { error: error.message || "Gagal menolak misi anak." };
   }
 
-  revalidatePath("/parent");
   revalidatePath("/parent/queue");
   return { success: true };
 }

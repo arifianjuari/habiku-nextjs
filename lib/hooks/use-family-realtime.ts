@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/env";
+import { parentQueryKeys } from "@/lib/parent/query-keys";
 
 type UseFamilyRealtimeOptions = {
   /** ID profil anak dalam keluarga — dipakai untuk filter task_history & goals */
@@ -45,7 +46,7 @@ export function useFamilyRealtime({
         },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["task-history", profileId] });
-          void queryClient.invalidateQueries({ queryKey: ["parent-queue"] });
+          void queryClient.invalidateQueries({ queryKey: parentQueryKeys.all });
           onFamilyDataChange?.();
         },
       );
@@ -59,6 +60,7 @@ export function useFamilyRealtime({
         },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["goals", profileId] });
+          void queryClient.invalidateQueries({ queryKey: parentQueryKeys.all });
           onFamilyDataChange?.();
         },
       );

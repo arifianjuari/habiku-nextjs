@@ -63,9 +63,15 @@ function StreakFlames({ days }: { days: number }) {
   );
 }
 
-export function ChildHomeView() {
+import type { ChildHomeData } from "@/lib/child/fetch-child-data";
+
+type ChildHomeViewProps = {
+  initialData?: ChildHomeData;
+};
+
+export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
   const { profileId, profileName } = useChildModeStore();
-  const { data, isLoading, isFetching } = useChildHomeData(profileId);
+  const { data, isLoading, isFetching } = useChildHomeData(profileId, initialData);
   const patchHome = usePatchChildHomeCache(profileId ?? "");
   const [isPending, startTransition] = useTransition();
 

@@ -6,7 +6,10 @@ import { fetchChildHomeData, type ChildHomeData } from "@/lib/child/fetch-child-
 import { isValidChildProfileId } from "@/lib/child/profile-id";
 import { CHILD_STALE_MS } from "@/lib/query/constants";
 
-export function useChildHomeData(profileId: string | null) {
+export function useChildHomeData(
+  profileId: string | null,
+  initialData?: ChildHomeData,
+) {
   const enabled = isValidChildProfileId(profileId);
 
   return useQuery({
@@ -14,6 +17,7 @@ export function useChildHomeData(profileId: string | null) {
     queryFn: () => fetchChildHomeData(profileId!),
     enabled,
     staleTime: CHILD_STALE_MS,
+    initialData: enabled && initialData ? initialData : undefined,
     placeholderData: (prev) => prev,
   });
 }

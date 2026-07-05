@@ -1,7 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 import {
-  fetchFamilyChildrenAndGoalsClient,
-  fetchFamilyChildrenAndTasksClient,
+  fetchFamilyChildrenClient,
+  fetchFamilyGoalsClient,
+  fetchFamilyTasksClient,
   fetchParentSavingsDataClient,
   fetchPendingTaskRequestsClient,
 } from "@/lib/parent/fetch-family-page-data-client";
@@ -10,24 +11,29 @@ import { seedParentListCache } from "@/lib/parent/seed-parent-list-cache";
 import type { Goal } from "@/types/database";
 
 export function prefetchParentTasks(queryClient: QueryClient, familyId: string) {
-  return Promise.all([
-    fetchFamilyChildrenAndTasksClient(familyId).then(({ tasks }) => {
-      seedParentListCache(queryClient, parentQueryKeys.tasks(familyId), tasks);
-    }),
-    fetchPendingTaskRequestsClient(familyId).then((requests) => {
-      seedParentListCache(
-        queryClient,
-        [...parentQueryKeys.tasks(familyId), "pending-requests"],
-        requests,
-      );
-    }),
-  ]);
+  return fetchFamilyChildrenClient(familyId).then((children) => {
+    const childIds = children.map((c) => c.id);
+    return Promise.all([
+      fetchFamilyTasksClient(familyId, childIds).then((tasks) => {
+        seedParentListCache(queryClient, parentQueryKeys.tasks(familyId), tasks);
+      }),
+      fetchPendingTaskRequestsClient(familyId, children).then((requests) => {
+        seedParentListCache(
+          queryClient,
+          [...parentQueryKeys.tasks(familyId), "pending-requests"],
+          requests,
+        );
+      }),
+    ]);
+  });
 }
 
 export function prefetchParentTargets(queryClient: QueryClient, familyId: string) {
-  return fetchFamilyChildrenAndGoalsClient(familyId).then(({ goals }) => {
-    seedParentListCache(queryClient, parentQueryKeys.targets(familyId), goals);
-  });
+  return fetchFamilyChildrenClient(familyId).then((children) =>
+    fetchFamilyGoalsClient(familyId, children.map((c) => c.id)).then((goals) => {
+      seedParentListCache(queryClient, parentQueryKeys.targets(familyId), goals);
+    }),
+  );
 }
 
 export function prefetchParentSavings(queryClient: QueryClient, familyId: string) {
@@ -50,7 +56,7 @@ export function prefetchParentTabData(
   if (href.startsWith("/parent/targets")) {
     return prefetchParentTargets(queryClient, familyId);
   }
-  if (href.startsWith("/parent/queue")) {
+  if (href.startsWith("/parent/profil-anak")) {
     return Promise.resolve();
   }
   return Promise.resolve();

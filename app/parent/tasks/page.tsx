@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import {
-  fetchFamilyChildrenAndGoals,
-  fetchFamilyChildrenAndTasks,
+  fetchFamilyGoals,
+  fetchFamilyTasks,
   fetchPendingTaskRequests,
 } from "@/lib/parent/fetch-family-page-data";
-import { TasksClientView } from "@/components/parent/tasks-client-view";
+import { getFamilyChildren } from "@/lib/parent/parent-home-data";
+import { DynamicTasksClientView } from "@/components/parent/parent-dynamic-views";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import type { Goal } from "@/types/database";
 
 export const metadata: Metadata = {
@@ -14,17 +17,28 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default async function ParentTasksPage() {
+export default function ParentTasksPage() {
+  return (
+    <Suspense fallback={<PageLoadingSkeleton variant="parent" />}>
+      <ParentTasksContent />
+    </Suspense>
+  );
+}
+
+async function ParentTasksContent() {
   const context = await getSessionContext();
 
   if (!context) {
     redirect("/login");
   }
 
-  const [{ children, tasks }, { goals }, pendingTaskRequests] = await Promise.all([
-    fetchFamilyChildrenAndTasks(context.family.id),
-    fetchFamilyChildrenAndGoals(context.family.id),
-    fetchPendingTaskRequests(context.family.id),
+  const children = await getFamilyChildren(context.family.id);
+  const childIds = children.map((c) => c.id);
+
+  const [tasks, goals, pendingTaskRequests] = await Promise.all([
+    fetchFamilyTasks(context.family.id, childIds),
+    fetchFamilyGoals(context.family.id, childIds),
+    fetchPendingTaskRequests(context.family.id, children),
   ]);
 
   const goalsByProfile = children.reduce<Record<string, Goal[]>>((acc, child) => {
@@ -40,7 +54,7 @@ export default async function ParentTasksPage() {
           <p className="text-xs text-muted-foreground">Silakan tambahkan profil anak di menu Onboarding atau Pengaturan terlebih dahulu.</p>
         </div>
       ) : (
-        <TasksClientView
+        <DynamicTasksClientView
           children={children}
           initialTasks={tasks}
           goalsByProfile={goalsByProfile}

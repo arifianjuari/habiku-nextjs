@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import type { AppSupabaseClient } from "@/lib/supabase/types";
 import {
   DEFAULT_CHILD_ENGAGEMENT_SETTINGS,
   type ChildEngagementData,
@@ -8,9 +9,14 @@ import {
   type SiblingHighlight,
 } from "@/lib/child/engagement-types";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type FamilyEngagementSettingsRow = {
+  micro_anim_enabled?: boolean;
+  daily_tip_enabled?: boolean;
+  show_sibling_highlight?: boolean;
+  family_garden_enabled?: boolean;
+};
 
-function callProfileRpc(supabase: SupabaseClient, fn: string, profileId: string) {
+function callProfileRpc(supabase: AppSupabaseClient, fn: string, profileId: string) {
   const client = supabase as unknown as {
     rpc: (
       name: string,
@@ -23,6 +29,8 @@ function callProfileRpc(supabase: SupabaseClient, fn: string, profileId: string)
 export async function fetchChildEngagement(
   profileId: string,
   familyId: string,
+  supabase?: AppSupabaseClient,
+  options?: { settingsRow?: FamilyEngagementSettingsRow | null },
 ): Promise<ChildEngagementData> {
   if (!familyId) {
     return {
@@ -36,21 +44,22 @@ export async function fetchChildEngagement(
     };
   }
 
-  const supabase = createClient();
+  const client = supabase ?? createClient();
 
-  const [settingsResult, tipResult, siblingResult, countdownResult] =
-    await Promise.all([
-      supabase
-        .from("family_settings")
-        .select(
-          "micro_anim_enabled, daily_tip_enabled, show_sibling_highlight, family_garden_enabled",
-        )
-        .eq("family_id", familyId)
-        .maybeSingle(),
-      callProfileRpc(supabase, "pick_daily_tip", profileId),
-      callProfileRpc(supabase, "pick_sibling_highlight", profileId),
-      callProfileRpc(supabase, "compute_goal_countdown", profileId),
-    ]);
+  const [settingsResult, tipResult, siblingResult, countdownResult] = await Promise.all([
+    options?.settingsRow !== undefined
+      ? Promise.resolve({ data: options.settingsRow, error: null })
+      : client
+          .from("family_settings")
+          .select(
+            "micro_anim_enabled, daily_tip_enabled, show_sibling_highlight, family_garden_enabled",
+          )
+          .eq("family_id", familyId)
+          .maybeSingle(),
+    callProfileRpc(client, "pick_daily_tip", profileId),
+    callProfileRpc(client, "pick_sibling_highlight", profileId),
+    callProfileRpc(client, "compute_goal_countdown", profileId),
+  ]);
 
   const settingsRow = settingsResult.data as {
     micro_anim_enabled?: boolean;

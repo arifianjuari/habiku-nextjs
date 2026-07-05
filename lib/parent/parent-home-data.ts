@@ -82,7 +82,7 @@ export const getFamilyChildren = cache(async (familyId: string): Promise<ChildPr
     .select("*")
     .eq("family_id", familyId)
     .is("archived_at", null)
-    .order("created_at", { ascending: true });
+    .order("name", { ascending: true });
 
   return data ?? [];
 });

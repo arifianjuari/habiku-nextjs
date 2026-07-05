@@ -40,24 +40,56 @@ export async function fetchFamilyChildrenClient(
   return data ?? [];
 }
 
+export async function fetchFamilyTasksClient(
+  familyId: string,
+  childIds?: string[],
+  supabase?: AppSupabaseClient,
+): Promise<Task[]> {
+  const client = supabase ?? createClient();
+  const ids = childIds ?? (await fetchFamilyChildrenClient(familyId, client)).map((c) => c.id);
+
+  if (ids.length === 0) return [];
+
+  const { data: tasks } = await client
+    .from("tasks")
+    .select("*")
+    .in("profile_id", ids)
+    .order("created_at", { ascending: false });
+
+  return (tasks ?? []) as Task[];
+}
+
+export async function fetchFamilyGoalsClient(
+  familyId: string,
+  childIds?: string[],
+  supabase?: AppSupabaseClient,
+): Promise<Goal[]> {
+  const client = supabase ?? createClient();
+  const ids = childIds ?? (await fetchFamilyChildrenClient(familyId, client)).map((c) => c.id);
+
+  if (ids.length === 0) return [];
+
+  const { data: goals } = await client
+    .from("goals")
+    .select("*")
+    .in("profile_id", ids)
+    .order("created_at", { ascending: false });
+
+  return goals ?? [];
+}
+
 export async function fetchFamilyChildrenAndTasksClient(
   familyId: string,
 ): Promise<{ children: ChildProfile[]; tasks: Task[] }> {
   const supabase = createClient();
   const children = await fetchFamilyChildrenClient(familyId, supabase);
-  const childIds = children.map((c) => c.id);
+  const tasks = await fetchFamilyTasksClient(
+    familyId,
+    children.map((c) => c.id),
+    supabase,
+  );
 
-  if (childIds.length === 0) {
-    return { children, tasks: [] };
-  }
-
-  const { data: tasks } = await supabase
-    .from("tasks")
-    .select("*")
-    .in("profile_id", childIds)
-    .order("created_at", { ascending: false });
-
-  return { children, tasks: (tasks ?? []) as Task[] };
+  return { children, tasks };
 }
 
 export async function fetchFamilyChildrenAndGoalsClient(
@@ -65,32 +97,28 @@ export async function fetchFamilyChildrenAndGoalsClient(
 ): Promise<{ children: ChildProfile[]; goals: Goal[] }> {
   const supabase = createClient();
   const children = await fetchFamilyChildrenClient(familyId, supabase);
-  const childIds = children.map((c) => c.id);
+  const goals = await fetchFamilyGoalsClient(
+    familyId,
+    children.map((c) => c.id),
+    supabase,
+  );
 
-  if (childIds.length === 0) {
-    return { children, goals: [] };
-  }
-
-  const { data: goals } = await supabase
-    .from("goals")
-    .select("*")
-    .in("profile_id", childIds)
-    .order("created_at", { ascending: false });
-
-  return { children, goals: goals ?? [] };
+  return { children, goals };
 }
 
 export async function fetchPendingTaskRequestsClient(
   familyId: string,
+  children?: Pick<ChildProfile, "id" | "name">[],
 ): Promise<PendingTaskRequest[]> {
   const supabase = createClient();
-  const { data: children } = await supabase
-    .from("child_profiles")
-    .select("id, name")
-    .eq("family_id", familyId)
-    .is("archived_at", null);
+  const childList =
+    children ??
+    ((await supabase
+      .from("child_profiles")
+      .select("id, name")
+      .eq("family_id", familyId)
+      .is("archived_at", null)).data ?? []);
 
-  const childList = children ?? [];
   const childIds = childList.map((c) => c.id);
   if (childIds.length === 0) return [];
 

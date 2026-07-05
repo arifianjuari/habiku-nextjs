@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
-import { TargetsClientView } from "@/components/parent/targets-client-view";
+import { DynamicTargetsClientView } from "@/components/parent/parent-dynamic-views";
 import type { ChildProfile, Goal } from "@/types/database";
 
 type TargetsPageRootProps = {
@@ -20,7 +20,7 @@ export function TargetsPageRoot({ children, initialGoals }: TargetsPageRootProps
         title={`Target Hadiah ${activeChild?.name ?? ""}`.trim()}
         description="Atur hadiah impian anak yang ditebus menggunakan poin energi."
       />
-      <TargetsClientView
+      <DynamicTargetsClientView
         children={children}
         initialGoals={initialGoals}
         activeChildId={activeChildId}

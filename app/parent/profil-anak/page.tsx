@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
@@ -8,8 +9,9 @@ import {
   fetchArchivedFamilyChildren,
   fetchFamilyChildren,
 } from "@/lib/parent/fetch-family-page-data";
-import { ChildProfilesList } from "@/components/parent/child-profiles-list";
+import { DynamicChildProfilesList } from "@/components/parent/parent-dynamic-views";
 import { FamilyBroadcastEditor } from "@/components/parent/family-broadcast-editor";
+import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -18,33 +20,40 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default async function ParentChildProfilesPage() {
+export default function ParentChildProfilesPage() {
+  return (
+    <Suspense fallback={<PageLoadingSkeleton variant="parent" />}>
+      <ParentChildProfilesContent />
+    </Suspense>
+  );
+}
+
+async function ParentChildProfilesContent() {
   const context = await getSessionContext();
 
   if (!context) {
     redirect("/login");
   }
 
-  const [children, archivedChildren] = await Promise.all([
+  const supabase = await createClient();
+  const [children, archivedChildren, familyRow] = await Promise.all([
     fetchFamilyChildren(context.family.id),
     fetchArchivedFamilyChildren(context.family.id),
+    supabase
+      .from("families")
+      .select("family_broadcast_message")
+      .eq("id", context.family.id)
+      .maybeSingle(),
   ]);
 
-  const supabase = await createClient();
-  const { data: familyRow } = await supabase
-    .from("families")
-    .select("family_broadcast_message")
-    .eq("id", context.family.id)
-    .maybeSingle();
-
   const broadcastMessage =
-    (familyRow as { family_broadcast_message?: string | null } | null)
+    (familyRow.data as { family_broadcast_message?: string | null } | null)
       ?.family_broadcast_message ?? null;
 
   return (
     <div className="space-y-6">
       <FamilyBroadcastEditor initialMessage={broadcastMessage} />
-      <ChildProfilesList
+      <DynamicChildProfilesList
         initialChildren={children}
         initialArchivedChildren={archivedChildren}
       />

@@ -34,6 +34,7 @@ export async function loadStickyMessages(
   supabase: SupabaseClient,
   profileId: string,
   familyId: string | null | undefined,
+  options?: { parentStickyMessage?: string | null },
 ): Promise<StickyMessages> {
   const untyped = supabase as unknown as UntypedClient;
   const rpcClient = supabase as unknown as {
@@ -44,11 +45,16 @@ export async function loadStickyMessages(
   };
 
   const [profileResult, familyResult, rpcResult] = await Promise.all([
-    untyped
-      .from("child_profiles")
-      .select("parent_sticky_message")
-      .eq("id", profileId)
-      .maybeSingle(),
+    options?.parentStickyMessage !== undefined
+      ? Promise.resolve({
+          data: { parent_sticky_message: options.parentStickyMessage },
+          error: null,
+        })
+      : untyped
+          .from("child_profiles")
+          .select("parent_sticky_message")
+          .eq("id", profileId)
+          .maybeSingle(),
     familyId
       ? untyped
           .from("families")
