@@ -25,10 +25,10 @@ export function ChildTabSelector({
     <Tabs
       value={activeChildId}
       onValueChange={onActiveChildIdChange}
-      className={cn("w-full", className)}
+      className={cn("min-w-0 w-full", className)}
     >
-      <div className="overflow-x-auto pb-0.5 scrollbar-none">
-        <TabsList className="inline-flex h-auto min-w-full w-max gap-1 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 shadow-inner">
+      <div className="-mx-4 min-w-0 overflow-x-auto px-4 pb-0.5 scrollbar-none">
+        <TabsList className="inline-flex h-auto w-max gap-1 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 shadow-inner">
           {profiles.map((child) => {
             const accentColor = child.home_card_accent || "#8B5CF6";
             const isActive = child.id === activeChildId;

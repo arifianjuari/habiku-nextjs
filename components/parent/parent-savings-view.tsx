@@ -77,14 +77,21 @@ function SummaryStat({ icon, label, value, suffix, tone = "slate" }: SummaryStat
         : "text-foreground";
 
   return (
-    <div className="min-w-0 rounded-xl border border-border/60 bg-card px-2.5 py-2 shadow-sm">
-      <div className="flex items-center gap-1.5">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60">
+    <div className="min-w-0 rounded-xl border border-border/60 bg-card px-2 py-2 shadow-sm sm:px-2.5">
+      <div className="flex items-start gap-1.5">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted/60 sm:size-6">
           {icon}
         </span>
-        <p className="truncate text-[10px] font-medium text-muted-foreground">{label}</p>
+        <p className="min-w-0 text-[9px] font-medium leading-tight text-muted-foreground text-pretty sm:text-[10px]">
+          {label}
+        </p>
       </div>
-      <p className={cn("mt-1 font-heading text-lg font-black tabular-nums leading-none", valueTone)}>
+      <p
+        className={cn(
+          "mt-1 font-heading text-base font-black tabular-nums leading-none sm:text-lg",
+          valueTone,
+        )}
+      >
         {value}
         {suffix ? (
           <span className="ml-0.5 text-xs font-bold text-muted-foreground">{suffix}</span>
@@ -163,20 +170,18 @@ function SavingsPocketCard({
   if (pocket.reserved > 0) metaParts.push(`${pocket.reserved} E pending`);
 
   return (
-    <article className="rounded-xl border border-border/60 bg-card shadow-sm">
-      <div className="space-y-1.5 px-2.5 py-2">
-        <div className="flex items-center gap-2">
+    <article className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+      <div className="space-y-2 px-2.5 py-2.5">
+        <div className="flex items-start gap-2">
           <span className="shrink-0 text-lg leading-none" aria-hidden>
             {pocket.emoji}
           </span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <h3 className="truncate font-heading text-xs font-bold text-foreground">
-                {pocket.name}
-              </h3>
+            <h3 className="truncate font-heading text-xs font-bold text-foreground">{pocket.name}</h3>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1">
               <span
                 className={cn(
-                  "shrink-0 rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
+                  "rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-wide",
                   pocket.pocket_type === "term"
                     ? "bg-amber-100 text-amber-800"
                     : "bg-slate-100 text-slate-600",
@@ -185,47 +190,49 @@ function SavingsPocketCard({
                 {pocket.pocket_type === "term" ? "Deposito" : "Akumulatif"}
               </span>
               {pocket.default_for_goal_save ? (
-                <span className="shrink-0 rounded bg-violet-100 px-1.5 py-px text-[9px] font-bold text-violet-700">
+                <span className="rounded bg-violet-100 px-1.5 py-px text-[9px] font-bold text-violet-700">
                   Default
                 </span>
               ) : null}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span className="flex items-center gap-0.5 font-heading text-base font-black tabular-nums text-violet-700">
+              {pocket.balance}
+              <Zap className="size-3.5 fill-amber-400 text-amber-500" aria-hidden />
+            </span>
             {progress !== null ? (
               <span className="text-[10px] font-black tabular-nums text-violet-600">
                 {progress}%
               </span>
             ) : null}
-            <span className="flex items-center gap-0.5 font-heading text-base font-black tabular-nums text-violet-700">
-              {pocket.balance}
-              <Zap className="size-3.5 fill-amber-400 text-amber-500" aria-hidden />
-            </span>
-            <button
-              type="button"
-              data-compact
-              onClick={onEdit}
-              aria-label={`Ubah kantong ${pocket.name}`}
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            >
-              <Pencil className="size-3.5" aria-hidden />
-            </button>
-            {canDelete ? (
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 data-compact
-                onClick={onDelete}
-                aria-label={`Hapus kantong ${pocket.name}`}
-                className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-red-200/80 text-red-600 transition-colors hover:bg-red-50"
+                onClick={onEdit}
+                aria-label={`Ubah kantong ${pocket.name}`}
+                className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
               >
-                <Trash2 className="size-3.5" aria-hidden />
+                <Pencil className="size-3.5" aria-hidden />
               </button>
-            ) : null}
+              {canDelete ? (
+                <button
+                  type="button"
+                  data-compact
+                  onClick={onDelete}
+                  aria-label={`Hapus kantong ${pocket.name}`}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-red-200/80 text-red-600 transition-colors hover:bg-red-50"
+                >
+                  <Trash2 className="size-3.5" aria-hidden />
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 
         {metaParts.length > 0 ? (
-          <p className="truncate pl-[calc(1.125rem+0.5rem)] text-[10px] leading-tight text-muted-foreground">
+          <p className="min-w-0 truncate text-[10px] leading-tight text-muted-foreground">
             {metaParts.map((part, i) => (
               <span key={part}>
                 {i > 0 ? <span className="text-border"> · </span> : null}
@@ -586,7 +593,7 @@ export function ParentSavingsView({
   }
 
   return (
-    <div className="space-y-3.5 pb-20">
+    <div className="min-w-0 space-y-3.5 overflow-x-clip pb-[calc(7.5rem+env(safe-area-inset-bottom))]">
       {pendingCount > 0 ? (
         <section
           className="space-y-2 rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3 shadow-sm"
@@ -661,7 +668,7 @@ export function ParentSavingsView({
 
       {activeChild ? (
         <section
-          className="grid grid-cols-3 gap-2"
+          className="grid grid-cols-3 gap-1.5 sm:gap-2"
           aria-label={`Ringkasan tabungan ${activeChild.name}`}
         >
           <SummaryStat
@@ -688,10 +695,10 @@ export function ParentSavingsView({
       ) : null}
 
       <section className="space-y-2" aria-label="Daftar kantong tabungan">
-        <div className="flex items-center justify-between gap-2 px-0.5">
+        <div className="space-y-0.5 px-0.5">
           <h2 className="text-xs font-bold text-muted-foreground">Kantong tabungan</h2>
           {activeChild ? (
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[10px] leading-snug text-muted-foreground text-pretty">
               Energi di target aktif bisa ditabung ke kantong
             </p>
           ) : null}
@@ -734,7 +741,7 @@ export function ParentSavingsView({
       </section>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.5rem)] z-50">
-        <div className="pointer-events-auto mx-auto flex max-w-lg items-center justify-center gap-2 px-4">
+        <div className="pointer-events-auto mx-auto flex w-full max-w-lg items-center justify-center gap-2 px-4">
           <Link
             href="/parent/ledger"
             data-compact

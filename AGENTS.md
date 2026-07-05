@@ -26,3 +26,7 @@ See root `package.json`: `pnpm lint`, `pnpm build`, `pnpm start`. ESLint current
 ### Auth / E2E seed
 
 Full parent→child flows need a Supabase project with migrations applied and seed users (E2E spec expects `parent@habiku.id` — may not exist on a fresh project). For smoke tests without credentials: homepage, `/login`, and unauthenticated `/parent` → `/login?next=%2Fparent`.
+
+### Performance / responsiveness
+
+Before adding parent/child routes, tabs, data fetching, server actions, or PWA changes, read and follow `.agents/skills/habiku-performance/SKILL.md`. Verify with `docs/performance-verification.md` when touching navigation or submit flows.
