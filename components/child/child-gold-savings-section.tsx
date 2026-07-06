@@ -462,13 +462,13 @@ export function ChildGoldSavingsSection({
 
 
       <ChildGoldPnlPanel
-
-        pnl={gold.pnl}
-
+        profileId={profileId}
+        quantityMilli={gold.quantityMilli}
+        buyPriceEnergy={gold.prices.buyPriceEnergy}
+        sellPriceEnergy={gold.prices.sellPriceEnergy}
         unitLabel={unitLabel}
-
         hasHoldings={gold.quantityMilli > 0}
-
+        enabled={gold.goldSavingsEnabled}
       />
 
 

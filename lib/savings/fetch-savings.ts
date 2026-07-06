@@ -59,9 +59,13 @@ export async function fetchParentSavingsData(
   ]);
 
   const profileIds = children.map((c) => c.id);
-  const savingsEnabled = settingsResult.data?.savings_enabled ?? true;
-  const goalSaveEnabled = settingsResult.data?.goal_save_enabled ?? true;
-  const maxMonthlyInterestBps = settingsResult.data?.max_monthly_interest_bps ?? 500;
+  const settingsRow = settingsResult.data;
+  const savingsEnabled = settingsRow?.savings_enabled ?? true;
+  const goalSaveEnabled = settingsRow?.goal_save_enabled ?? true;
+  const maxMonthlyInterestBps = settingsRow?.max_monthly_interest_bps ?? 500;
+  const goldEnabled = settingsRow?.gold_savings_enabled ?? false;
+
+  const emptyGold = await fetchParentGoldSavingsData(supabase, familyId, profileIds, settingsRow);
 
   const empty: ParentSavingsData = {
     children: [],
@@ -72,10 +76,10 @@ export async function fetchParentSavingsData(
     savingsEnabled,
     goalSaveEnabled,
     maxMonthlyInterestBps,
-    gold: await fetchParentGoldSavingsData(supabase, familyId, [], settingsResult.data),
+    gold: emptyGold,
   };
 
-  if (profileIds.length === 0) return empty;
+  if (profileIds.length === 0) return { ...empty, children };
 
   const [pocketsResult, pendingResult, claimsResult, goalsResult, gold] = await Promise.all([
     supabase
@@ -106,7 +110,9 @@ export async function fetchParentSavingsData(
       .select("profile_id, current_hp")
       .in("profile_id", profileIds)
       .eq("status", "active"),
-    fetchParentGoldSavingsData(supabase, familyId, profileIds, settingsResult.data),
+    goldEnabled
+      ? fetchParentGoldSavingsData(supabase, familyId, profileIds, settingsRow)
+      : Promise.resolve(emptyGold),
   ]);
 
   const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];

@@ -29,3 +29,17 @@ export const DynamicChildProfilesList = dynamic(
   () => import("./child-profiles-list").then((m) => m.ChildProfilesList),
   { loading: ParentViewLoading },
 );
+
+export const DynamicParentGoldSavingsSection = dynamic(
+  () =>
+    import("./parent-gold-savings-section").then((m) => m.ParentGoldSavingsSection),
+  { loading: () => null },
+);
+
+export const DynamicChildGoldSavingsSection = dynamic(
+  () =>
+    import("@/components/child/child-gold-savings-section").then(
+      (m) => m.ChildGoldSavingsSection,
+    ),
+  { loading: () => null },
+);

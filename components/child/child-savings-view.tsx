@@ -33,7 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
-import { ChildGoldSavingsSection } from "@/components/child/child-gold-savings-section";
+import { DynamicChildGoldSavingsSection } from "@/components/parent/parent-dynamic-views";
 import { cn } from "@/lib/utils";
 
 function formatLockDate(iso: string): string {
@@ -187,7 +187,7 @@ export function ChildSavingsView() {
             </div>
           </CardContent>
         </Card>
-        <ChildGoldSavingsSection
+        <DynamicChildGoldSavingsSection
           profileId={profileId}
           gold={data.gold}
           savableBalance={data.savableBalance}
@@ -219,7 +219,7 @@ export function ChildSavingsView() {
       <div className="relative space-y-6 pb-4" data-fetching={isFetching ? "" : undefined}>
         <ChildFetchingIndicator isFetching={isFetching && !!data} />
         {savingsDisabledCard}
-        <ChildGoldSavingsSection
+        <DynamicChildGoldSavingsSection
           profileId={profileId}
           gold={data.gold}
           savableBalance={data.savableBalance}
@@ -616,7 +616,7 @@ export function ChildSavingsView() {
         </>
       )}
 
-      <ChildGoldSavingsSection
+      <DynamicChildGoldSavingsSection
         profileId={profileId}
         gold={data.gold}
         savableBalance={data.savableBalance}

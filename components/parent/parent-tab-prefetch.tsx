@@ -2,19 +2,15 @@
 
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  prefetchParentSavings,
-  prefetchParentTargets,
-  prefetchParentTasks,
-} from "@/lib/parent/prefetch-parent-queries";
+import { prefetchAllParentTabs } from "@/lib/parent/prefetch-parent-queries";
 
 type ParentTabPrefetchProps = {
   familyId: string | null;
 };
 
 /**
- * Prefetch tab ortu saat idle — navigasi bottom nav pakai cache React Query,
- * bukan menunggu RSC fetch ulang.
+ * Prefetch tab ortu saat idle — bertahap agar tidak membanjiri jaringan
+ * (tabungan + emas virtual paling berat).
  */
 export function ParentTabPrefetch({ familyId }: ParentTabPrefetchProps) {
   const queryClient = useQueryClient();
@@ -31,9 +27,7 @@ export function ParentTabPrefetch({ familyId }: ParentTabPrefetchProps) {
         : (cb: () => void) => window.setTimeout(cb, 400);
 
     const idleId = schedule(() => {
-      void prefetchParentTasks(queryClient, familyId);
-      void prefetchParentTargets(queryClient, familyId);
-      void prefetchParentSavings(queryClient, familyId);
+      prefetchAllParentTabs(queryClient, familyId);
     });
 
     return () => {

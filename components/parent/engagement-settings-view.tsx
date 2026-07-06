@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles, PiggyBank, Coins } from "lucide-react";
 import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,7 +57,7 @@ function SettingsSwitch({
 }
 
 export function EngagementSettingsView({ initialSettings }: EngagementSettingsViewProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
 
   const [microAnim, setMicroAnim] = useState(initialSettings.micro_anim_enabled);
@@ -104,7 +104,8 @@ export function EngagementSettingsView({ initialSettings }: EngagementSettingsVi
         toast.error(res.error);
       } else {
         toast.success("Pengaturan keterlibatan berhasil disimpan! 🎯");
-        router.refresh();
+        void queryClient.invalidateQueries({ queryKey: ["parent"] });
+        void queryClient.invalidateQueries({ queryKey: ["child"] });
       }
     });
   };

@@ -142,20 +142,31 @@ export async function fetchParentSavingsDataClient(
   familyId: string,
 ): Promise<ParentSavingsData> {
   const supabase = createClient();
-  const children = await fetchFamilyChildrenClient(familyId, supabase);
-  const profileIds = children.map((c) => c.id);
 
-  const [settingsResult] = await Promise.all([
+  const [children, settingsResult] = await Promise.all([
+    fetchFamilyChildrenClient(familyId, supabase),
     supabase
       .from("family_settings")
-      .select("savings_enabled, goal_save_enabled, max_monthly_interest_bps, gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label")
+      .select(
+        "savings_enabled, goal_save_enabled, max_monthly_interest_bps, gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label",
+      )
       .eq("family_id", familyId)
       .maybeSingle(),
   ]);
 
-  const savingsEnabled = settingsResult.data?.savings_enabled ?? true;
-  const goalSaveEnabled = settingsResult.data?.goal_save_enabled ?? true;
-  const maxMonthlyInterestBps = settingsResult.data?.max_monthly_interest_bps ?? 500;
+  const profileIds = children.map((c) => c.id);
+  const settingsRow = settingsResult.data;
+  const savingsEnabled = settingsRow?.savings_enabled ?? true;
+  const goalSaveEnabled = settingsRow?.goal_save_enabled ?? true;
+  const maxMonthlyInterestBps = settingsRow?.max_monthly_interest_bps ?? 500;
+  const goldEnabled = settingsRow?.gold_savings_enabled ?? false;
+
+  const emptyGold = await fetchParentGoldSavingsData(
+    supabase,
+    familyId,
+    profileIds,
+    settingsRow,
+  );
 
   const empty: ParentSavingsData = {
     children,
@@ -166,7 +177,7 @@ export async function fetchParentSavingsDataClient(
     savingsEnabled,
     goalSaveEnabled,
     maxMonthlyInterestBps,
-    gold: await fetchParentGoldSavingsData(supabase, familyId, [], settingsResult.data),
+    gold: emptyGold,
   };
 
   if (profileIds.length === 0) return empty;
@@ -200,7 +211,9 @@ export async function fetchParentSavingsDataClient(
       .select("profile_id, current_hp")
       .in("profile_id", profileIds)
       .eq("status", "active"),
-    fetchParentGoldSavingsData(supabase, familyId, profileIds, settingsResult.data),
+    goldEnabled
+      ? fetchParentGoldSavingsData(supabase, familyId, profileIds, settingsRow)
+      : Promise.resolve(emptyGold),
   ]);
 
   const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];

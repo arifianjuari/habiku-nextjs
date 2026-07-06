@@ -53,7 +53,7 @@ import {
   approveGoldTransactionAction,
   rejectGoldTransactionAction,
 } from "@/app/parent/savings/actions";
-import { ParentGoldSavingsSection } from "@/components/parent/parent-gold-savings-section";
+import { DynamicParentGoldSavingsSection } from "@/components/parent/parent-dynamic-views";
 import {
   bpsToPercentInputValue,
   effectiveMonthlyBps,
@@ -825,7 +825,7 @@ export function ParentSavingsView({
             Tambahkan profil anak terlebih dahulu.
           </p>
         </div>
-        <ParentGoldSavingsSection gold={gold} children={children} activeChildId="" />
+        <DynamicParentGoldSavingsSection gold={gold} children={children} activeChildId="" />
       </div>
     );
   }
@@ -857,7 +857,7 @@ export function ParentSavingsView({
     return (
       <div className="space-y-4">
         {savingsDisabledCard}
-        <ParentGoldSavingsSection gold={gold} children={children} activeChildId={activeChildId} />
+        <DynamicParentGoldSavingsSection gold={gold} children={children} activeChildId={activeChildId} />
       </div>
     );
   }
@@ -872,7 +872,7 @@ export function ParentSavingsView({
           activeChildId={activeChildId}
           onActiveChildIdChange={setActiveChildId}
         />
-        <ParentGoldSavingsSection gold={gold} children={children} activeChildId={activeChildId} />
+        <DynamicParentGoldSavingsSection gold={gold} children={children} activeChildId={activeChildId} />
         {approvalRejectDialogs}
       </div>
     );
@@ -962,7 +962,7 @@ export function ParentSavingsView({
         )}
       </section>
 
-      <ParentGoldSavingsSection gold={gold} children={children} activeChildId={activeChildId} />
+      <DynamicParentGoldSavingsSection gold={gold} children={children} activeChildId={activeChildId} />
 
       <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.5rem)] z-50">
         <div className="pointer-events-auto mx-auto flex w-full max-w-lg items-center justify-center gap-2 px-4">

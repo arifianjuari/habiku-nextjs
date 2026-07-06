@@ -2,24 +2,48 @@
 
 import { useId, useMemo } from "react";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
-import type { GoldPnlSnapshot } from "@/lib/gold/pnl";
 import {
   buildGoldPnlChartPaths,
   formatPnlPercent,
+  type GoldPnlSnapshot,
 } from "@/lib/gold/pnl";
+import { useChildGoldPnl } from "@/lib/hooks/use-child-gold-pnl";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type ChildGoldPnlPanelProps = {
-  pnl: GoldPnlSnapshot;
+  profileId: string;
+  quantityMilli: number;
+  buyPriceEnergy: number;
+  sellPriceEnergy: number;
   unitLabel: string;
   hasHoldings: boolean;
+  enabled: boolean;
 };
 
 const CHART_WIDTH = 280;
 const CHART_HEIGHT = 72;
 
-export function ChildGoldPnlPanel({ pnl, unitLabel, hasHoldings }: ChildGoldPnlPanelProps) {
+function PnlPanelSkeleton() {
+  return (
+    <Card className="border-dashed border-amber-200/80 bg-amber-50/30 shadow-sm">
+      <CardContent className="space-y-2 p-4">
+        <div className="h-3 w-32 animate-pulse rounded bg-amber-100" />
+        <div className="h-16 animate-pulse rounded-xl bg-amber-100/60" />
+      </CardContent>
+    </Card>
+  );
+}
+
+function PnlPanelContent({
+  pnl,
+  unitLabel,
+  hasHoldings,
+}: {
+  pnl: GoldPnlSnapshot;
+  unitLabel: string;
+  hasHoldings: boolean;
+}) {
   const gradientId = useId().replace(/:/g, "");
   const chart = useMemo(
     () => buildGoldPnlChartPaths(pnl.history, CHART_WIDTH, CHART_HEIGHT),
@@ -200,5 +224,31 @@ export function ChildGoldPnlPanel({ pnl, unitLabel, hasHoldings }: ChildGoldPnlP
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+export function ChildGoldPnlPanel({
+  profileId,
+  quantityMilli,
+  buyPriceEnergy,
+  sellPriceEnergy,
+  unitLabel,
+  hasHoldings,
+  enabled,
+}: ChildGoldPnlPanelProps) {
+  const { data: pnl, isLoading } = useChildGoldPnl(
+    profileId,
+    quantityMilli,
+    buyPriceEnergy,
+    sellPriceEnergy,
+    enabled,
+  );
+
+  if (isLoading || !pnl) {
+    return <PnlPanelSkeleton />;
+  }
+
+  return (
+    <PnlPanelContent pnl={pnl} unitLabel={unitLabel} hasHoldings={hasHoldings} />
   );
 }
