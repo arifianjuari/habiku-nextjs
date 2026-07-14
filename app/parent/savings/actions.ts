@@ -42,6 +42,9 @@ function mapRpcError(message: string): string {
   if (message.includes("pending_withdrawals")) {
     return "Masih ada permintaan penarikan yang menunggu persetujuan.";
   }
+  if (message.includes("goal_not_ready")) {
+    return "Target ini sudah tidak bisa diklaim — energinya sudah ditabung atau diklaim. Tolak permintaan ini.";
+  }
   if (message.includes("invalid_gold_spread")) {
     return "Harga beli harus lebih rendah dari harga jual.";
   }

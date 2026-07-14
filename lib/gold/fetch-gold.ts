@@ -10,7 +10,7 @@ import type {
   ParentGoldSavingsData,
 } from "@/lib/gold/types";
 
-type FamilyGoldSettingsRow = {
+export type FamilyGoldSettingsRow = {
   gold_savings_enabled: boolean;
   gold_sell_price_energy: number;
   gold_buy_price_energy: number;
@@ -108,15 +108,13 @@ function mapPendingGoldTrades(rows: GoldTransactionDbRow[]): GoldTradePending[] 
   }));
 }
 
-export async function fetchParentGoldSavingsData(
-  supabase: AppSupabaseClient,
-  familyId: string,
-  profileIds: string[],
+/** Bentuk kosong tanpa query DB — pakai untuk fallback agar tidak menambah round-trip. */
+export function emptyParentGoldSavingsData(
   settingsRow: FamilyGoldSettingsRow | null | undefined,
-): Promise<ParentGoldSavingsData> {
+  profileIds: string[],
+): ParentGoldSavingsData {
   const settings = parseGoldSettings(settingsRow);
-
-  const empty: ParentGoldSavingsData = {
+  return {
     goldSavingsEnabled: settings.goldSavingsEnabled,
     prices: {
       sellPriceEnergy: settings.sellPriceEnergy,
@@ -127,6 +125,16 @@ export async function fetchParentGoldSavingsData(
     pendingTrades: [],
     transactions: [],
   };
+}
+
+export async function fetchParentGoldSavingsData(
+  supabase: AppSupabaseClient,
+  familyId: string,
+  profileIds: string[],
+  settingsRow: FamilyGoldSettingsRow | null | undefined,
+): Promise<ParentGoldSavingsData> {
+  const settings = parseGoldSettings(settingsRow);
+  const empty = emptyParentGoldSavingsData(settingsRow, profileIds);
 
   if (profileIds.length === 0 || !settings.goldSavingsEnabled) return empty;
 
@@ -197,18 +205,22 @@ export async function fetchChildGoldSavingsData(
   supabase: AppSupabaseClient,
   profileId: string,
   familyId: string,
+  /** Baris family_settings yang sudah dimuat pemanggil — hindari query duplikat + waterfall. */
+  knownSettingsRow?: FamilyGoldSettingsRow | null,
 ): Promise<ChildGoldSavingsData> {
-  const settingsResult = await supabase
-    .from("family_settings")
-    .select(
-      "gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label",
-    )
-    .eq("family_id", familyId)
-    .maybeSingle();
+  let settingsRow = knownSettingsRow;
+  if (settingsRow === undefined) {
+    const settingsResult = await supabase
+      .from("family_settings")
+      .select(
+        "gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label",
+      )
+      .eq("family_id", familyId)
+      .maybeSingle();
+    settingsRow = settingsResult.data as FamilyGoldSettingsRow | null;
+  }
 
-  const settings = parseGoldSettings(
-    settingsResult.data as FamilyGoldSettingsRow | null | undefined,
-  );
+  const settings = parseGoldSettings(settingsRow);
 
   const prices = {
     sellPriceEnergy: settings.sellPriceEnergy,

@@ -51,6 +51,13 @@ function getLatestDeposit(rows: SavingsTransactionRow[]): SavingsTransactionRow 
     .toSorted((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 }
 
+/** Total bunga yang sudah diposting ke kantong — jumlah semua baris kind='interest'. */
+function computeInterestAccrued(rows: SavingsTransactionRow[]): number {
+  return rows
+    .filter((row) => row.kind === "interest")
+    .reduce((sum, row) => sum + row.amount, 0);
+}
+
 export async function enrichPockets(
   supabase: SavingsSupabaseClient,
   pockets: SavingsPocketRow[],
@@ -85,7 +92,7 @@ export async function enrichPockets(
       reserved,
       is_locked: isPocketLocked(pocket, rows),
       locked_until: latestDeposit?.locked_until ?? null,
-      interest_accrued: latestDeposit?.interest_accrued ?? 0,
+      interest_accrued: computeInterestAccrued(rows),
       projected_interest: projectedInterestTotal(principal, pocket),
     };
   });

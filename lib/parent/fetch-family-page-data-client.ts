@@ -2,7 +2,10 @@ import { createClient } from "@/lib/supabase/client";
 import type { ChildProfile, Goal, Task } from "@/types/database";
 import type { PendingTaskRequest } from "@/lib/parent/fetch-family-page-data";
 import { enrichPockets } from "@/lib/savings/enrich-pockets";
-import { fetchParentGoldSavingsData } from "@/lib/gold/fetch-gold";
+import {
+  emptyParentGoldSavingsData,
+  fetchParentGoldSavingsData,
+} from "@/lib/gold/fetch-gold";
 import type {
   GoalClaimPending,
   ParentSavingsData,
@@ -161,12 +164,7 @@ export async function fetchParentSavingsDataClient(
   const maxMonthlyInterestBps = settingsRow?.max_monthly_interest_bps ?? 500;
   const goldEnabled = settingsRow?.gold_savings_enabled ?? false;
 
-  const emptyGold = await fetchParentGoldSavingsData(
-    supabase,
-    familyId,
-    profileIds,
-    settingsRow,
-  );
+  const emptyGold = emptyParentGoldSavingsData(settingsRow, profileIds);
 
   const empty: ParentSavingsData = {
     children,
@@ -182,13 +180,17 @@ export async function fetchParentSavingsDataClient(
 
   if (profileIds.length === 0) return empty;
 
-  const [pocketsResult, pendingResult, claimsResult, goalsResult, gold] = await Promise.all([
-    supabase
-      .from("savings_pockets")
-      .select("*")
-      .in("profile_id", profileIds)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
+  const [enriched, pendingResult, claimsResult, goalsResult, gold] = await Promise.all([
+    Promise.resolve(
+      supabase
+        .from("savings_pockets")
+        .select("*")
+        .in("profile_id", profileIds)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+    ).then((pocketsResult) =>
+      enrichPockets(supabase, (pocketsResult.data ?? []) as SavingsPocketRow[]),
+    ),
     supabase
       .from("savings_transactions")
       .select(
@@ -215,9 +217,6 @@ export async function fetchParentSavingsDataClient(
       ? fetchParentGoldSavingsData(supabase, familyId, profileIds, settingsRow)
       : Promise.resolve(emptyGold),
   ]);
-
-  const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];
-  const enriched = await enrichPockets(supabase, pockets);
 
   const pocketsByProfile = profileIds.reduce<Record<string, SavingsPocketWithBalance[]>>(
     (acc, id) => {

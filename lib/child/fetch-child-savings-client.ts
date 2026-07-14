@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
 import { RPC } from "@/lib/database/rpc";
 import { enrichPockets } from "@/lib/savings/enrich-pockets";
-import { fetchChildGoldSavingsData } from "@/lib/gold/fetch-gold";
+import {
+  fetchChildGoldSavingsData,
+  type FamilyGoldSettingsRow,
+} from "@/lib/gold/fetch-gold";
 import type { ChildSavingsData, SavingsPocketRow } from "@/lib/savings/types";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
 
@@ -44,7 +47,8 @@ export async function fetchChildSavingsDataClient(
   const familyId = childResult.data.family_id;
   const pockets = (pocketsResult.data ?? []) as SavingsPocketRow[];
 
-  const [settingsResult, savableBalance, walletBalance, gold, enriched] = await Promise.all([
+  // Satu query family_settings dibagi ke fetch gold — hindari duplikat + waterfall.
+  const settingsPromise = Promise.resolve(
     client
       .from("family_settings")
       .select(
@@ -52,9 +56,20 @@ export async function fetchChildSavingsDataClient(
       )
       .eq("family_id", familyId)
       .maybeSingle(),
+  );
+
+  const [settingsResult, savableBalance, walletBalance, gold, enriched] = await Promise.all([
+    settingsPromise,
     rpcNumber(client, RPC.computeSavableGoalEnergy, { p_profile_id: profileId }),
     rpcNumber(client, RPC.computeWalletBalance, { p_profile_id: profileId }),
-    fetchChildGoldSavingsData(client, profileId, familyId),
+    settingsPromise.then((res) =>
+      fetchChildGoldSavingsData(
+        client,
+        profileId,
+        familyId,
+        (res.data ?? null) as FamilyGoldSettingsRow | null,
+      ),
+    ),
     enrichPockets(client, pockets),
   ]);
 
