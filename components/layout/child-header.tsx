@@ -7,6 +7,7 @@ import {
 } from "@/lib/stores/child-mode-store";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { verifyChildProfilePin } from "@/lib/supabase/rpc";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -46,10 +47,10 @@ export function ChildHeader() {
 
     startTransition(async () => {
       try {
-        const { data: isValid, error: rpcError } = await (supabase as any).rpc("verify_child_profile_pin", {
-          p_profile_id: profileId,
-          p_pin: pin,
-        });
+        const { data: isValid, error: rpcError } = await verifyChildProfilePin(
+          supabase,
+          { p_profile_id: profileId, p_pin: pin },
+        );
 
         if (rpcError) {
           setError(rpcError.message || "Gagal memverifikasi PIN.");

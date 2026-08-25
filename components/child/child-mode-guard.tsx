@@ -31,18 +31,21 @@ export function ChildModeGuard({
   const profileId = useChildModeStore((s) => s.profileId);
   const exit = useChildModeStore((s) => s.exit);
 
+  const cookieActive = isChildModeCookieActive();
   const effectiveProfileId = profileId ?? serverProfileId;
   const isValidUuid = effectiveProfileId ? UUID_REGEX.test(effectiveProfileId) : false;
   const clientSessionReady = isActive && isValidUuid;
-  const sessionReady = serverSessionReady || clientSessionReady;
+  // Props server dari RSC tidak ikut berubah saat keluar di klien — hormati cookie klien.
+  const sessionReady = (serverSessionReady && cookieActive) || clientSessionReady;
 
   useEffect(() => {
-    if (serverSessionReady && serverProfileId && !isActive) {
-      useChildModeStore.setState({
-        isActive: true,
-        profileId: serverProfileId,
-      });
-    }
+    if (!serverSessionReady || !serverProfileId || isActive) return;
+    // Jangan hidupkan lagi sesi anak setelah keluar (cookie sudah dibersihkan).
+    if (!isChildModeCookieActive()) return;
+    useChildModeStore.setState({
+      isActive: true,
+      profileId: serverProfileId,
+    });
   }, [serverSessionReady, serverProfileId, isActive]);
 
   useEffect(() => {
