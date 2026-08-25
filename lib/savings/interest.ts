@@ -3,6 +3,9 @@ import type { SavingsPocketRow } from "@/lib/savings/types";
 /** Plafon kolom `monthly_interest_bps` / `max_monthly_interest_bps` (2000 = 20%/bulan). */
 export const MONTHLY_INTEREST_ABS_MAX_BPS = 2000;
 
+/** Horizon proyeksi kantong flexible — tidak punya jatuh tempo. */
+export const FLEXIBLE_PROJECTION_MONTHS = 12;
+
 /** Basis poin per 10.000 (500 = 5%/bulan). */
 export function effectiveMonthlyBps(pocket: Pick<SavingsPocketRow, "monthly_interest_bps" | "lock_bonus_coefficient">): number {
   return Math.floor(pocket.monthly_interest_bps * Number(pocket.lock_bonus_coefficient));
@@ -13,25 +16,50 @@ export function monthlyInterestAmount(principal: number, effectiveBps: number): 
   return Math.floor((principal * effectiveBps) / 10000);
 }
 
-/** Perkiraan total bunga — selaras dengan mesin akrual (simple interest). */
+/**
+ * Perkiraan total bunga ke depan.
+ *
+ * Cerminan langsung `accrue_savings_interest`: tiap bulan mesin menghitung
+ * `floor(saldo_kantong * effective_bps / 10000)` lalu menambahkannya ke saldo —
+ * jadi bunganya **majemuk**, dan basisnya saldo kantong berjalan, bukan nominal
+ * setoran. Proyeksi ini menjalankan loop yang sama supaya angka di UI dan angka
+ * yang benar-benar dibayar tidak berpisah.
+ */
 export function projectedInterestTotal(
-  principal: number,
+  balance: number,
   pocket: Pick<SavingsPocketRow, "monthly_interest_bps" | "lock_bonus_coefficient" | "lock_months" | "pocket_type">,
-  options?: { interestAccrued?: number; projectionMonths?: number },
+  options?: { projectionMonths?: number },
 ): number {
-  const monthly = monthlyInterestAmount(principal, effectiveMonthlyBps(pocket));
-  if (monthly < 1) return 0;
+  const effectiveBps = effectiveMonthlyBps(pocket);
+  const months =
+    options?.projectionMonths ??
+    (pocket.pocket_type === "term"
+      ? (pocket.lock_months ?? 0)
+      : FLEXIBLE_PROJECTION_MONTHS);
 
-  const accrued = options?.interestAccrued ?? 0;
+  if (months < 1 || effectiveBps < 1) return 0;
 
-  if (pocket.pocket_type === "term") {
-    const lockMonths = pocket.lock_months ?? 0;
-    return Math.max(0, monthly * lockMonths - accrued);
+  let running = Math.max(0, Math.floor(balance));
+  let total = 0;
+
+  for (let month = 0; month < months; month += 1) {
+    const gain = monthlyInterestAmount(running, effectiveBps);
+    if (gain < 1) break;
+    total += gain;
+    running += gain;
   }
 
-  // flexible: proyeksi horizon (default 12 bulan) — mesin akrual membayar tiap bulan
-  const horizon = options?.projectionMonths ?? 12;
-  return monthly * horizon;
+  return total;
+}
+
+/** Sisa bulan penuh sampai kunci deposito berakhir. */
+export function monthsRemainingUntil(lockedUntil: string | null, from = new Date()): number {
+  if (!lockedUntil) return 0;
+  const end = new Date(lockedUntil);
+  if (Number.isNaN(end.getTime()) || end <= from) return 0;
+  const months =
+    (end.getFullYear() - from.getFullYear()) * 12 + (end.getMonth() - from.getMonth());
+  return Math.max(0, end.getDate() >= from.getDate() ? months : months - 1);
 }
 
 export function formatInterestBps(bps: number): string {

@@ -1,4 +1,4 @@
-import { projectedInterestTotal } from "@/lib/savings/interest";
+import { monthsRemainingUntil, projectedInterestTotal } from "@/lib/savings/interest";
 import type { SavingsPocketRow, SavingsPocketWithBalance } from "@/lib/savings/types";
 import type { createClient } from "@/lib/supabase/server";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
@@ -85,20 +85,22 @@ export async function enrichPockets(
     const reserved = computeReservedFromRows(rows);
     const latestDeposit = getLatestDeposit(rows);
     const interestAccrued = computeInterestAccrued(rows);
-    // Principal = nominal setoran asli (bukan saldo berjalan) — selaras dengan mesin akrual.
-    const principal =
-      latestDeposit?.amount ??
-      rows.find((row) => row.kind === "deposit")?.amount ??
-      0;
+    const lockedUntil = latestDeposit?.locked_until ?? null;
+
+    // Mesin akrual berbunga atas SALDO kantong dan bersifat majemuk, jadi basis
+    // proyeksi adalah saldo — bukan nominal setoran. Untuk deposito, bunga hanya
+    // berjalan selama masih terkunci, jadi horizonnya sisa masa kunci.
+    const projectionMonths =
+      pocket.pocket_type === "term" ? monthsRemainingUntil(lockedUntil) : undefined;
 
     return {
       ...pocket,
       balance,
       reserved,
       is_locked: isPocketLocked(pocket, rows),
-      locked_until: latestDeposit?.locked_until ?? null,
+      locked_until: lockedUntil,
       interest_accrued: interestAccrued,
-      projected_interest: projectedInterestTotal(principal, pocket, { interestAccrued }),
+      projected_interest: projectedInterestTotal(balance, pocket, { projectionMonths }),
     };
   });
 }
