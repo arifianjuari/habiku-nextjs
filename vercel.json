@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/mark-missed-tick",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/accrue-savings-interest",
+      "schedule": "0 1 1 * *"
     }
   ]
 }

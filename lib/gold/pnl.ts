@@ -17,6 +17,11 @@ export type GoldPnlSnapshot = {
   currentBuyPriceEnergy: number;
   currentSellPriceEnergy: number;
   priceVsAvgPercent: number | null;
+  /** Saldo emas hasil replay transaksi (milli). */
+  holdingsReplayMilli: number;
+  /** Selisih replay vs `gold_holdings` tersimpan — bukan nol = inkonsistensi data. */
+  holdingsDriftMilli: number;
+  holdingsDriftDetected: boolean;
   history: GoldPnlPoint[];
 };
 
@@ -35,7 +40,7 @@ function applyApprovedTx(
   if (holdings <= 0 || tx.quantityMilli <= 0) {
     return {
       holdings: Math.max(0, holdings - tx.quantityMilli),
-      costBasis: 0,
+      costBasis: holdings <= 0 ? 0 : costBasis,
     };
   }
 
@@ -71,9 +76,8 @@ export function computeGoldPnlSnapshot(
     });
   }
 
-  if (holdings !== holdingsMilli && holdings > 0 && holdingsMilli >= 0) {
-    costBasis = Math.round((costBasis * holdingsMilli) / holdings);
-  }
+  const holdingsDriftMilli = holdings - holdingsMilli;
+  const holdingsDriftDetected = holdings !== holdingsMilli;
 
   const marketValueEnergy = energyForSellMilli(holdingsMilli, currentBuyPriceEnergy);
   const unrealizedPnlEnergy = marketValueEnergy - costBasis;
@@ -115,6 +119,9 @@ export function computeGoldPnlSnapshot(
     currentBuyPriceEnergy,
     currentSellPriceEnergy,
     priceVsAvgPercent,
+    holdingsReplayMilli: holdings,
+    holdingsDriftMilli,
+    holdingsDriftDetected,
     history,
   };
 }

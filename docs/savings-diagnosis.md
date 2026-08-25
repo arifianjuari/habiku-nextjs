@@ -1,6 +1,36 @@
 # Diagnosis Fitur Tabungan — Integritas Akuntansi Energi
 
-> Tanggal audit: 25 Agustus 2026 · Cakupan: audit baca-saja terhadap kode + data produksi. Tanpa perubahan kode dan tanpa perubahan data.
+> Tanggal audit: 25 Agustus 2026 · **Status implementasi: Selesai** (25 Agustus 2026)
+
+## Status implementasi
+
+Perbaikan integritas akuntansi tabungan/emas sudah diimplementasi. Migrasi:
+`supabase/migrations/20260825130000_savings_accounting_integrity.sql`.
+
+| # | Temuan | Status |
+|---|--------|--------|
+| 1 | View `energy_drift` | ✅ Selesai |
+| T1 | `approve_goal_reward_redeem` → `goal_redeem_spend` | ✅ Selesai + backfill historis |
+| T2 | `save_goal_hp_to_savings` → debit dompet | ✅ Selesai + backfill historis |
+| T3 | Jual emas → restore HP goal | ✅ Selesai (transaksi baru) |
+| T4/T5 | Bunga tanpa kredit ganda dompet + cron | ✅ Selesai (`vercel.json` tiap tgl 1) |
+| T6 | Akrual catch-up bulan terlewat | ✅ Selesai |
+| T7 | Penarikan wajib alokasi HP penuh | ✅ Selesai |
+| T8 | HP terdampar di goal selesai | ✅ Koreksi data |
+| T9 | Deposito roll-over (`term_pocket_has_deposit`) | ✅ Selesai |
+| T10 | Proyeksi bunga UI | ✅ Selesai (`interest.ts`, `enrich-pockets.ts`) |
+| T11 | PnL laporkan drift | ✅ Selesai (`pnl.ts` + panel) |
+| T12/T13 | Kedaluwarsa emas 7 hari + harga > 0 | ✅ Selesai |
+| T14 | Plafon bunga di DB (≤ 2000 bps) | ✅ Selesai |
+
+**Catatan drift historis jual emas (T3):** transaksi jual lama sebelum perbaikan tidak
+direkonstruksi otomatis ke HP goal — hanya transaksi baru yang simetris. Jalankan query
+§ Verifikasi `energy_drift` setelah deploy migrasi.
+
+**Keputusan butir 10 (koreksi drift total):** backfill otomatis untuk klaim hadiah + setoran
+tanpa ledger + HP terdampar; sisa selisih dari jual emas historis perlu review manual bila masih ada.
+
+---
 
 ## Latar belakang
 

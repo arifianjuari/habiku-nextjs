@@ -13,14 +13,25 @@ export function monthlyInterestAmount(principal: number, effectiveBps: number): 
   return Math.floor((principal * effectiveBps) / 10000);
 }
 
-/** Perkiraan total bunga selama lock (simple, bukan compound). */
+/** Perkiraan total bunga — selaras dengan mesin akrual (simple interest). */
 export function projectedInterestTotal(
   principal: number,
   pocket: Pick<SavingsPocketRow, "monthly_interest_bps" | "lock_bonus_coefficient" | "lock_months" | "pocket_type">,
+  options?: { interestAccrued?: number; projectionMonths?: number },
 ): number {
   const monthly = monthlyInterestAmount(principal, effectiveMonthlyBps(pocket));
-  const months = pocket.pocket_type === "term" ? (pocket.lock_months ?? 0) : 0;
-  return monthly * months;
+  if (monthly < 1) return 0;
+
+  const accrued = options?.interestAccrued ?? 0;
+
+  if (pocket.pocket_type === "term") {
+    const lockMonths = pocket.lock_months ?? 0;
+    return Math.max(0, monthly * lockMonths - accrued);
+  }
+
+  // flexible: proyeksi horizon (default 12 bulan) — mesin akrual membayar tiap bulan
+  const horizon = options?.projectionMonths ?? 12;
+  return monthly * horizon;
 }
 
 export function formatInterestBps(bps: number): string {

@@ -84,7 +84,12 @@ export async function enrichPockets(
     const balance = computeBalanceFromRows(rows);
     const reserved = computeReservedFromRows(rows);
     const latestDeposit = getLatestDeposit(rows);
-    const principal = balance > 0 ? balance : (latestDeposit?.amount ?? 0);
+    const interestAccrued = computeInterestAccrued(rows);
+    // Principal = nominal setoran asli (bukan saldo berjalan) — selaras dengan mesin akrual.
+    const principal =
+      latestDeposit?.amount ??
+      rows.find((row) => row.kind === "deposit")?.amount ??
+      0;
 
     return {
       ...pocket,
@@ -92,8 +97,8 @@ export async function enrichPockets(
       reserved,
       is_locked: isPocketLocked(pocket, rows),
       locked_until: latestDeposit?.locked_until ?? null,
-      interest_accrued: computeInterestAccrued(rows),
-      projected_interest: projectedInterestTotal(principal, pocket),
+      interest_accrued: interestAccrued,
+      projected_interest: projectedInterestTotal(principal, pocket, { interestAccrued }),
     };
   });
 }

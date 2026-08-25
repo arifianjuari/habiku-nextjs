@@ -114,6 +114,13 @@ function PnlPanelContent({
           </div>
         </div>
 
+        {pnl.holdingsDriftDetected ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1.5 text-[10px] text-amber-900 text-pretty">
+            Catatan: riwayat transaksi ({pnl.holdingsReplayMilli} milli) tidak cocok dengan
+            saldo tersimpan ({pnl.holdingsReplayMilli - pnl.holdingsDriftMilli} milli).
+          </p>
+        ) : null}
+
         {chart && pnl.history.length > 1 ? (
           <div
             className="relative overflow-hidden rounded-xl border border-amber-100/80 bg-white/70 px-1 py-2"
