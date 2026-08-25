@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { motion } from "framer-motion";
+import { m } from "@/lib/motion";
 import { Heart, MessageCircleHeart } from "lucide-react";
 import { toast } from "sonner";
 import { thankBroadcastAction } from "@/app/child/actions";
@@ -33,7 +33,7 @@ export function ChildBroadcastSticky({
   };
 
   return (
-    <motion.div
+    <m.div
       initial={microAnimEnabled ? { opacity: 0, y: 8 } : false}
       animate={microAnimEnabled ? { opacity: 1, y: 0 } : undefined}
     >
@@ -67,6 +67,6 @@ export function ChildBroadcastSticky({
           </Button>
         </CardContent>
       </Card>
-    </motion.div>
+    </m.div>
   );
 }

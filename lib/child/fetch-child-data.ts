@@ -147,9 +147,22 @@ export async function fetchChildHomeData(
     settings: { ...DEFAULT_CHILD_ENGAGEMENT_SETTINGS },
   };
 
+  const childStickySource = child as { parent_sticky_message?: string | null } | null;
+  const childStickyMessage =
+    typeof childStickySource?.parent_sticky_message === "string" &&
+    childStickySource.parent_sticky_message.trim()
+      ? childStickySource.parent_sticky_message.trim()
+      : null;
+
   const [engagementBase, sticky, sharedFamilyGoal] = await (async () => {
+    const stickyOptions = { parentStickyMessage: childStickyMessage };
+
     if (!child?.family_id) {
-      return [emptyEngagement, await loadStickyMessages(client, profileId, null), EMPTY_FAMILY_SHARED_GOAL] as const;
+      return [
+        emptyEngagement,
+        await loadStickyMessages(client, profileId, null, stickyOptions),
+        EMPTY_FAMILY_SHARED_GOAL,
+      ] as const;
     }
 
     const familyId = child.family_id;
@@ -166,7 +179,7 @@ export async function fetchChildHomeData(
 
     return Promise.all([
       fetchChildEngagement(profileId, familyId, client, { settingsRow }),
-      loadStickyMessages(client, profileId, familyId),
+      loadStickyMessages(client, profileId, familyId, stickyOptions),
       fetchFamilySharedGoal(familyId, client, {
         childIds,
         settingsRow,

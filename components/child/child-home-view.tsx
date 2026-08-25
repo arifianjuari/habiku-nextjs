@@ -3,7 +3,8 @@
 import { useTransition } from "react";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, m } from "@/lib/motion";
+import { ChildMotionRoot } from "@/components/child/child-motion-root";
 import {
   Zap,
   Flame,
@@ -46,7 +47,7 @@ function StreakFlames({ days }: { days: number }) {
   return (
     <div className="flex items-center gap-0.5" aria-label={`${days} hari berturut-turut`}>
       {Array.from({ length: capped }).map((_, i) => (
-        <motion.span
+        <m.span
           key={i}
           initial={{ scale: 0, rotate: -20 }}
           animate={{ scale: 1, rotate: 0 }}
@@ -54,7 +55,7 @@ function StreakFlames({ days }: { days: number }) {
           className="text-base leading-none"
         >
           🔥
-        </motion.span>
+        </m.span>
       ))}
       {days > 7 && (
         <span className="ml-1 text-xs font-black text-orange-700">+{days - 7}</span>
@@ -150,10 +151,11 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
     : 0;
 
   return (
+    <ChildMotionRoot>
     <div className="relative space-y-3.5 pb-2" data-fetching={isFetching ? "" : undefined}>
       <ChildFetchingIndicator isFetching={isFetching && !!data} />
       {/* Hero petualang */}
-      <motion.section
+      <m.section
         {...sectionMotion}
         className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-emerald-600 via-teal-500 to-violet-600 p-5 text-white shadow-xl"
         style={{ backgroundImage: buildChildHeroGradient(childAccent) }}
@@ -166,7 +168,7 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
         </div>
 
         <div className="relative flex items-start gap-4">
-          <motion.div
+          <m.div
             animate={microAnim ? { y: [0, -4, 0] } : undefined}
             transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
           >
@@ -179,7 +181,7 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
               className="h-16 w-16 shrink-0 rounded-[1.25rem] border-2 border-white/40 shadow-lg text-2xl font-bold text-white"
               fallbackSizeClass="text-3xl"
             />
-          </motion.div>
+          </m.div>
 
           <div className="min-w-0 flex-1 space-y-1.5 pt-0.5">
             <p className="text-[11px] font-bold uppercase tracking-widest text-white/80">
@@ -216,7 +218,7 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
             </div>
           )}
         </div>
-      </motion.section>
+      </m.section>
 
       {personalStickyMessage && profileId && (
         <ChildBroadcastSticky
@@ -232,7 +234,7 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
       />
 
       {/* Check-in harian */}
-      <motion.div {...sectionMotion} transition={{ delay: 0.08 }}>
+      <m.div {...sectionMotion} transition={{ delay: 0.08 }}>
         <Card
           size="sm"
           className="gap-0 overflow-hidden rounded-[1.75rem] border-2 border-sky-100 bg-gradient-to-br from-sky-50/90 via-white to-cyan-50/50 py-0 shadow-md"
@@ -250,7 +252,7 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
 
             <AnimatePresence mode="wait">
               {!isCheckedInToday ? (
-                <motion.div
+                <m.div
                   key="checkin-btn"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -264,9 +266,9 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
                     <Sparkles className="mr-2 h-5 w-5 fill-amber-200 text-amber-200" />
                     {isPending ? "Sedang Check-in..." : "Klaim Check-in! +2 E ⚡"}
                   </Button>
-                </motion.div>
+                </m.div>
               ) : (
-                <motion.div
+                <m.div
                   key="checkin-done"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -274,16 +276,16 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
                 >
                   <CheckCircle className="h-6 w-6 shrink-0 text-emerald-600" />
                   <span>Sudah check-in hari ini! Keren! 🎉</span>
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
           </CardContent>
         </Card>
-      </motion.div>
+      </m.div>
 
       {/* Quest hadiah */}
       {activeGoal ? (
-        <motion.div {...sectionMotion} transition={{ delay: 0.12 }}>
+        <m.div {...sectionMotion} transition={{ delay: 0.12 }}>
           <Card
             size="sm"
             className="gap-0 overflow-hidden rounded-[1.75rem] border-2 border-rose-100 bg-gradient-to-br from-rose-50/80 via-white to-pink-50/50 py-0 shadow-md"
@@ -320,16 +322,16 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
                 </div>
 
                 <div className="relative h-5 w-full overflow-hidden rounded-full bg-slate-100 shadow-inner">
-                  <motion.div
+                  <m.div
                     className="relative h-full rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500"
                     initial={{ width: 0 }}
                     animate={{ width: `${goalPercent}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                   >
                     <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.35)_50%,transparent_100%)] animate-pulse" />
-                  </motion.div>
+                  </m.div>
                   {goalPercent > 8 && (
-                    <motion.span
+                    <m.span
                       className="absolute top-1/2 -translate-y-1/2 text-xs"
                       style={{ left: `calc(${goalPercent}% - 12px)` }}
                       animate={microAnim ? { scale: [1, 1.2, 1] } : undefined}
@@ -337,7 +339,7 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
                       aria-hidden
                     >
                       ⭐
-                    </motion.span>
+                    </m.span>
                   )}
                 </div>
 
@@ -357,9 +359,9 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
               </Link>
             </CardContent>
           </Card>
-        </motion.div>
+        </m.div>
       ) : (
-        <motion.div {...sectionMotion} transition={{ delay: 0.12 }}>
+        <m.div {...sectionMotion} transition={{ delay: 0.12 }}>
           <div className="flex flex-col items-center justify-center space-y-3 rounded-[1.75rem] border-2 border-dashed border-violet-200 bg-white/60 p-8 text-center backdrop-blur-sm">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-violet-100 text-3xl shadow-inner">
               🏆
@@ -377,7 +379,7 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
               <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-        </motion.div>
+        </m.div>
       )}
 
       {settings.dailyTipEnabled && dailyTip && (
@@ -392,7 +394,7 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
       )}
 
       {/* CTA misi */}
-      <motion.div {...sectionMotion} transition={{ delay: 0.16 }}>
+      <m.div {...sectionMotion} transition={{ delay: 0.16 }}>
         <Link
           href="/child/missions"
           className="group flex items-center gap-3 rounded-[1.75rem] border-2 border-emerald-200 bg-gradient-to-r from-emerald-500 to-teal-500 p-3 text-white shadow-lg transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
@@ -408,7 +410,8 @@ export function ChildHomeView({ initialData }: ChildHomeViewProps = {}) {
           </div>
           <ChevronRight className="h-6 w-6 shrink-0 transition-transform group-hover:translate-x-0.5" />
         </Link>
-      </motion.div>
+      </m.div>
     </div>
+    </ChildMotionRoot>
   );
 }

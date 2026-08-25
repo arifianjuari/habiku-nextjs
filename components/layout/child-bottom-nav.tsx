@@ -69,7 +69,6 @@ export function ChildBottomNav() {
             <li key={href} className="flex-1">
               <Link
                 href={href}
-                prefetch={true}
                 onTouchStart={() => warmTab(href)}
                 className={cn(
                   "group flex min-h-[4rem] flex-col items-center justify-center gap-1 px-0.5 py-1.5 transition-transform active:scale-95",

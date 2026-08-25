@@ -44,6 +44,13 @@ export function invalidateSignedUrlCache(cacheKey: string) {
   inFlightRequests.delete(cacheKey);
 }
 
+export function putSignedUrlCache(cacheKey: string, url: string, ttlSec: number) {
+  signedUrlCache.set(cacheKey, {
+    url,
+    expiresAt: Date.now() + ttlSec * 1000,
+  });
+}
+
 export async function prefetchSignedUrls(
   entries: Array<{
     cacheKey: string;

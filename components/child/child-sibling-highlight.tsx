@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "@/lib/motion";
 import { Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { SiblingHighlight } from "@/lib/child/engagement-types";
@@ -14,7 +14,7 @@ export function ChildSiblingHighlight({
   highlight,
   microAnimEnabled,
 }: ChildSiblingHighlightProps) {
-  const Wrapper = microAnimEnabled ? motion.div : "div";
+  const Wrapper = microAnimEnabled ? m.div : "div";
   const wrapperProps = microAnimEnabled
     ? { initial: { opacity: 0, scale: 0.98 }, animate: { opacity: 1, scale: 1 }, transition: { delay: 0.08 } }
     : {};

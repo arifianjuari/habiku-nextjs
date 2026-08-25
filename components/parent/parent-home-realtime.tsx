@@ -1,6 +1,6 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useFamilyRealtime } from "@/lib/hooks/use-family-realtime";
 
 type ParentHomeRealtimeProps = {
@@ -14,14 +14,14 @@ export function ParentHomeRealtime({
   accountId,
   children,
 }: ParentHomeRealtimeProps) {
-  const queryClient = useQueryClient();
+  const stableChildProfileIds = useMemo(
+    () => [...childProfileIds].sort(),
+    [childProfileIds.join(",")],
+  );
 
   useFamilyRealtime({
-    childProfileIds,
+    childProfileIds: stableChildProfileIds,
     accountId,
-    onFamilyDataChange: () => {
-      void queryClient.invalidateQueries({ queryKey: ["parent"] });
-    },
   });
 
   return <>{children}</>;

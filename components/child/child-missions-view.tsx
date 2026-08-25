@@ -9,7 +9,8 @@ import { useChildMissionsData } from "@/lib/hooks/use-child-missions-data";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
 import { ChildMissionRequestDialog } from "@/components/child/child-mission-request-dialog";
-import { motion } from "framer-motion";
+import { AnimatePresence, m } from "@/lib/motion";
+import { ChildMotionRoot } from "@/components/child/child-motion-root";
 import {
   BookOpen,
   GraduationCap,
@@ -101,6 +102,7 @@ export function ChildMissionsView() {
   }
 
   return (
+    <ChildMotionRoot>
     <div className="relative space-y-4" data-fetching={isFetching ? "" : undefined}>
       <ChildFetchingIndicator isFetching={isFetching && tasks.length > 0} />
       {/* Page Header */}
@@ -218,7 +220,7 @@ export function ChildMissionsView() {
                 : "Belum dikerjakan";
 
             return (
-              <motion.div
+              <m.div
                 key={task.id}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -309,11 +311,12 @@ export function ChildMissionsView() {
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </m.div>
             );
           })}
         </div>
       )}
     </div>
+    </ChildMotionRoot>
   );
 }

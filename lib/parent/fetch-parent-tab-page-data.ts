@@ -1,10 +1,12 @@
 import {
+  fetchArchivedFamilyChildrenClient,
   fetchFamilyChildrenClient,
   fetchFamilyGoalsClient,
   fetchFamilyTasksClient,
   fetchParentSavingsDataClient,
   fetchPendingTaskRequestsClient,
 } from "@/lib/parent/fetch-family-page-data-client";
+import { createClient } from "@/lib/supabase/client";
 import type { PendingTaskRequest } from "@/lib/parent/fetch-family-page-data";
 import type { ParentSavingsData } from "@/lib/savings/types";
 import type { ChildProfile, Goal, Task } from "@/types/database";
@@ -19,6 +21,12 @@ export type ParentTasksData = {
 export type ParentTargetsData = {
   children: ChildProfile[];
   goals: Goal[];
+};
+
+export type ParentProfilesData = {
+  children: ChildProfile[];
+  archivedChildren: ChildProfile[];
+  broadcastMessage: string | null;
 };
 
 function goalsByProfileFromList(
@@ -60,6 +68,29 @@ export async function fetchParentTargetsPageData(familyId: string): Promise<Pare
 
 export async function fetchParentSavingsPageData(familyId: string): Promise<ParentSavingsData> {
   return fetchParentSavingsDataClient(familyId);
+}
+
+export async function fetchParentProfilesPageData(
+  familyId: string,
+): Promise<ParentProfilesData> {
+  const supabase = createClient();
+  const [children, archivedChildren, familyRow] = await Promise.all([
+    fetchFamilyChildrenClient(familyId, supabase),
+    fetchArchivedFamilyChildrenClient(familyId, supabase),
+    supabase
+      .from("families")
+      .select("family_broadcast_message")
+      .eq("id", familyId)
+      .maybeSingle(),
+  ]);
+
+  return {
+    children,
+    archivedChildren,
+    broadcastMessage:
+      (familyRow.data as { family_broadcast_message?: string | null } | null)
+        ?.family_broadcast_message ?? null,
+  };
 }
 
 export { goalsByProfileFromList };

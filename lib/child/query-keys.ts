@@ -6,6 +6,5 @@ export const childQueryKeys = {
   savings: (profileId: string) => [...childQueryKeys.all, "savings", profileId] as const,
   garden: (profileId: string) => [...childQueryKeys.all, "garden", profileId] as const,
   badges: (profileId: string) => [...childQueryKeys.all, "badges", profileId] as const,
-  points: (profileId: string) => [...childQueryKeys.all, "points", profileId] as const,
   task: (taskId: string) => [...childQueryKeys.all, "task", taskId] as const,
 };

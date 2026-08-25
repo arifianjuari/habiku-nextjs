@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { ParentPageHeaderSync } from "@/components/layout/parent-page-header-context";
-import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { InviteCreator } from "@/components/parent/invite-creator";
 import { buttonVariants } from "@/components/ui/button";

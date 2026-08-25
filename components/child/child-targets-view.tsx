@@ -4,7 +4,8 @@ import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import { useChildTargetsData } from "@/lib/hooks/use-child-targets-data";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, m } from "@/lib/motion";
+import { ChildMotionRoot } from "@/components/child/child-motion-root";
 import {
   Target,
   Gift,
@@ -49,6 +50,7 @@ export function ChildTargetsView() {
   const archivedGoals = goals.filter((g) => g.status === "archived");
 
   return (
+    <ChildMotionRoot>
     <div className="relative space-y-6" data-fetching={isFetching ? "" : undefined}>
       <ChildFetchingIndicator isFetching={isFetching && !!data} />
       {/* 1. Header Area */}
@@ -114,7 +116,7 @@ export function ChildTargetsView() {
               const visualMeta = getGoalVisualStateMeta(goal.visual_state);
 
               return (
-                <motion.div
+                <m.div
                   key={goal.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -127,7 +129,7 @@ export function ChildTargetsView() {
                   >
                     {isReady && (
                       <div className="absolute top-2 right-2">
-                        <motion.div
+                        <m.div
                           animate={{ scale: [1, 1.1, 1] }}
                           transition={{ repeat: Infinity, duration: 1.5 }}
                         >
@@ -135,7 +137,7 @@ export function ChildTargetsView() {
                             <Sparkles className="h-2.5 w-2.5 fill-white" />
                             SIAP KLAIM!
                           </Badge>
-                        </motion.div>
+                        </m.div>
                       </div>
                     )}
                     <CardContent className="p-5 space-y-4">
@@ -195,7 +197,7 @@ export function ChildTargetsView() {
                       </div>
                     </CardContent>
                   </Card>
-                </motion.div>
+                </m.div>
               );
             })}
           </div>
@@ -286,5 +288,6 @@ export function ChildTargetsView() {
         )}
       </div>
     </div>
+    </ChildMotionRoot>
   );
 }

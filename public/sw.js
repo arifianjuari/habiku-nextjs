@@ -1,4 +1,4 @@
-const CACHE_NAME = "habiku-pwa-cache-v7";
+const CACHE_NAME = "habiku-pwa-cache-v9";
 const OFFLINE_URL = "/offline";
 
 /** Hanya aset statis — jangan pre-cache route HTML (memicu auth + RSC berat saat install PWA). */
@@ -52,8 +52,18 @@ self.addEventListener("message", (event) => {
 function isSupabaseStorageGet(url) {
   return (
     url.origin.includes("supabase.co") &&
-    url.pathname.includes("/storage/v1/object/")
+    (url.pathname.includes("/storage/v1/object/") ||
+      url.pathname.includes("/storage/v1/render/image/"))
   );
+}
+
+/** Signed URL token berotasi — cache key pakai pathname saja. */
+function storageCacheRequest(request, url) {
+  if (!isSupabaseStorageGet(url)) return request;
+  return new Request(`${url.origin}${url.pathname}`, {
+    method: request.method,
+    headers: request.headers,
+  });
 }
 
 function shouldBypassServiceWorker(request, url) {
@@ -70,14 +80,16 @@ function shouldBypassServiceWorker(request, url) {
   return false;
 }
 
-function cacheFirstWithBackgroundUpdate(request) {
-  return caches.match(request).then((cachedResponse) => {
+function cacheFirstWithBackgroundUpdate(request, url) {
+  const cacheRequest = storageCacheRequest(request, url);
+
+  return caches.match(cacheRequest).then((cachedResponse) => {
     const networkUpdate = fetch(request)
       .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
           void caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
+            cache.put(cacheRequest, responseClone);
           });
         }
         return networkResponse;
@@ -97,29 +109,8 @@ function cacheFirstWithBackgroundUpdate(request) {
   });
 }
 
-function staleWhileRevalidateNavigate(request) {
-  return caches.match(request).then((cachedResponse) => {
-    const networkFetch = fetch(request)
-      .then((response) => {
-        if (response && response.ok) {
-          const responseClone = response.clone();
-          void caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-        }
-        return response;
-      })
-      .catch(() => null);
-
-    if (cachedResponse) {
-      void networkFetch;
-      return cachedResponse;
-    }
-
-    return networkFetch.then(
-      (response) => response || caches.match(OFFLINE_URL),
-    );
-  });
+function networkFirstNavigate(request) {
+  return fetch(request).catch(() => caches.match(OFFLINE_URL));
 }
 
 // Fetch Event: Caching strategies
@@ -132,16 +123,16 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (isSupabaseStorageGet(url)) {
-    event.respondWith(cacheFirstWithBackgroundUpdate(request));
+    event.respondWith(cacheFirstWithBackgroundUpdate(request, url));
     return;
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(staleWhileRevalidateNavigate(request));
+    event.respondWith(networkFirstNavigate(request));
     return;
   }
 
-  event.respondWith(cacheFirstWithBackgroundUpdate(request));
+  event.respondWith(cacheFirstWithBackgroundUpdate(request, url));
 });
 
 // ==========================================

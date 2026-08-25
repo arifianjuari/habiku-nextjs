@@ -1,14 +1,20 @@
 import type { QueryClient } from "@tanstack/react-query";
 import {
+  fetchParentProfilesPageData,
   fetchParentSavingsPageData,
   fetchParentTargetsPageData,
   fetchParentTasksPageData,
 } from "@/lib/parent/fetch-parent-tab-page-data";
 import { fetchParentQueuePageData } from "@/lib/parent/fetch-parent-queue-client";
+import { parentIncidentalPageQueryKey } from "@/lib/hooks/use-parent-incidental-data";
+import { parentLedgerPageQueryKey } from "@/lib/hooks/use-parent-ledger-data";
+import { parentProfilesPageQueryKey } from "@/lib/hooks/use-parent-profiles-data";
 import { parentSavingsPageQueryKey } from "@/lib/hooks/use-parent-savings-data";
 import { parentTargetsPageQueryKey } from "@/lib/hooks/use-parent-targets-data";
 import { parentTasksPageQueryKey } from "@/lib/hooks/use-parent-tasks-data";
 import { parentQueuePageQueryKey } from "@/lib/hooks/use-parent-queue-data";
+import { fetchParentIncidentalPageData } from "@/lib/parent/fetch-parent-incidental-client";
+import { fetchParentLedgerPageData } from "@/lib/parent/fetch-parent-ledger-client";
 import { parentQueryKeys } from "@/lib/parent/query-keys";
 import { seedParentListCache } from "@/lib/parent/seed-parent-list-cache";
 import { PARENT_STALE_MS } from "@/lib/query/constants";
@@ -72,15 +78,39 @@ export function prefetchParentQueue(queryClient: QueryClient, familyId: string) 
   );
 }
 
+export function prefetchParentProfiles(queryClient: QueryClient, familyId: string) {
+  return prefetchIfStale(queryClient, parentProfilesPageQueryKey(familyId), () =>
+    fetchParentProfilesPageData(familyId),
+  );
+}
+
+export function prefetchParentLedger(queryClient: QueryClient, familyId: string) {
+  return prefetchIfStale(queryClient, parentLedgerPageQueryKey(familyId), () =>
+    fetchParentLedgerPageData(familyId),
+  );
+}
+
+export function prefetchParentIncidental(queryClient: QueryClient, familyId: string) {
+  return prefetchIfStale(queryClient, parentIncidentalPageQueryKey(familyId), () =>
+    fetchParentIncidentalPageData(familyId),
+  );
+}
+
 /** Prefetch bertahap — tabungan/emas paling berat, dijadwalkan terakhir. */
 export function prefetchAllParentTabs(queryClient: QueryClient, familyId: string) {
   void prefetchParentTasks(queryClient, familyId);
-  window.setTimeout(() => {
+  void prefetchParentProfiles(queryClient, familyId);
+  const targetsTimer = window.setTimeout(() => {
     void prefetchParentTargets(queryClient, familyId);
   }, 350);
-  window.setTimeout(() => {
+  const savingsTimer = window.setTimeout(() => {
     void prefetchParentSavings(queryClient, familyId);
   }, 900);
+
+  return () => {
+    window.clearTimeout(targetsTimer);
+    window.clearTimeout(savingsTimer);
+  };
 }
 
 export function prefetchParentTabData(
@@ -99,6 +129,12 @@ export function prefetchParentTabData(
   }
   if (href.startsWith("/parent/queue")) {
     return prefetchParentQueue(queryClient, familyId);
+  }
+  if (href.startsWith("/parent/profil-anak")) {
+    return prefetchParentProfiles(queryClient, familyId);
+  }
+  if (href.startsWith("/parent/ledger")) {
+    return prefetchParentLedger(queryClient, familyId);
   }
   return Promise.resolve();
 }

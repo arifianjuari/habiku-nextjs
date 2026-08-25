@@ -44,5 +44,4 @@ export type ChildGoldSavingsData = GoldSavingsSettings & {
   estimatedSellEnergy: number;
   pendingTrades: GoldTradePending[];
   transactions: GoldTransactionRow[];
-  pnl: import("@/lib/gold/pnl").GoldPnlSnapshot;
 };

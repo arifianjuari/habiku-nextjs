@@ -1,11 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   isChildAvatarStoragePath,
   STORAGE_BUCKETS,
 } from "@/lib/storage/child-avatar";
+import {
+  CHILD_AVATAR_TRANSFORM,
+  childAvatarSignedCacheKey,
+} from "@/lib/storage/avatar-transform";
 import { getCachedSignedUrl } from "@/lib/storage/signed-url-cache";
 import { SIGNED_URL_TTL_SEC } from "@/lib/query/constants";
 import { cn } from "@/lib/utils";
@@ -25,7 +30,6 @@ function prefersPhoto(avatarPreference: string | undefined, avatarUrl: string | 
   if (!avatarUrl) return false;
   if (avatarPreference === "emoji") return false;
   if (avatarPreference === "photo") return true;
-  // Data legacy: path storage ada tapi preference belum diset ke "photo"
   return isChildAvatarStoragePath(avatarUrl);
 }
 
@@ -62,7 +66,7 @@ export function ChildAvatar({
 
     let cancelled = false;
     const supabase = createClient();
-    const cacheKey = `${STORAGE_BUCKETS.childAvatars}:${avatarUrl}`;
+    const cacheKey = childAvatarSignedCacheKey(avatarUrl, STORAGE_BUCKETS.childAvatars);
 
     setIsResolving(true);
 
@@ -71,7 +75,9 @@ export function ChildAvatar({
       async () => {
         const { data, error } = await supabase.storage
           .from(STORAGE_BUCKETS.childAvatars)
-          .createSignedUrl(avatarUrl, SIGNED_URL_TTL_SEC);
+          .createSignedUrl(avatarUrl, SIGNED_URL_TTL_SEC, {
+            transform: CHILD_AVATAR_TRANSFORM,
+          });
         return error ? null : data?.signedUrl ?? null;
       },
       SIGNED_URL_TTL_SEC,
@@ -95,6 +101,11 @@ export function ChildAvatar({
   }, [avatarUrl]);
 
   const showPhoto = wantsPhoto && resolvedUrl && !hasError;
+  const useNextImage =
+    showPhoto &&
+    resolvedUrl != null &&
+    (resolvedUrl.includes("/storage/v1/render/image/") ||
+      resolvedUrl.includes("/storage/v1/object/sign/"));
 
   return (
     <div
@@ -104,8 +115,16 @@ export function ChildAvatar({
       )}
       style={{ backgroundColor: accentColor }}
     >
-      {showPhoto ? (
-        // eslint-disable-next-line @next/next/no-img-element -- signed URL Supabase; img langsung lebih andal daripada next/image
+      {useNextImage ? (
+        <Image
+          src={resolvedUrl}
+          alt={name}
+          fill
+          sizes="128px"
+          className={cn("object-cover", imgClassName)}
+          onError={() => setHasError(true)}
+        />
+      ) : showPhoto ? (
         <img
           src={resolvedUrl}
           alt={name}
@@ -115,10 +134,7 @@ export function ChildAvatar({
           onError={() => setHasError(true)}
         />
       ) : wantsPhoto && isResolving ? (
-        <span
-          className="absolute inset-0 animate-pulse bg-white/25"
-          aria-hidden
-        />
+        <span className="absolute inset-0 animate-pulse bg-white/25" aria-hidden />
       ) : avatarEmoji ? (
         <span className={cn("leading-none", fallbackSizeClass)}>{avatarEmoji}</span>
       ) : (

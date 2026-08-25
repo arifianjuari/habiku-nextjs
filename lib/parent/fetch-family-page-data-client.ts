@@ -44,6 +44,21 @@ export async function fetchFamilyChildrenClient(
   return data ?? [];
 }
 
+export async function fetchArchivedFamilyChildrenClient(
+  familyId: string,
+  supabase?: AppSupabaseClient,
+): Promise<ChildProfile[]> {
+  const client = supabase ?? createClient();
+  const { data } = await client
+    .from("child_profiles")
+    .select("*")
+    .eq("family_id", familyId)
+    .not("archived_at", "is", null)
+    .order("archived_at", { ascending: false });
+
+  return data ?? [];
+}
+
 export async function fetchFamilyTasksClient(
   familyId: string,
   childIds?: string[],

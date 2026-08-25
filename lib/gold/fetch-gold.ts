@@ -40,25 +40,6 @@ function parseGoldSettings(row: FamilyGoldSettingsRow | null | undefined): GoldP
   };
 }
 
-function emptyChildPnl(
-  quantityMilli: number,
-  buyPriceEnergy: number,
-  sellPriceEnergy: number,
-): GoldPnlSnapshot {
-  const marketValueEnergy = energyForSellMilli(quantityMilli, buyPriceEnergy);
-  return {
-    costBasisEnergy: 0,
-    marketValueEnergy,
-    unrealizedPnlEnergy: marketValueEnergy,
-    unrealizedPnlPercent: null,
-    avgBuyPricePerUnit: null,
-    currentBuyPriceEnergy: buyPriceEnergy,
-    currentSellPriceEnergy: sellPriceEnergy,
-    priceVsAvgPercent: null,
-    history: [],
-  };
-}
-
 async function rpcNumber(
   supabase: AppSupabaseClient,
   fn: string,
@@ -238,7 +219,6 @@ export async function fetchChildGoldSavingsData(
       estimatedSellEnergy: 0,
       pendingTrades: [],
       transactions: [],
-      pnl: emptyChildPnl(0, settings.buyPriceEnergy, settings.sellPriceEnergy),
     };
   }
 
@@ -281,6 +261,5 @@ export async function fetchChildGoldSavingsData(
     estimatedSellEnergy: energyForSellMilli(availableMilli, settings.buyPriceEnergy),
     pendingTrades: mapPendingGoldTrades((pendingResult.data ?? []) as GoldTransactionDbRow[]),
     transactions: mapGoldTransactions((transactionsResult.data ?? []) as GoldTransactionDbRow[]),
-    pnl: emptyChildPnl(quantityMilli, settings.buyPriceEnergy, settings.sellPriceEnergy),
   };
 }

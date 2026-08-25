@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { AnimatePresence, m } from "@/lib/motion";
+import { ChildMotionRoot } from "@/components/child/child-motion-root";
 import {
   PiggyBank,
   ArrowDownToLine,
@@ -251,6 +252,7 @@ export function ChildSavingsView() {
   };
 
   return (
+    <ChildMotionRoot>
     <div className="relative space-y-6 pb-4" data-fetching={isFetching ? "" : undefined}>
       <ChildFetchingIndicator isFetching={isFetching && !!data} />
 
@@ -361,7 +363,7 @@ export function ChildSavingsView() {
           </div>
 
           {activePocket ? (
-            <motion.div
+            <m.div
               key={activePocket.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -611,7 +613,7 @@ export function ChildSavingsView() {
                   </Button>
                 </CardContent>
               </Card>
-            </motion.div>
+            </m.div>
           ) : null}
         </>
       )}
@@ -624,5 +626,6 @@ export function ChildSavingsView() {
         onSuccess={invalidateSavings}
       />
     </div>
+    </ChildMotionRoot>
   );
 }

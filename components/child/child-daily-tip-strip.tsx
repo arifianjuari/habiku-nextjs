@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "@/lib/motion";
 import { Lightbulb } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { DailyTip } from "@/lib/child/engagement-types";
@@ -11,7 +11,7 @@ type ChildDailyTipStripProps = {
 };
 
 export function ChildDailyTipStrip({ tip, microAnimEnabled }: ChildDailyTipStripProps) {
-  const Wrapper = microAnimEnabled ? motion.div : "div";
+  const Wrapper = microAnimEnabled ? m.div : "div";
   const wrapperProps = microAnimEnabled
     ? { initial: { opacity: 0, x: -6 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.05 } }
     : {};

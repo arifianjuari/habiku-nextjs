@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, m } from "@/lib/motion";
+import { ChildMotionRoot } from "@/components/child/child-motion-root";
 import {
   Smile,
   Compass,
@@ -95,14 +96,14 @@ export function ChildReflectionView() {
   if (submitted) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-6 text-center">
-        <motion.div
+        <m.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: [0.8, 1.1, 1], opacity: 1 }}
           transition={{ duration: 0.5 }}
           className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 shadow-lg border border-emerald-100"
         >
           <CheckCircle2 className="h-10 w-10" />
-        </motion.div>
+        </m.div>
 
         <div className="space-y-2">
           <h2 className="font-heading text-2xl font-black text-slate-900 tracking-tight">
@@ -113,14 +114,14 @@ export function ChildReflectionView() {
           </p>
         </div>
 
-        <motion.div
+        <m.div
           animate={{ y: [0, -4, 0] }}
           transition={{ repeat: Infinity, duration: 2 }}
           className="rounded-2xl border border-violet-100 bg-violet-50/30 p-3.5 flex gap-2.5 items-center justify-center text-[10px] text-violet-850 font-bold max-w-xs"
         >
           <Heart className="h-4 w-4 text-violet-600 fill-violet-200" />
           <span>Kamu mendapatkan +1 Bonus Atribut Kejujuran! 🌟</span>
-        </motion.div>
+        </m.div>
 
         <Link href="/child/home" className="w-full max-w-xs">
           <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 rounded-xl shadow-md cursor-pointer">
@@ -132,6 +133,7 @@ export function ChildReflectionView() {
   }
 
   return (
+    <ChildMotionRoot>
     <div className="space-y-6">
       {/* 1. Navigation Header */}
       <div className="flex items-center gap-3">
@@ -168,7 +170,7 @@ export function ChildReflectionView() {
                 {MOODS.map((mood) => {
                   const isActive = selectedMood === mood.key;
                   return (
-                    <motion.button
+                    <m.button
                       key={mood.key}
                       type="button"
                       whileTap={{ scale: 0.95 }}
@@ -183,7 +185,7 @@ export function ChildReflectionView() {
                       <span className="text-[10px] font-extrabold text-slate-800 leading-none">
                         {mood.label}
                       </span>
-                    </motion.button>
+                    </m.button>
                   );
                 })}
               </div>
@@ -224,5 +226,6 @@ export function ChildReflectionView() {
         </CardContent>
       </Card>
     </div>
+    </ChildMotionRoot>
   );
 }

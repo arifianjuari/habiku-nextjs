@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/env";
@@ -12,8 +12,6 @@ type UseFamilyRealtimeOptions = {
   /** ID akun ortu yang login — untuk notifikasi */
   accountId: string | null;
   enabled?: boolean;
-  /** Dipanggil saat task_history atau goals berubah (mis. router.refresh di beranda ortu) */
-  onFamilyDataChange?: () => void;
 };
 
 /**
@@ -24,18 +22,24 @@ export function useFamilyRealtime({
   childProfileIds,
   accountId,
   enabled = true,
-  onFamilyDataChange,
 }: UseFamilyRealtimeOptions) {
   const queryClient = useQueryClient();
+  const profileIdsKey = useMemo(
+    () => [...childProfileIds].sort().join(","),
+    [childProfileIds],
+  );
 
   useEffect(() => {
     if (!enabled || !hasSupabaseConfig()) return;
-    if (childProfileIds.length === 0 && !accountId) return;
+
+    const profileIdList = profileIdsKey ? profileIdsKey.split(",") : [];
+    if (profileIdList.length === 0 && !accountId) return;
 
     const supabase = createClient();
-    const channel = supabase.channel("family-realtime");
+    const channelName = `family-realtime-${accountId ?? profileIdsKey}`;
+    const channel = supabase.channel(channelName);
 
-    for (const profileId of childProfileIds) {
+    for (const profileId of profileIdList) {
       channel.on(
         "postgres_changes",
         {
@@ -47,7 +51,6 @@ export function useFamilyRealtime({
         () => {
           void queryClient.invalidateQueries({ queryKey: ["task-history", profileId] });
           void queryClient.invalidateQueries({ queryKey: parentQueryKeys.all });
-          onFamilyDataChange?.();
         },
       );
       channel.on(
@@ -61,7 +64,6 @@ export function useFamilyRealtime({
         () => {
           void queryClient.invalidateQueries({ queryKey: ["goals", profileId] });
           void queryClient.invalidateQueries({ queryKey: parentQueryKeys.all });
-          onFamilyDataChange?.();
         },
       );
     }
@@ -86,5 +88,5 @@ export function useFamilyRealtime({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [childProfileIds, accountId, enabled, onFamilyDataChange, queryClient]);
+  }, [profileIdsKey, accountId, enabled, queryClient]);
 }

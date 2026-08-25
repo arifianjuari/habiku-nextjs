@@ -93,7 +93,6 @@ export function FamilySharedGoalHero({
         toast.success("Reward keluarga dinonaktifkan.");
         setIsEditing(true);
       }
-      router.refresh();
     });
   };
 

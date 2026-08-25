@@ -6,10 +6,14 @@ import {
   isChildAvatarStoragePath,
   STORAGE_BUCKETS,
 } from "@/lib/storage/child-avatar";
-import { prefetchSignedUrls } from "@/lib/storage/signed-url-cache";
+import {
+  CHILD_AVATAR_TRANSFORM,
+  childAvatarSignedCacheKey,
+} from "@/lib/storage/avatar-transform";
+import { getCachedSignedUrl } from "@/lib/storage/signed-url-cache";
 import { SIGNED_URL_TTL_SEC } from "@/lib/query/constants";
 
-/** Prewarm signed URL cache untuk daftar avatar anak (hindari N+1 saat list render). */
+/** Prewarm signed thumbnail URLs (transform 128px, hindari unduh foto penuh). */
 export function usePrefetchChildAvatarUrls(avatarPaths: (string | null | undefined)[]) {
   useEffect(() => {
     const uniquePaths = [
@@ -19,17 +23,23 @@ export function usePrefetchChildAvatarUrls(avatarPaths: (string | null | undefin
     if (uniquePaths.length === 0) return;
 
     const supabase = createClient();
-    void prefetchSignedUrls(
-      uniquePaths.map((path) => ({
-        cacheKey: `${STORAGE_BUCKETS.childAvatars}:${path}`,
-        ttlSec: SIGNED_URL_TTL_SEC,
-        createSignedUrl: async () => {
-          const { data, error } = await supabase.storage
-            .from(STORAGE_BUCKETS.childAvatars)
-            .createSignedUrl(path, SIGNED_URL_TTL_SEC);
-          return error ? null : data?.signedUrl ?? null;
-        },
-      })),
+    const bucket = STORAGE_BUCKETS.childAvatars;
+
+    void Promise.all(
+      uniquePaths.map((path) =>
+        getCachedSignedUrl(
+          childAvatarSignedCacheKey(path, bucket),
+          async () => {
+            const { data, error } = await supabase.storage
+              .from(bucket)
+              .createSignedUrl(path, SIGNED_URL_TTL_SEC, {
+                transform: CHILD_AVATAR_TRANSFORM,
+              });
+            return error ? null : data?.signedUrl ?? null;
+          },
+          SIGNED_URL_TTL_SEC,
+        ),
+      ),
     );
   }, [avatarPaths]);
 }

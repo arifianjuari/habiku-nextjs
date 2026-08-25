@@ -8,7 +8,8 @@ import { childQueryKeys } from "@/lib/child/query-keys";
 import { fetchChildTaskClient } from "@/lib/child/prefetch-child-queries";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, m } from "@/lib/motion";
+import { ChildMotionRoot } from "@/components/child/child-motion-root";
 import {
   ArrowLeft,
   Camera,
@@ -278,6 +279,7 @@ export function ChildMissionCompleteView({
   }
 
   return (
+    <ChildMotionRoot>
     <div className="space-y-6">
       {/* Back navigation */}
       <button
@@ -291,21 +293,21 @@ export function ChildMissionCompleteView({
 
       <AnimatePresence mode="wait">
         {isSuccess ? (
-          <motion.div
+          <m.div
             key="success-celebration"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             className="flex flex-col items-center justify-center p-10 text-center rounded-3xl border border-emerald-100 bg-white shadow-xl space-y-4"
           >
-            <motion.div
+            <m.div
               initial={{ scale: 0 }}
               animate={{ scale: [0, 1.2, 1] }}
               transition={{ delay: 0.2, duration: 0.5 }}
               className="rounded-full bg-emerald-50 p-5 border-2 border-emerald-500 text-emerald-600 shadow-md shadow-emerald-500/10"
             >
               <CheckCircle2 className="h-16 w-16 fill-emerald-100" />
-            </motion.div>
+            </m.div>
             
             <div className="space-y-2">
               <h3 className="font-heading text-lg font-black text-slate-900">Misi Terkirim! 🚀</h3>
@@ -319,9 +321,9 @@ export function ChildMissionCompleteView({
               <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-500 animate-pulse" />
               <span>Dapatkan +{task.reward_points} Energi setelah disetujui!</span>
             </div>
-          </motion.div>
+          </m.div>
         ) : (
-          <motion.div
+          <m.div
             key="mission-form"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -366,7 +368,7 @@ export function ChildMissionCompleteView({
 
                   <AnimatePresence mode="wait">
                     {imagePreview ? (
-                      <motion.div
+                      <m.div
                         key="image-preview"
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -387,9 +389,9 @@ export function ChildMissionCompleteView({
                         >
                           <Trash2 className="h-4.5 w-4.5" />
                         </button>
-                      </motion.div>
+                      </m.div>
                     ) : (
-                      <motion.div
+                      <m.div
                         key="uploader-area"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -415,7 +417,7 @@ export function ChildMissionCompleteView({
                             Tap untuk buka Kamera / Drag & drop berkas foto bukti disini
                           </p>
                         </div>
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
                 </CardContent>
@@ -459,9 +461,10 @@ export function ChildMissionCompleteView({
                 )}
               </Button>
             </form>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
+    </ChildMotionRoot>
   );
 }

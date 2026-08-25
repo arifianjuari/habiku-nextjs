@@ -1,6 +1,40 @@
 # Diagnosis Performa Habiku — Fondasi yang Masih Bermasalah
 
-> Tanggal audit: 25 Agustus 2026 · Cakupan: audit baca-saja, tanpa perubahan kode.
+> Tanggal audit: 25 Agustus 2026 · **Status implementasi: Selesai** (25 Agustus 2026)
+
+## Status implementasi
+
+Semua butir eksekusi prioritas (1–13) sudah diimplementasi di kode. Migrasi DB
+`performance_fk_indexes_rls_initplan` sudah diterapkan ke project remote
+`ohnmeatnujnxeeeaaywv` (versi `20260825041151`).
+
+| # | Perubahan | Status |
+|---|-----------|--------|
+| 1 | `"regions": ["sin1"]` di `vercel.json` | ✅ Selesai |
+| 2 | Hapus `prefetch={true}` di bottom nav ortu/anak | ✅ Selesai |
+| 3 | Cek path dulu di middleware; persempit matcher | ✅ Selesai |
+| 4 | `getUser()` → `getClaims()` di middleware | ✅ Selesai |
+| 5 | Cookie server → `ChildModeGuard`; kurangi gate skeleton | ✅ Selesai |
+| 6 | `child-dynamic-views.tsx` + dynamic import 7 halaman anak | ✅ Selesai |
+| 7 | `LazyMotion` + `m` di view anak | ✅ Selesai |
+| 8 | Realtime: invalidasi ganda + deps stabil | ✅ Selesai |
+| 9 | SW: stop cache HTML navigasi + bump `CACHE_NAME` v9 | ✅ Selesai |
+| 10 | `/parent/profil-anak`, `/parent/ledger`, `/parent/incidental` client-first | ✅ Selesai |
+| 11 | Oper `parentStickyMessage`; hilangkan query duplikat | ✅ Selesai |
+| 12 | `React.cache` di `createClient`; memoize `getPublicEnv` | ✅ Selesai |
+| 13 | Index FK (26) + RLS `(select auth.uid())` (17 policy) | ✅ Selesai (remote) |
+
+**Migrasi DB:** `supabase db push` lokal gagal karena CLI v2.39.2 tidak kompatibel dengan
+`supabase/config.toml` (butuh upgrade ke ≥ v2.115). Migrasi diterapkan via Supabase MCP
+(`apply_migration`). File lokal: `supabase/migrations/20260825120000_performance_fk_indexes_rls_initplan.sql`.
+
+**Kode mati:** semua item di § Kode mati sudah dihapus (server action orphan, prefetch no-op,
+cache stale, placeholder PnL, `.tmp-*`, impor tidak terpakai).
+
+**Belum diverifikasi otomatis:** baseline TTFB, jumlah `_rsc`, cold start anak, reinstall PWA
+(SW v9). Lihat § Verifikasi.
+
+---
 
 ## Latar belakang
 
@@ -281,46 +315,40 @@ ditunda via `requestIdleCallback`; tidak ada `setInterval`/`refetchInterval` di 
 
 ---
 
-## Kode mati yang ditemukan (bukan isu performa, tapi menambah permukaan)
+## Kode mati yang ditemukan (sudah dibersihkan)
 
-- `app/child/savings/get-child-savings.ts` — server action **tanpa satu pun pemanggil**,
-  tapi tetap menerbitkan endpoint server action
-- `lib/child/child-page-prefetch.tsx:9-16` — wrapper no-op yang mengembalikan `children` dan
-  mengabaikan prop `tab`; dipakai di 6 halaman anak
-- `lib/parent/seed-parent-list-cache.ts:21` — `readParentListCache` diekspor, tidak pernah dipanggil
-- `lib/parent/prefetch-parent-queries.ts:63` — menulis cache key `"stale-entry"` yang tidak
-  pernah dibaca siapa pun (`parent-savings-view` tidak memakai `useParentListCache`)
-- `childQueryKeys.points` — ditulis (`use-child-home-data.ts:33`) dan diinvalidasi (`:42`),
-  tapi **tidak ada `useQuery` yang membacanya**
-- `lib/gold/fetch-gold.ts:283` — mengembalikan `pnl: emptyChildPnl(...)` placeholder yang
-  tidak dipakai, karena panel selalu refetch P&L sungguhan
-- `app/parent/settings/page.tsx:6` — impor `createClient` tidak terpakai
-- 17 file `.tmp-*.sql` / `.tmp-*.json` / `.tmp-*.b64` di root repo
+Semua item berikut sudah dihapus saat implementasi (25 Agustus 2026):
+
+- ~~`app/child/savings/get-child-savings.ts`~~ — server action orphan
+- ~~`lib/child/child-page-prefetch.tsx`~~ — wrapper no-op
+- ~~`readParentListCache`~~ — diekspor, tidak pernah dipanggil
+- ~~cache key `"stale-entry"`~~ di `prefetch-parent-queries.ts`
+- ~~`childQueryKeys.points`~~ — ditulis/diinvalidasi tanpa `useQuery`
+- ~~placeholder `pnl`~~ di `fetch-gold.ts`
+- ~~impor `createClient`~~ tidak terpakai di `app/parent/settings/page.tsx`
+- ~~17 file `.tmp-*`~~ di root repo
 
 ---
 
-## Urutan eksekusi yang disarankan (untuk ronde berikutnya)
+## Urutan eksekusi (referensi — sudah selesai)
 
-Diurutkan berdasarkan (dampak ÷ risiko):
+Diurutkan berdasarkan (dampak ÷ risiko). Semua butir sudah diimplementasi; lihat § Status implementasi.
 
-| # | Perubahan | Menyentuh | Risiko |
+| # | Perubahan | Menyentuh | Status |
 |---|-----------|-----------|--------|
-| 1 | `"regions": ["sin1"]` di `vercel.json` | 1 baris | sangat rendah |
-| 2 | `prefetch={true}` → default di 2 bottom nav | 2 baris | rendah |
-| 3 | Pindahkan cek path ke atas `getUser()`; persempit matcher | `middleware.ts`, `lib/supabase/middleware.ts` | rendah |
-| 4 | `getUser()` → `getClaims()` di middleware (ES256 sudah aktif) | `lib/supabase/middleware.ts` | sedang — perlu uji alur login/logout |
-| 5 | Beri `ChildModeGuard` nilai awal dari cookie server, hapus gate skeleton | `app/child/layout.tsx`, `child-mode-guard.tsx`, `child-mode-store.ts` | sedang — inti sesi anak |
-| 6 | `child-dynamic-views.tsx` meniru `parent-dynamic-views.tsx` | 7 halaman anak | rendah |
-| 7 | `LazyMotion`+`m`, atau ganti preset fade-up dengan CSS | 17 file framer-motion | rendah, repetitif |
-| 8 | Hapus invalidasi `["parent"]` ganda; stabilkan deps realtime | `use-family-realtime.ts`, `parent-home-realtime.tsx` | rendah |
-| 9 | Berhenti cache HTML navigasi terautentikasi di SW (+ bump `CACHE_NAME`) | `public/sw.js` | rendah, **wajib bump versi** |
-| 10 | `/parent/profil-anak` → pola client-first + React Query | 1 rute + hook baru | sedang |
-| 11 | Hilangkan query `child_profiles` duplikat (oper `parentStickyMessage`) | `fetch-child-data.ts:169` | rendah |
-| 12 | Bungkus `createClient` dengan `React.cache`; memoize `getPublicEnv` | `lib/supabase/server.ts`, `lib/env.ts` | rendah |
-| 13 | Higiene DB: index FK + `(select auth.uid())` di RLS | migrasi baru | rendah, belum mendesak |
-
-Butir 1–4 kemungkinan besar memberi perbaikan paling terasa per baris kode yang diubah.
-Butir 5+6+7 adalah yang benar-benar memperbaiki cold start di sisi anak.
+| 1 | `"regions": ["sin1"]` di `vercel.json` | 1 baris | ✅ |
+| 2 | `prefetch={true}` → default di 2 bottom nav | 2 baris | ✅ |
+| 3 | Pindahkan cek path ke atas auth; persempit matcher | middleware | ✅ |
+| 4 | `getUser()` → `getClaims()` di middleware | `lib/supabase/middleware.ts` | ✅ |
+| 5 | Cookie server → `ChildModeGuard` | layout + guard + store | ✅ |
+| 6 | `child-dynamic-views.tsx` | 7 halaman anak | ✅ |
+| 7 | `LazyMotion` + `m` | view anak + `lib/motion.ts` | ✅ |
+| 8 | Realtime: invalidasi + deps | `use-family-realtime.ts` | ✅ |
+| 9 | SW navigasi + bump cache v9 | `public/sw.js` | ✅ |
+| 10 | Client-first ortu (profil-anak, ledger, incidental) | hooks + prefetch | ✅ |
+| 11 | Oper `parentStickyMessage` | `fetch-child-data.ts` | ✅ |
+| 12 | `React.cache` + memoize env | server + env | ✅ |
+| 13 | Index FK + RLS initplan | migrasi remote | ✅ |
 
 ---
 
@@ -345,5 +373,6 @@ ambil baseline:
 7. `pnpm build` dan `pnpm lint` harus tetap lulus (catatan: ESLint sudah melaporkan banyak
    isu lama yang bukan berasal dari perubahan ini — lihat `AGENTS.md`).
 
-Setelah setiap perubahan SW, **uninstall + reinstall PWA** dan bump `CACHE_NAME`
-(`public/sw.js:1`, sekarang `habiku-pwa-cache-v7`).
+Setelah deploy, **uninstall + reinstall PWA** agar SW baru aktif (`public/sw.js:1`,
+sekarang `habiku-pwa-cache-v9`). Konfirmasi region Vercel `sin1` via header
+`x-vercel-id` setelah deploy produksi.

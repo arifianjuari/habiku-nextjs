@@ -5,7 +5,8 @@ import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import { useChildBadgesData } from "@/lib/hooks/use-child-badges-data";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
 import { ChildFetchingIndicator } from "@/components/shared/child-fetching-indicator";
-import { motion } from "framer-motion";
+import { AnimatePresence, m } from "@/lib/motion";
+import { ChildMotionRoot } from "@/components/child/child-motion-root";
 import {
   Award,
   Lock,
@@ -128,10 +129,11 @@ export function ChildBadgeShelf() {
   const totalCount = ALL_BADGES.length;
 
   return (
+    <ChildMotionRoot>
     <div className="relative space-y-6" data-fetching={isFetching ? "" : undefined}>
       <ChildFetchingIndicator isFetching={isFetching && unlockedKeys.length > 0} />
       {/* 1. Welcoming & Counter Header */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-3xl p-5 text-white bg-gradient-to-r from-violet-600 to-indigo-700 shadow-lg shadow-violet-950/20"
@@ -159,11 +161,11 @@ export function ChildBadgeShelf() {
             {unlockedCount} / {totalCount}
           </span>
         </div>
-      </motion.div>
+      </m.div>
 
       {/* 2. Badge Details Panel (Hovered/Clicked) */}
       {selectedBadge && (
-        <motion.div
+        <m.div
           key={selectedBadge.key}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -211,7 +213,7 @@ export function ChildBadgeShelf() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </m.div>
       )}
 
       {/* 3. Badges Grid */}
@@ -221,7 +223,7 @@ export function ChildBadgeShelf() {
           const isSelected = selectedBadge?.key === badge.key;
 
           return (
-            <motion.button
+            <m.button
               key={badge.key}
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedBadge(badge)}
@@ -243,10 +245,11 @@ export function ChildBadgeShelf() {
               <span className="text-[9px] font-extrabold text-slate-800 text-center leading-tight truncate w-full">
                 {badge.title.split(" ")[0]} {/* only show word, or simple truncate */}
               </span>
-            </motion.button>
+            </m.button>
           );
         })}
       </div>
     </div>
+    </ChildMotionRoot>
   );
 }

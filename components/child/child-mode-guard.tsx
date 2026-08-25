@@ -14,17 +14,40 @@ import { toast } from "sonner";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function ChildModeGuard({ children }: { children: React.ReactNode }) {
+type ChildModeGuardProps = {
+  children: React.ReactNode;
+  /** Dari cookie server — izinkan first paint tanpa menunggu rehydrate Zustand. */
+  serverSessionReady?: boolean;
+  serverProfileId?: string | null;
+};
+
+export function ChildModeGuard({
+  children,
+  serverSessionReady = false,
+  serverProfileId = null,
+}: ChildModeGuardProps) {
   const hydrated = useChildModeHydrated();
   const isActive = useChildModeStore((s) => s.isActive);
   const profileId = useChildModeStore((s) => s.profileId);
   const exit = useChildModeStore((s) => s.exit);
 
-  const isValidUuid = profileId ? UUID_REGEX.test(profileId) : false;
-  const sessionReady = isActive && isValidUuid;
+  const effectiveProfileId = profileId ?? serverProfileId;
+  const isValidUuid = effectiveProfileId ? UUID_REGEX.test(effectiveProfileId) : false;
+  const clientSessionReady = isActive && isValidUuid;
+  const sessionReady = serverSessionReady || clientSessionReady;
 
   useEffect(() => {
-    if (!hydrated || sessionReady) return;
+    if (serverSessionReady && serverProfileId && !isActive) {
+      useChildModeStore.setState({
+        isActive: true,
+        profileId: serverProfileId,
+      });
+    }
+  }, [serverSessionReady, serverProfileId, isActive]);
+
+  useEffect(() => {
+    if (!hydrated && !serverSessionReady) return;
+    if (sessionReady) return;
 
     if (isActive && profileId && !isValidUuid) {
       console.warn("Invalid child profileId UUID in Guard, exiting...", profileId);
@@ -35,7 +58,15 @@ export function ChildModeGuard({ children }: { children: React.ReactNode }) {
     if (isChildModeCookieActive()) return;
 
     navigateToParentDashboardAfterChildExit();
-  }, [hydrated, sessionReady, isActive, profileId, isValidUuid, exit]);
+  }, [
+    hydrated,
+    serverSessionReady,
+    sessionReady,
+    isActive,
+    profileId,
+    isValidUuid,
+    exit,
+  ]);
 
   useEffect(() => {
     if (sessionReady) {
@@ -43,17 +74,11 @@ export function ChildModeGuard({ children }: { children: React.ReactNode }) {
     }
   }, [sessionReady]);
 
-  if (!hydrated) {
-    return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
-  }
-
   if (!sessionReady) {
-    return (
-      <PageLoadingSkeleton
-        variant="child"
-        className="min-h-[50vh]"
-      />
-    );
+    if (!hydrated && !serverSessionReady) {
+      return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
+    }
+    return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
   }
 
   return <>{children}</>;

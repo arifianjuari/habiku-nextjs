@@ -1,15 +1,21 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import { toast } from "sonner";
-import { PwaInstallPrompt } from "@/components/shared/pwa-install-prompt";
 import { syncChildModeCookieFromStore } from "@/lib/stores/child-mode-store";
+
+const PwaInstallPrompt = dynamic(
+  () =>
+    import("@/components/shared/pwa-install-prompt").then((m) => m.PwaInstallPrompt),
+  { ssr: false },
+);
 
 export function PwaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
     let removeFocusListener: (() => void) | undefined;
+    let removeVisibilityListener: (() => void) | undefined;
 
     const handleRegister = () => {
       void navigator.serviceWorker
@@ -26,18 +32,20 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
                 installing.state === "installed" &&
                 navigator.serviceWorker.controller
               ) {
-                toast.info("Versi baru Habiku tersedia.", {
-                  duration: 8000,
-                  action: {
-                    label: "Muat ulang",
-                    onClick: () => {
-                      syncChildModeCookieFromStore();
-                      void navigator.serviceWorker.getRegistration().then((reg) => {
-                        reg?.waiting?.postMessage({ type: "SKIP_WAITING" });
-                        window.location.reload();
-                      });
+                void import("sonner").then(({ toast }) => {
+                  toast.info("Versi baru Habiku tersedia.", {
+                    duration: 8000,
+                    action: {
+                      label: "Muat ulang",
+                      onClick: () => {
+                        syncChildModeCookieFromStore();
+                        void navigator.serviceWorker.getRegistration().then((reg) => {
+                          reg?.waiting?.postMessage({ type: "SKIP_WAITING" });
+                          window.location.reload();
+                        });
+                      },
                     },
-                  },
+                  });
                 });
               }
             });
@@ -69,10 +77,14 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     const syncBeforeHide = () => {
       syncChildModeCookieFromStore();
     };
-    window.addEventListener("pagehide", syncBeforeHide);
-    document.addEventListener("visibilitychange", () => {
+    const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") syncBeforeHide();
-    });
+    };
+
+    window.addEventListener("pagehide", syncBeforeHide);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    removeVisibilityListener = () =>
+      document.removeEventListener("visibilitychange", onVisibilityChange);
 
     if (document.readyState === "complete") {
       scheduleRegister();
@@ -84,11 +96,19 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("pagehide", syncBeforeHide);
       window.removeEventListener("load", scheduleRegister);
       removeFocusListener?.();
+      removeVisibilityListener?.();
     };
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+
+    let disposed = false;
+    let removeListeners: (() => void) | undefined;
+
+    void import("sonner").then(({ toast }) => {
+      if (disposed) return;
+
       const handleOnline = () => {
         toast.success("Koneksi kembali! Aplikasi terhubung secara daring. ⚡", {
           duration: 4000,
@@ -105,11 +125,16 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       window.addEventListener("online", handleOnline);
       window.addEventListener("offline", handleOffline);
 
-      return () => {
+      removeListeners = () => {
         window.removeEventListener("online", handleOnline);
         window.removeEventListener("offline", handleOffline);
       };
-    }
+    });
+
+    return () => {
+      disposed = true;
+      removeListeners?.();
+    };
   }, []);
 
   return (

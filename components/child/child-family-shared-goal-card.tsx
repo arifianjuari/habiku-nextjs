@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "@/lib/motion";
 import { Gift, Sparkles, Users, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -29,7 +29,7 @@ export function ChildFamilySharedGoalCard({
   const isComplete = familyEarnEnergy >= targetPoints;
   const remaining = Math.max(0, targetPoints - familyEarnEnergy);
 
-  const Wrapper = microAnimEnabled ? motion.div : "div";
+  const Wrapper = microAnimEnabled ? m.div : "div";
   const wrapperProps = microAnimEnabled
     ? {
         initial: { opacity: 0, y: 10 },
@@ -103,7 +103,7 @@ export function ChildFamilySharedGoalCard({
               aria-valuemax={100}
               aria-label={`Progres energi bersama untuk ${title}`}
             >
-              <motion.div
+              <m.div
                 className={cn(
                   "relative h-full rounded-full",
                   isComplete
@@ -115,9 +115,9 @@ export function ChildFamilySharedGoalCard({
                 transition={{ duration: 0.8, ease: "easeOut" }}
               >
                 <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.35)_50%,transparent_100%)] animate-pulse" />
-              </motion.div>
+              </m.div>
               {percent > 8 && (
-                <motion.span
+                <m.span
                   className="absolute top-1/2 -translate-y-1/2 text-xs"
                   style={{ left: `calc(${percent}% - 12px)` }}
                   animate={microAnimEnabled ? { scale: [1, 1.2, 1] } : undefined}
@@ -125,7 +125,7 @@ export function ChildFamilySharedGoalCard({
                   aria-hidden
                 >
                   {isComplete ? "🎉" : "⭐"}
-                </motion.span>
+                </m.span>
               )}
             </div>
 

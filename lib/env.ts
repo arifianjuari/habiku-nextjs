@@ -8,8 +8,14 @@ const publicEnvSchema = z.object({
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
 
+let cachedPublicEnv: PublicEnv | null = null;
+
 /** Validasi env publik — panggil di server atau saat init klien. */
 export function getPublicEnv(): PublicEnv {
+  if (cachedPublicEnv) {
+    return cachedPublicEnv;
+  }
+
   const parsed = publicEnvSchema.safeParse({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -22,7 +28,8 @@ export function getPublicEnv(): PublicEnv {
     );
   }
 
-  return parsed.data;
+  cachedPublicEnv = parsed.data;
+  return cachedPublicEnv;
 }
 
 export function hasSupabaseConfig(): boolean {

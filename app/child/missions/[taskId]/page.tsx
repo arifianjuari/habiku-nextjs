@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { createClient } from "@/lib/supabase/server";
-import { ChildMissionCompleteView } from "@/components/child/child-mission-complete-view";
+import { DynamicChildMissionCompleteView } from "@/components/child/child-dynamic-views";
 
 interface ChildMissionCompletePageProps {
   params: Promise<{
@@ -30,5 +30,5 @@ export default async function ChildMissionCompletePage({ params }: ChildMissionC
     .eq("id", taskId)
     .maybeSingle();
 
-  return <ChildMissionCompleteView taskId={taskId} initialTask={initialTask} />;
+  return <DynamicChildMissionCompleteView taskId={taskId} initialTask={initialTask} />;
 }

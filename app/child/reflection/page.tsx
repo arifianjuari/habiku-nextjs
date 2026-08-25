@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { ChildReflectionView } from "@/components/child/child-reflection-view";
+import { DynamicChildReflectionView } from "@/components/child/child-dynamic-views";
 
 export const metadata: Metadata = {
   title: "Refleksi Sore — Habiku",
 };
 
 export default function ChildReflectionPage() {
-  return <ChildReflectionView />;
+  return <DynamicChildReflectionView />;
 }

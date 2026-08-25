@@ -12,7 +12,29 @@ function isChildModeActive(request: NextRequest): boolean {
   return isChildModeCookieValue(request.cookies.get(CHILD_MODE_COOKIE)?.value);
 }
 
+function pathnameNeedsAuthCheck(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/sign-up") ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/parent") ||
+    pathname.startsWith("/child") ||
+    pathname.startsWith("/onboarding")
+  );
+}
+
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (
+    pathname.startsWith("/api/") ||
+    pathname === "/icon" ||
+    pathname.startsWith("/apple-icon")
+  ) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   if (!hasSupabaseConfig()) {
@@ -40,11 +62,6 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
   const isAuthRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/sign-up") ||
@@ -54,16 +71,23 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/child") ||
     pathname.startsWith("/onboarding");
 
+  let user: { id: string } | null = null;
+
+  if (pathnameNeedsAuthCheck(pathname)) {
+    const { data, error } = await supabase.auth.getClaims();
+    if (!error && data?.claims?.sub) {
+      user = { id: String(data.claims.sub) };
+    }
+  }
+
   const childModeActive = isChildModeActive(request);
 
-  // PWA / deep link: langsung ke app jika sudah login (bukan landing marketing)
   if (user && pathname === "/") {
     const url = request.nextUrl.clone();
     url.pathname = getAuthenticatedHomePath(childModeActive);
     return NextResponse.redirect(url);
   }
 
-  // Tetap di mode anak setelah update/reload — jangan lempar ke dasbor ortu
   if (user && childModeActive && pathname.startsWith("/parent")) {
     const url = request.nextUrl.clone();
     url.pathname = CHILD_MODE_HOME;
