@@ -437,10 +437,12 @@ revoke all on function public.save_goal_hp_to_savings from public;
 grant execute on function public.save_goal_hp_to_savings to authenticated;
 
 -- Drift: dompet vs goal + energi di kantong tabungan (bunga menambah total kekayaan)
-create or replace view public.energy_drift as
+drop view if exists public.energy_drift;
+
+create view public.energy_drift as
 select
   c.id                                       as profile_id,
-  c.name                                     as child_name,
+  c.name,
   public.compute_wallet_balance(c.id)        as wallet_balance,
   public.compute_goal_held_energy(c.id)      as goal_held_energy,
   public.compute_savable_goal_energy(c.id)   as savable_goal_energy,
