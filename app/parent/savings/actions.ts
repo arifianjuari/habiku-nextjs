@@ -15,6 +15,12 @@ function mapRpcError(message: string): string {
   if (message.includes("insufficient_pocket")) {
     return "Saldo kantong tidak cukup.";
   }
+  if (message.includes("no_active_goals_for_withdraw")) {
+    return "Anak belum punya target aktif. Buat target dulu agar energi hasil tarik atau jual emas punya tempat.";
+  }
+  if (message.includes("insufficient_goal_capacity")) {
+    return "Target aktif tidak punya ruang untuk energi ini.";
+  }
   if (message.includes("savings_disabled")) {
     return "Fitur tabungan dinonaktifkan di pengaturan keluarga.";
   }
