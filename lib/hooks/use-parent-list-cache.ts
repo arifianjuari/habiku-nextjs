@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PARENT_STALE_MS } from "@/lib/query/constants";
 
@@ -14,7 +14,7 @@ export function useParentListCache<T>(
   serverData: T,
 ): [T, (value: T | ((prev: T) => T)) => void] {
   const queryClient = useQueryClient();
-  const entryKey = [...queryKey, "stale-entry"] as const;
+  const entryKey = useMemo(() => [...queryKey, "stale-entry"] as const, [queryKey]);
 
   const [data, setDataState] = useState<T>(() => {
     const entry = queryClient.getQueryData<CacheEntry<T>>(entryKey);
@@ -39,14 +39,20 @@ export function useParentListCache<T>(
   );
 
   useEffect(() => {
+    let cancelled = false;
     const entry = queryClient.getQueryData<CacheEntry<T>>(entryKey);
     if (!entry || Date.now() - entry.ts >= PARENT_STALE_MS) {
       queryClient.setQueryData<CacheEntry<T>>(entryKey, {
         value: serverData,
         ts: Date.now(),
       });
-      setDataState(serverData);
+      queueMicrotask(() => {
+        if (!cancelled) setDataState(serverData);
+      });
     }
+    return () => {
+      cancelled = true;
+    };
   }, [serverData, entryKey, queryClient]);
 
   return [data, setData];

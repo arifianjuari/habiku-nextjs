@@ -143,7 +143,7 @@ self.addEventListener("push", (event) => {
   if (event.data) {
     try {
       data = event.data.json();
-    } catch (e) {
+    } catch {
       data = { body: event.data.text() };
     }
   }
@@ -169,14 +169,16 @@ self.addEventListener("notificationclick", (event) => {
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
-        const url = event.notification.data?.url || "/parent";
+        const notificationUrl = event.notification.data?.url || "/parent";
+        const targetUrl = new URL(notificationUrl, self.location.origin);
         for (const client of clientList) {
-          if (client.url === url && "focus" in client) {
+          const clientUrl = new URL(client.url);
+          if (clientUrl.pathname === targetUrl.pathname && "focus" in client) {
             return client.focus();
           }
         }
         if (clients.openWindow) {
-          return clients.openWindow(url);
+          return clients.openWindow(targetUrl.href);
         }
       }),
   );

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/env";
 import { parentQueryKeys } from "@/lib/parent/query-keys";
 
 type UseFamilyRealtimeOptions = {
+  /** ID keluarga — dipakai agar invalidasi React Query bisa spesifik per tab. */
+  familyId?: string | null;
   /** ID profil anak dalam keluarga — dipakai untuk filter task_history & goals */
   childProfileIds: string[];
   /** ID akun ortu yang login — untuk notifikasi */
@@ -19,6 +21,7 @@ type UseFamilyRealtimeOptions = {
  * `task_history` tidak punya family_id — filter via profile_id (lihat database-architecture.md §4.6).
  */
 export function useFamilyRealtime({
+  familyId,
   childProfileIds,
   accountId,
   enabled = true,
@@ -28,6 +31,19 @@ export function useFamilyRealtime({
     () => [...childProfileIds].sort().join(","),
     [childProfileIds],
   );
+
+  const invalidateParentTaskHistoryQueries = useCallback(() => {
+    if (!familyId) return;
+    void queryClient.invalidateQueries({ queryKey: parentQueryKeys.queue(familyId) });
+    void queryClient.invalidateQueries({ queryKey: parentQueryKeys.tasks(familyId) });
+    void queryClient.invalidateQueries({ queryKey: parentQueryKeys.savings(familyId) });
+  }, [familyId, queryClient]);
+
+  const invalidateParentGoalQueries = useCallback(() => {
+    if (!familyId) return;
+    void queryClient.invalidateQueries({ queryKey: parentQueryKeys.targets(familyId) });
+    void queryClient.invalidateQueries({ queryKey: parentQueryKeys.savings(familyId) });
+  }, [familyId, queryClient]);
 
   useEffect(() => {
     if (!enabled || !hasSupabaseConfig()) return;
@@ -50,7 +66,7 @@ export function useFamilyRealtime({
         },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["task-history", profileId] });
-          void queryClient.invalidateQueries({ queryKey: parentQueryKeys.all });
+          invalidateParentTaskHistoryQueries();
         },
       );
       channel.on(
@@ -63,7 +79,7 @@ export function useFamilyRealtime({
         },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["goals", profileId] });
-          void queryClient.invalidateQueries({ queryKey: parentQueryKeys.all });
+          invalidateParentGoalQueries();
         },
       );
     }
@@ -88,5 +104,13 @@ export function useFamilyRealtime({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [profileIdsKey, accountId, enabled, queryClient]);
+  }, [
+    profileIdsKey,
+    accountId,
+    enabled,
+    familyId,
+    queryClient,
+    invalidateParentTaskHistoryQueries,
+    invalidateParentGoalQueries,
+  ]);
 }

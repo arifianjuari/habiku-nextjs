@@ -320,6 +320,7 @@ export function QueueClientView({
   }, [initialQueueItems, setItems]);
 
   useEffect(() => {
+    let cancelled = false;
     const initialSelections: Record<string, string> = {};
     initialQueueItems.forEach((item) => {
       const activeGoalsForChild = item.childGoals.filter((g) => g.status === "active");
@@ -328,16 +329,24 @@ export function QueueClientView({
       }
     });
 
-    setSelectedGoalIds((prev) => {
-      const next = { ...prev };
-      for (const [id, goalId] of Object.entries(initialSelections)) {
-        if (!next[id]) next[id] = goalId;
-      }
-      return next;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setSelectedGoalIds((prev) => {
+        const next = { ...prev };
+        for (const [id, goalId] of Object.entries(initialSelections)) {
+          if (!next[id]) next[id] = goalId;
+        }
+        return next;
+      });
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [initialQueueItems]);
 
   useFamilyRealtime({
+    familyId,
     childProfileIds,
     accountId: null,
   });

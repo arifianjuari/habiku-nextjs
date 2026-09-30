@@ -28,7 +28,11 @@ export default async function ParentHomePage() {
   const childProfileIds = await getFamilyChildIds(family.id);
 
   return (
-    <ParentHomeRealtime childProfileIds={childProfileIds} accountId={account.id}>
+    <ParentHomeRealtime
+      familyId={family.id}
+      childProfileIds={childProfileIds}
+      accountId={account.id}
+    >
       <div className="space-y-6 pb-2">
         <Suspense fallback={<ParentHomeMainSkeleton />}>
           <ParentHomeMainSection
