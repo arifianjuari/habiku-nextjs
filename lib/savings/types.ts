@@ -25,6 +25,8 @@ export type SavingsPocketWithBalance = SavingsPocketRow & {
   locked_until: string | null;
   interest_accrued: number;
   projected_interest: number;
+  /** Bulan horizon untuk projected_interest (label UI). */
+  projected_interest_months: number;
 };
 
 export type SavingsWithdrawPending = {
@@ -58,6 +60,7 @@ export type ParentSavingsData = {
   pendingGoalClaims: GoalClaimPending[];
   savingsEnabled: boolean;
   goalSaveEnabled: boolean;
+  savingsInterestEnabled: boolean;
   maxMonthlyInterestBps: number;
   gold: ParentGoldSavingsData;
 };

@@ -3,8 +3,12 @@ import type { SavingsPocketRow } from "@/lib/savings/types";
 /** Plafon kolom `monthly_interest_bps` / `max_monthly_interest_bps` (2000 = 20%/bulan). */
 export const MONTHLY_INTEREST_ABS_MAX_BPS = 2000;
 
-/** Horizon proyeksi kantong flexible — tidak punya jatuh tempo. */
+/** Horizon proyeksi UI kantong flexible (akrual SQL tidak dibatasi). */
 export const FLEXIBLE_PROJECTION_MONTHS = 12;
+
+export function interestProjectionLabel(months = FLEXIBLE_PROJECTION_MONTHS): string {
+  return `perkiraan ${months} bln ke depan`;
+}
 
 /** Basis poin per 10.000 (500 = 5%/bulan). */
 export function effectiveMonthlyBps(pocket: Pick<SavingsPocketRow, "monthly_interest_bps" | "lock_bonus_coefficient">): number {

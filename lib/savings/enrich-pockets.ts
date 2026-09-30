@@ -1,4 +1,8 @@
-import { monthsRemainingUntil, projectedInterestTotal } from "@/lib/savings/interest";
+import {
+  FLEXIBLE_PROJECTION_MONTHS,
+  monthsRemainingUntil,
+  projectedInterestTotal,
+} from "@/lib/savings/interest";
 import type { SavingsPocketRow, SavingsPocketWithBalance } from "@/lib/savings/types";
 import type { createClient } from "@/lib/supabase/server";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
@@ -90,8 +94,13 @@ export async function enrichPockets(
     // Mesin akrual berbunga atas SALDO kantong dan bersifat majemuk, jadi basis
     // proyeksi adalah saldo — bukan nominal setoran. Untuk deposito, bunga hanya
     // berjalan selama masih terkunci, jadi horizonnya sisa masa kunci.
+    const termMonthsRemaining = monthsRemainingUntil(lockedUntil);
     const projectionMonths =
-      pocket.pocket_type === "term" ? monthsRemainingUntil(lockedUntil) : undefined;
+      pocket.pocket_type === "term"
+        ? (termMonthsRemaining > 0
+            ? termMonthsRemaining
+            : Math.max(pocket.lock_months ?? 0, 0))
+        : FLEXIBLE_PROJECTION_MONTHS;
 
     return {
       ...pocket,
@@ -101,6 +110,7 @@ export async function enrichPockets(
       locked_until: lockedUntil,
       interest_accrued: interestAccrued,
       projected_interest: projectedInterestTotal(balance, pocket, { projectionMonths }),
+      projected_interest_months: projectionMonths,
     };
   });
 }

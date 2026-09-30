@@ -17,10 +17,14 @@ async function handleAccrual(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET?.trim();
 
-  const authorized =
-    cronSecret && authHeader === `Bearer ${cronSecret}`;
+  if (!cronSecret) {
+    return NextResponse.json(
+      { error: "CRON_SECRET belum dikonfigurasi." },
+      { status: 503 },
+    );
+  }
 
-  if (cronSecret && !authorized) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Akses tidak sah." }, { status: 401 });
   }
 

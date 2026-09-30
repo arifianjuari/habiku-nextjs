@@ -15,7 +15,11 @@ import {
   Wallet,
   Vault,
 } from "lucide-react";
-import { formatInterestBps, effectiveMonthlyBps } from "@/lib/savings/interest";
+import {
+  formatInterestBps,
+  effectiveMonthlyBps,
+  interestProjectionLabel,
+} from "@/lib/savings/interest";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import {
   useChildSavingsData,
@@ -429,7 +433,13 @@ export function ChildSavingsView() {
                     ) : null}
                     {activePocket.projected_interest > 0 ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-bold backdrop-blur-sm">
-                        +{activePocket.projected_interest} ⚡ perkiraan
+                        +{activePocket.projected_interest} ⚡{" "}
+                        {interestProjectionLabel(activePocket.projected_interest_months)}
+                      </span>
+                    ) : null}
+                    {activePocket.monthly_interest_bps > 0 ? (
+                      <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium backdrop-blur-sm">
+                        Bunga otomatis setiap tanggal 1 (bulan sebelumnya)
                       </span>
                     ) : null}
                     {activePocket.interest_accrued > 0 ? (
