@@ -32,6 +32,8 @@ export type GoldSavingsSettings = {
 };
 
 export type ParentGoldSavingsData = GoldSavingsSettings & {
+  /** Keluarga memilih harga pasar; cron harian menimpa harga selama ini true. */
+  goldFollowMarket: boolean;
   holdingsByProfile: Record<string, number>;
   pendingTrades: GoldTradePending[];
   transactions: GoldTransactionRow[];

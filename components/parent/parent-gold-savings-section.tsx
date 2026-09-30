@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Coins, Settings2, TrendingDown, TrendingUp } from "lucide-react";
+import { Coins, RefreshCw, Settings2, TrendingDown, TrendingUp } from "lucide-react";
 import type { ChildProfile } from "@/types/database";
 import type { ParentGoldSavingsData } from "@/lib/gold/types";
 import { formatGoldQuantity, energyForSellMilli } from "@/lib/gold/units";
-import { updateGoldPricesAction } from "@/app/parent/savings/actions";
+import { MARKET_SPREAD_RATIO } from "@/lib/gold/market-price";
+import {
+  applyMarketGoldPricesAction,
+  updateGoldPricesAction,
+} from "@/app/parent/savings/actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,14 +39,28 @@ export function ParentGoldSavingsSection({
   children,
   activeChildId,
 }: ParentGoldSavingsSectionProps) {
-  const [isPending, startTransition] = useTransition();
+  const queryClient = useQueryClient();
+  const [isSaving, startSave] = useTransition();
+  const [isApplyingMarket, startApplyMarket] = useTransition();
+  const serverKey = `${gold.prices.sellPriceEnergy}:${gold.prices.buyPriceEnergy}:${gold.goldFollowMarket}`;
+  const [syncedKey, setSyncedKey] = useState(serverKey);
   const [sellPrice, setSellPrice] = useState(String(gold.prices.sellPriceEnergy));
   const [buyPrice, setBuyPrice] = useState(String(gold.prices.buyPriceEnergy));
+  const [followMarket, setFollowMarket] = useState(gold.goldFollowMarket);
+  const busy = isSaving || isApplyingMarket;
+  const spreadPercent = Math.round(MARKET_SPREAD_RATIO * 100);
 
-  useEffect(() => {
+  if (syncedKey !== serverKey) {
+    setSyncedKey(serverKey);
     setSellPrice(String(gold.prices.sellPriceEnergy));
     setBuyPrice(String(gold.prices.buyPriceEnergy));
-  }, [gold.prices.sellPriceEnergy, gold.prices.buyPriceEnergy]);
+    setFollowMarket(gold.goldFollowMarket);
+  }
+
+  const refreshGoldQueries = () => {
+    void queryClient.invalidateQueries({ queryKey: ["parent", "savings"] });
+    void queryClient.invalidateQueries({ queryKey: ["child"] });
+  };
 
   const unitLabel = gold.prices.unitLabel;
   const activeChild = children.find((c) => c.id === activeChildId);
@@ -65,10 +84,36 @@ export function ParentGoldSavingsSection({
       return;
     }
 
-    startTransition(async () => {
+    startSave(async () => {
       const res = await updateGoldPricesAction(sell, buy);
-      if (res.error) toast.error(res.error);
-      else toast.success("Harga emas keluarga diperbarui.");
+      if ("error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
+      setFollowMarket(false);
+      refreshGoldQueries();
+      toast.success(
+        followMarket
+          ? "Harga emas keluarga diperbarui. Pembaruan otomatis dimatikan."
+          : "Harga emas keluarga diperbarui.",
+      );
+    });
+  };
+
+  const handleApplyMarket = () => {
+    startApplyMarket(async () => {
+      const res = await applyMarketGoldPricesAction();
+      if ("error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
+      setSellPrice(String(res.sellPriceEnergy));
+      setBuyPrice(String(res.buyPriceEnergy));
+      setFollowMarket(true);
+      refreshGoldQueries();
+      toast.success(
+        `Harga pasar dipakai. Jual ${res.sellPriceEnergy} · beli ${res.buyPriceEnergy} (acuan ${res.spotEnergy}).`,
+      );
     });
   };
 
@@ -166,14 +211,40 @@ export function ParentGoldSavingsSection({
             </div>
           </div>
 
-          <Button
-            type="button"
-            disabled={isPending}
-            onClick={handleSavePrices}
-            className="h-10 w-full rounded-xl bg-amber-600 font-bold hover:bg-amber-700"
-          >
-            {isPending ? "Menyimpan…" : "Simpan harga emas"}
-          </Button>
+          <p className="text-[10px] leading-snug text-amber-900/70 text-pretty">
+            Harga pasar memakai acuan emas dunia (bukan Antam), 1 {unitLabel} = 1 gram.
+            Energi = rupiah per gram dibagi 1.000. Harga jual {spreadPercent}% di atas acuan,
+            harga beli {spreadPercent}% di bawah.
+          </p>
+          {followMarket ? (
+            <p className="rounded-lg bg-amber-100/80 px-2.5 py-1.5 text-[10px] font-medium text-amber-950 text-pretty">
+              Mengikuti harga pasar. Diperbarui otomatis sekali sehari (sekitar pukul 09.00 WIB).
+              Simpan harga manual untuk berhenti.
+            </p>
+          ) : null}
+
+          <div className="grid gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={handleApplyMarket}
+              className="h-10 w-full rounded-xl border-amber-300 bg-white font-bold text-amber-950 hover:bg-amber-50"
+            >
+              <span className={cn("inline-flex", isApplyingMarket && "animate-spin")} aria-hidden>
+                <RefreshCw className="size-4" />
+              </span>
+              {isApplyingMarket ? "Mengambil harga…" : "Pakai harga pasar"}
+            </Button>
+            <Button
+              type="button"
+              disabled={busy}
+              onClick={handleSavePrices}
+              className="h-10 w-full rounded-xl bg-amber-600 font-bold hover:bg-amber-700"
+            >
+              {isSaving ? "Menyimpan…" : "Simpan harga emas"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

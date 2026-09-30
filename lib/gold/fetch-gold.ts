@@ -15,6 +15,7 @@ export type FamilyGoldSettingsRow = {
   gold_sell_price_energy: number;
   gold_buy_price_energy: number;
   gold_unit_label: string;
+  gold_follow_market?: boolean;
 };
 
 type GoldTransactionDbRow = {
@@ -31,9 +32,11 @@ type GoldTransactionDbRow = {
 
 function parseGoldSettings(row: FamilyGoldSettingsRow | null | undefined): GoldPrices & {
   goldSavingsEnabled: boolean;
+  goldFollowMarket: boolean;
 } {
   return {
     goldSavingsEnabled: row?.gold_savings_enabled ?? false,
+    goldFollowMarket: row?.gold_follow_market ?? false,
     sellPriceEnergy: row?.gold_sell_price_energy ?? 20,
     buyPriceEnergy: row?.gold_buy_price_energy ?? 18,
     unitLabel: row?.gold_unit_label ?? "butir",
@@ -97,6 +100,7 @@ export function emptyParentGoldSavingsData(
   const settings = parseGoldSettings(settingsRow);
   return {
     goldSavingsEnabled: settings.goldSavingsEnabled,
+    goldFollowMarket: settings.goldFollowMarket,
     prices: {
       sellPriceEnergy: settings.sellPriceEnergy,
       buyPriceEnergy: settings.buyPriceEnergy,
@@ -153,6 +157,7 @@ export async function fetchParentGoldSavingsData(
 
   return {
     goldSavingsEnabled: settings.goldSavingsEnabled,
+    goldFollowMarket: settings.goldFollowMarket,
     prices: empty.prices,
     holdingsByProfile,
     pendingTrades: mapPendingGoldTrades((pendingResult.data ?? []) as GoldTransactionDbRow[]),
