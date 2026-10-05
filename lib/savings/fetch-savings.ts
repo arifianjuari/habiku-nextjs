@@ -58,7 +58,7 @@ export async function fetchParentSavingsData(
     fetchFamilyChildren(familyId),
     supabase
       .from("family_settings")
-      .select("savings_enabled, goal_save_enabled, max_monthly_interest_bps, gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label")
+      .select("savings_enabled, goal_save_enabled, savings_interest_enabled, max_monthly_interest_bps, gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label")
       .eq("family_id", familyId)
       .maybeSingle(),
   ]);
@@ -67,6 +67,7 @@ export async function fetchParentSavingsData(
   const settingsRow = settingsResult.data;
   const savingsEnabled = settingsRow?.savings_enabled ?? true;
   const goalSaveEnabled = settingsRow?.goal_save_enabled ?? true;
+  const savingsInterestEnabled = settingsRow?.savings_interest_enabled ?? true;
   const maxMonthlyInterestBps = settingsRow?.max_monthly_interest_bps ?? 500;
   const goldEnabled = settingsRow?.gold_savings_enabled ?? false;
 
@@ -80,6 +81,7 @@ export async function fetchParentSavingsData(
     pendingGoalClaims: [],
     savingsEnabled,
     goalSaveEnabled,
+    savingsInterestEnabled,
     maxMonthlyInterestBps,
     gold: emptyGold,
   };
@@ -199,6 +201,7 @@ export async function fetchParentSavingsData(
     pendingGoalClaims,
     savingsEnabled,
     goalSaveEnabled,
+    savingsInterestEnabled,
     maxMonthlyInterestBps,
     gold,
   };

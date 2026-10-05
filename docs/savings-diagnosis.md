@@ -1,6 +1,6 @@
 # Diagnosis Fitur Tabungan — Integritas Akuntansi Energi
 
-> Tanggal audit: 25 Agustus 2026 · **Status implementasi: Selesai** (25 Agustus 2026)
+> Tanggal audit: 25 Agustus 2026 · **Pembaruan akrual bunga:** 30 September 2026 (`20260930120000_savings_interest_accrual_fixes.sql`)
 
 ## Status implementasi
 
@@ -14,11 +14,11 @@ Perbaikan integritas akuntansi tabungan/emas sudah diimplementasi. Migrasi:
 | T2 | `save_goal_hp_to_savings` → debit dompet | ✅ Selesai + backfill historis |
 | T3 | Jual emas → restore HP goal | ✅ Selesai (transaksi baru) |
 | T4/T5 | Bunga tanpa kredit ganda dompet + cron | ✅ Selesai (`vercel.json` tiap tgl 1) |
-| T6 | Akrual catch-up bulan terlewat | ✅ Selesai |
+| T6 | Akrual catch-up bulan terlewat | ✅ Diperbaiki ulang (Sep 2026): `accrual_period` + saldo historis |
 | T7 | Penarikan wajib alokasi HP penuh | ✅ Selesai |
 | T8 | HP terdampar di goal selesai | ✅ Koreksi data |
 | T9 | Deposito roll-over (`term_pocket_has_deposit`) | ✅ Selesai |
-| T10 | Proyeksi bunga UI | ✅ Selesai (`interest.ts`, `enrich-pockets.ts`) |
+| T10 | Proyeksi bunga UI | ✅ Label horizon 12 bln flexible; term = sisa kunci |
 | T11 | PnL laporkan drift | ✅ Selesai (`pnl.ts` + panel) |
 | T12/T13 | Kedaluwarsa emas 7 hari + harga > 0 | ✅ Selesai |
 | T14 | Plafon bunga di DB (≤ 2000 bps) | ✅ Selesai |

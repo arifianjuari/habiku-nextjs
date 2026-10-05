@@ -58,6 +58,7 @@ import {
   bpsToPercentInputValue,
   effectiveMonthlyBps,
   formatInterestBps,
+  interestProjectionLabel,
   MONTHLY_INTEREST_ABS_MAX_BPS,
   parseInterestPercentInput,
   sanitizeInterestPercentInput,
@@ -161,8 +162,12 @@ function SavingsPocketCard({
   const metaParts: string[] = [];
   if (pocket.monthly_interest_bps > 0) {
     let interest = `Bunga ${formatInterestBps(effectiveBps)}/bln`;
-    if (pocket.projected_interest > 0) interest += ` · +${pocket.projected_interest} E`;
+    if (pocket.projected_interest > 0) {
+      interest += ` · +${pocket.projected_interest} E (${interestProjectionLabel(pocket.projected_interest_months)})`;
+    }
     metaParts.push(interest);
+  } else {
+    metaParts.push("Bunga 0% — tidak ada akrual otomatis");
   }
   if (pocket.target_amount) metaParts.push(`Target ${pocket.target_amount} E`);
   if (pocket.is_locked && pocket.locked_until) {
@@ -294,6 +299,8 @@ export function ParentSavingsView({
   pendingWithdrawals,
   pendingGoalClaims,
   savingsEnabled,
+  savingsInterestEnabled,
+  maxMonthlyInterestBps,
   gold,
 }: ParentSavingsViewProps) {
   const [activeChildId, setActiveChildId] = useState(children[0]?.id ?? "");
@@ -322,6 +329,12 @@ export function ParentSavingsView({
   const [editPocketEmoji, setEditPocketEmoji] = useState<SavingsPocketEmoji>(
     DEFAULT_SAVINGS_POCKET_EMOJI,
   );
+
+  useEffect(() => {
+    if (createPocketOpen && savingsInterestEnabled && createInterestPct === "") {
+      setCreateInterestPct(bpsToPercentInputValue(maxMonthlyInterestBps));
+    }
+  }, [createPocketOpen, savingsInterestEnabled, maxMonthlyInterestBps, createInterestPct]);
 
   useEffect(() => {
     setPocketsByProfile(initialPocketsByProfile);
@@ -432,10 +445,16 @@ export function ParentSavingsView({
   const handleCreatePocket = (formData: FormData) => {
     formData.set("profileId", activeChildId);
     formData.set("pocketType", pocketType);
-    const parsedInterest = parseInterestPercentInput(createInterestPct);
+    const parsedInterest = parseInterestPercentInput(createInterestPct, maxMonthlyInterestBps);
     if (!parsedInterest.ok) {
       toast.error(parsedInterest.error);
       return;
+    }
+    if (savingsInterestEnabled && parsedInterest.bps < 1) {
+      const ok = window.confirm(
+        "Bunga 0% — kantong ini tidak akan menerima akrual otomatis. Lanjutkan?",
+      );
+      if (!ok) return;
     }
     formData.set("monthlyInterestBps", String(parsedInterest.bps));
     const optimisticId = `optimistic-${Date.now()}`;
@@ -467,6 +486,7 @@ export function ParentSavingsView({
       locked_until: null,
       interest_accrued: 0,
       projected_interest: 0,
+      projected_interest_months: 0,
     };
 
     setPocketsByProfile((prev) => ({
@@ -1106,7 +1126,8 @@ export function ParentSavingsView({
                   className="h-10 tabular-nums"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Min. 0% · maks. {MONTHLY_INTEREST_ABS_MAX_BPS / 100}% · 2 desimal
+                  Min. 0% · maks. {maxMonthlyInterestBps / 100}% · 2 desimal · akrual tiap
+                  tanggal 1 untuk bulan kalender sebelumnya
                 </p>
               </div>
               {pocketType === "term" ? (

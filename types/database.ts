@@ -331,6 +331,7 @@ export type Database = {
           interest_accrued: number;
           principal_snapshot: number | null;
           last_interest_at: string | null;
+          accrual_period: string | null;
         };
         Insert: never;
         Update: never;

@@ -84,10 +84,14 @@ Saat alokasi HP membuat `current_hp >= target_hp`, status goal menjadi **`ready_
 
 ### Bunga
 
-- Job bulanan: `POST /api/cron/accrue-savings-interest` dengan header `Authorization: Bearer $CRON_SECRET`
-- Formula: `floor(principal × effective_bps / 10000)` per periode
+- Job bulanan: `POST /api/cron/accrue-savings-interest` dengan header `Authorization: Bearer $CRON_SECRET` (wajib; tanpa secret endpoint menolak)
+- Jadwal: tanggal **1** setiap bulan (UTC) — akrual untuk **bulan kalender sebelumnya** yang sudah lengkap
+- Formula: `floor(saldo_akhir_bulan × effective_bps / 10000)` per periode (majemuk via saldo berjalan)
+- Idempotensi: kolom `savings_transactions.accrual_period` (awal bulan yang dibayar)
+- Catch-up: bulan terlewat dihitung ulang dengan saldo historis (`compute_savings_pocket_balance_as_of`)
 - `effective_bps = monthly_interest_bps × lock_bonus_coefficient` (kantong `term` terkunci)
-- Kantong `flexible`: bunga pada saldo positif jika `savings_interest_enabled`
+- Kantong `flexible`: bunga pada saldo positif jika `savings_interest_enabled` dan `monthly_interest_bps > 0`
+- Proyeksi UI flexible: horizon 12 bulan (akrual SQL tidak dibatasi)
 
 ## Notifikasi
 
