@@ -166,7 +166,7 @@ export async function fetchParentSavingsDataClient(
     supabase
       .from("family_settings")
       .select(
-        "savings_enabled, goal_save_enabled, savings_interest_enabled, max_monthly_interest_bps, gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label",
+        "savings_enabled, goal_save_enabled, savings_interest_enabled, max_monthly_interest_bps, gold_savings_enabled, gold_sell_price_energy, gold_buy_price_energy, gold_unit_label, gold_follow_market",
       )
       .eq("family_id", familyId)
       .maybeSingle(),

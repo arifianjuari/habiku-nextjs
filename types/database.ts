@@ -354,6 +354,7 @@ export type Database = {
           gold_sell_price_energy: number;
           gold_buy_price_energy: number;
           gold_unit_label: string;
+          gold_follow_market: boolean;
           daily_check_in_bonus: number;
           shared_family_goal_title: string | null;
           shared_family_goal_target_points: number | null;

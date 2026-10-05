@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { RPC } from "@/lib/database/rpc";
+import { fetchMarketGoldQuote } from "@/lib/gold/fetch-market-quote";
 
 function mapRpcError(message: string): string {
   if (message.includes("insufficient_goal_energy")) {
@@ -241,6 +242,14 @@ export async function rejectGoalClaimAction(requestId: string, reason: string) {
   return { ok: true as const };
 }
 
+async function setGoldFollowMarket(familyId: string, follow: boolean) {
+  const supabase = await createClient();
+  return supabase
+    .from("family_settings")
+    .update({ gold_follow_market: follow })
+    .eq("family_id", familyId);
+}
+
 export async function updateGoldPricesAction(sellPrice: number, buyPrice: number) {
   const context = await getSessionContext();
   if (!context) return { error: "Sesi tidak valid." };
@@ -255,9 +264,58 @@ export async function updateGoldPricesAction(sellPrice: number, buyPrice: number
 
   if (error) return { error: mapRpcError(error.message) };
 
+  const { error: followError } = await setGoldFollowMarket(context.family.id, false);
+  if (followError) {
+    return { error: "Harga tersimpan, tetapi mode harga pasar gagal dimatikan." };
+  }
+
   revalidatePath("/parent/savings");
   revalidatePath("/child/savings");
-  return { ok: true as const };
+  return { ok: true as const, followMarket: false as const };
+}
+
+export async function applyMarketGoldPricesAction() {
+  const context = await getSessionContext();
+  if (!context) return { error: "Sesi tidak valid." };
+
+  const role = context.account.role;
+  if (role !== "primary_parent" && role !== "secondary_parent") {
+    return { error: "Hanya orang tua yang bisa mengubah harga emas." };
+  }
+
+  let quote;
+  try {
+    quote = await fetchMarketGoldQuote();
+  } catch {
+    return { error: "Harga pasar sedang tidak tersedia. Harga tersimpan tidak diubah." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (n: string, a: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc(RPC.updateGoldPrices, {
+    p_sell_price: quote.sellPriceEnergy,
+    p_buy_price: quote.buyPriceEnergy,
+  });
+
+  if (error) return { error: mapRpcError(error.message) };
+
+  const { error: followError } = await setGoldFollowMarket(context.family.id, true);
+  if (followError) {
+    return {
+      error: "Harga pasar tersimpan, tetapi mode ikuti pasar gagal diaktifkan. Coba lagi.",
+    };
+  }
+
+  revalidatePath("/parent/savings");
+  revalidatePath("/child/savings");
+  return {
+    ok: true as const,
+    followMarket: true as const,
+    sellPriceEnergy: quote.sellPriceEnergy,
+    buyPriceEnergy: quote.buyPriceEnergy,
+    spotEnergy: quote.spotEnergy,
+  };
 }
 
 export async function approveGoldTransactionAction(transactionId: string) {
