@@ -222,7 +222,7 @@ export async function fetchChildSavingsData(
       .maybeSingle(),
   );
 
-  const [enriched, settingsResult, savableBalance, walletBalance, gold] = await Promise.all([
+  const [enriched, settingsResult, savableBalance, claimableBalance, walletBalance, gold] = await Promise.all([
     Promise.resolve(
       supabase
         .from("savings_pockets")
@@ -235,6 +235,7 @@ export async function fetchChildSavingsData(
     ),
     settingsPromise,
     rpcNumber(supabase, RPC.computeSavableGoalEnergy, { p_profile_id: profileId }),
+    rpcNumber(supabase, RPC.computeGoalClaimableEnergy, { p_profile_id: profileId }),
     rpcNumber(supabase, RPC.computeWalletBalance, { p_profile_id: profileId }),
     settingsPromise.then((settingsResult) =>
       fetchChildGoldSavingsData(
@@ -249,6 +250,7 @@ export async function fetchChildSavingsData(
   return {
     pockets: enriched,
     savableBalance,
+    claimableBalance,
     walletBalance,
     savingsEnabled: settingsResult.data?.savings_enabled ?? true,
     goalSaveEnabled: settingsResult.data?.goal_save_enabled ?? true,

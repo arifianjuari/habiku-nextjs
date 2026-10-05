@@ -240,6 +240,7 @@ export function ChildSavingsView() {
   const termPocketFull =
     activePocket?.pocket_type === "term" && (activePocket?.balance ?? 0) > 0;
   const savable = data.savableBalance;
+  const claimable = data.claimableBalance;
   const wallet = data.walletBalance;
   const maxDepositable = Math.min(savable, wallet);
   const canDeposit = activePocket && !termPocketFull && maxDepositable > 0;
@@ -293,7 +294,13 @@ export function ChildSavingsView() {
             <span className="ml-0.5 text-base">⚡</span>
           </p>
           <p className="mt-0.5 text-[10px] text-amber-800/80">
-            {wallet < savable ? "Batas setoran sekarang" : "Siap ditabung"}
+            {savable < 1
+              ? claimable > 0
+                ? "Menunggu target diklaim"
+                : "Belum ada target aktif"
+              : wallet < savable
+                ? "Batas setoran sekarang"
+                : "Siap ditabung"}
           </p>
         </div>
       </div>
@@ -557,6 +564,15 @@ export function ChildSavingsView() {
                   <p className="text-xs font-bold text-amber-900">Dompet masih kosong</p>
                   <p className="mt-1 text-[10px] text-amber-800 text-pretty">
                     Ada {savable} ⚡ di target, tapi belum masuk dompet. Selesaikan misi dulu ya!
+                  </p>
+                </div>
+              ) : savable < 1 && claimable > 0 ? (
+                <div className="rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-center">
+                  <p className="text-xs font-bold text-violet-900">Targetmu sudah penuh! 🎉</p>
+                  <p className="mt-1 text-[10px] text-violet-800 text-pretty">
+                    {claimable} ⚡ masih menunggu di target yang sudah tercapai, jadi belum
+                    bisa ditabung dari sini. Klaim hadiahnya dulu, atau minta Papa/Mama
+                    menabungkannya langsung ke kantong.
                   </p>
                 </div>
               ) : savable < 1 ? (

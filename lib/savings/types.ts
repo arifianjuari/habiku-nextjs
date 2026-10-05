@@ -69,6 +69,12 @@ export type ChildSavingsData = {
   pockets: SavingsPocketWithBalance[];
   /** Energi di target aktif yang bisa ditabung ke kantong. */
   savableBalance: number;
+  /**
+   * Energi yang tertahan di target yang sudah mencapai goal (status
+   * ready_to_claim). Tidak ikut savableBalance — dipakai UI untuk menjelaskan
+   * kenapa dompet berisi tapi "bisa ditabung" nol.
+   */
+  claimableBalance: number;
   /** Saldo dompet (point_ledger); RPC deposit juga memvalidasi ini. */
   walletBalance: number;
   savingsEnabled: boolean;

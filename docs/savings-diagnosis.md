@@ -1,6 +1,6 @@
 # Diagnosis Fitur Tabungan — Integritas Akuntansi Energi
 
-> Tanggal audit: 25 Agustus 2026 · **Pembaruan akrual bunga:** 30 September 2026 (`20260930120000_savings_interest_accrual_fixes.sql`)
+> Tanggal audit: 25 Agustus 2026 · **Pembaruan akrual bunga:** 30 September 2026 (`20260930120000_savings_interest_accrual_fixes.sql`) · **Penutupan drift + UX energi tertahan:** 5 Oktober 2026
 
 ## Status implementasi
 
@@ -15,7 +15,7 @@ Perbaikan integritas akuntansi tabungan/emas sudah diimplementasi. Migrasi:
 | T3 | Jual emas → restore HP goal | ✅ Selesai (transaksi baru) |
 | T4/T5 | Bunga tanpa kredit ganda dompet + cron | ✅ Selesai (`vercel.json` tiap tgl 1) |
 | T6 | Akrual catch-up bulan terlewat | ✅ Diperbaiki ulang (Sep 2026): `accrual_period` + saldo historis |
-| T7 | Penarikan wajib alokasi HP penuh | ✅ Selesai |
+| T7 | Penarikan wajib alokasi HP penuh | ✅ Selesai + residu historis ditutup 5 Okt 2026 (lihat bawah) |
 | T8 | HP terdampar di goal selesai | ✅ Koreksi data |
 | T9 | Deposito roll-over (`term_pocket_has_deposit`) | ✅ Selesai |
 | T10 | Proyeksi bunga UI | ✅ Label horizon 12 bln flexible; term = sisa kunci |
@@ -29,6 +29,53 @@ direkonstruksi otomatis ke HP goal — hanya transaksi baru yang simetris. Jalan
 
 **Keputusan butir 10 (koreksi drift total):** backfill otomatis untuk klaim hadiah + setoran
 tanpa ledger + HP terdampar; sisa selisih dari jual emas historis perlu review manual bila masih ada.
+
+### Penutupan drift terakhir — 5 Oktober 2026
+
+Sisa drift 103 energi pada Arvin **bukan** warisan "goal selesai jalur lama tanpa jejak klaim"
+seperti yang sebelumnya dicatat di dokumen ini. Penelusuran ulang menemukan sumbernya tunggal
+dan bisa ditunjuk: penarikan tabungan **430 energi yang disetujui 12 September 2026**. Versi
+`approve_savings_withdraw` saat itu mengkredit dompet penuh tetapi menaikkan `current_hp` hanya
+sampai `target_hp` tiap goal aktif. Satu-satunya goal aktif anak itu sudah dekat target, jadi
+sisanya dibuang tanpa jejak. Bug itu sudah ditutup di `20260930120000`.
+
+Identitas yang dipakai untuk membuktikannya, per anak:
+
+```
+goal_held_seharusnya = (earn + bonus_checkin + savings_withdraw)
+                     - (goal_redeem_spend + savings_deposit_nyata + gold_buy)
+```
+
+dengan `savings_deposit_nyata` = total `savings_deposit` dikurangi pasangan debit bunga.
+Untuk Arvin hasilnya 147 — sama dengan saldo dompet — sedangkan
+`compute_goal_held_energy()` hanya 44.
+
+Dua migrasi menutupnya, konsisten dengan kebijakan `20260825160000` (naikkan HP agar cocok
+dengan dompet, jangan potong dompet):
+
+| Migrasi | Isi |
+|---------|-----|
+| `20261005020000_withdraw_overflow_drift_reconciliation.sql` | Kembalikan sisa HP penarikan yang dibuang (teralokasi 56) |
+| `20261005030000_allocate_overflow_ready_to_claim_fix.sql` | **Bug baru yang ditemukan saat itu:** cabang overflow `allocate_energy_to_goals` mencari `status = 'active'`, padahal langkah sebelumnya baru mengubah goal itu ke `ready_to_claim` — sisa 47 menggantung. Cabang overflow kini menerima `ready_to_claim`; rekonsiliasi diselesaikan |
+
+Hasil terverifikasi: `energy_drift.drift` = **0 untuk semua anak**.
+
+Akrual bunga periode **September 2026** (seharusnya diposting cron 1 Oktober, terlewat karena
+proyek Supabase sempat auto-pause) sudah dijalankan: 6 kantong, total **609** energi, dompet
+tetap netral (`savings_interest` + `savings_deposit` berpasangan), dan pemanggilan ulang
+mengembalikan 0 — guard idempotensi per `accrual_period` bekerja.
+
+### UX: energi tertahan di goal `ready_to_claim`
+
+`compute_savable_goal_energy` hanya menjumlahkan goal `active`. Begitu goal mencapai target,
+statusnya pindah ke `ready_to_claim` dan energinya hilang dari angka "Bisa ditabung" —
+sementara dompet tetap menampilkannya. Anak melihat dompet berisi tetapi tidak bisa menabung,
+tanpa penjelasan. Ini yang dulu terbaca seperti bug.
+
+`20261005040000_compute_goal_claimable_energy.sql` menambah fungsi pelengkap, dialirkan ke
+`ChildSavingsData.claimableBalance` (kedua fetcher, tetap satu gelombang `Promise.all` — tanpa
+waterfall baru), dan layar tabungan anak kini menjelaskan jumlah yang tertahan beserta cara
+melepasnya. Aturan energi mana yang boleh ditabung tidak diubah.
 
 ---
 

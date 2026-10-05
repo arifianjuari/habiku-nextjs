@@ -49,6 +49,7 @@ export const RPC = {
   rejectSavingsWithdraw: "reject_savings_withdraw",
   computeWalletBalance: "compute_wallet_balance",
   computeSavableGoalEnergy: "compute_savable_goal_energy",
+  computeGoalClaimableEnergy: "compute_goal_claimable_energy",
   computeSavingsPocketBalance: "compute_savings_pocket_balance",
   computeGoldBalance: "compute_gold_balance",
   updateGoldPrices: "update_gold_prices",

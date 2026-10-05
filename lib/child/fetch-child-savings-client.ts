@@ -58,9 +58,10 @@ export async function fetchChildSavingsDataClient(
       .maybeSingle(),
   );
 
-  const [settingsResult, savableBalance, walletBalance, gold, enriched] = await Promise.all([
+  const [settingsResult, savableBalance, claimableBalance, walletBalance, gold, enriched] = await Promise.all([
     settingsPromise,
     rpcNumber(client, RPC.computeSavableGoalEnergy, { p_profile_id: profileId }),
+    rpcNumber(client, RPC.computeGoalClaimableEnergy, { p_profile_id: profileId }),
     rpcNumber(client, RPC.computeWalletBalance, { p_profile_id: profileId }),
     settingsPromise.then((res) =>
       fetchChildGoldSavingsData(
@@ -76,6 +77,7 @@ export async function fetchChildSavingsDataClient(
   return {
     pockets: enriched,
     savableBalance,
+    claimableBalance,
     walletBalance,
     savingsEnabled: settingsResult.data?.savings_enabled ?? true,
     goalSaveEnabled: settingsResult.data?.goal_save_enabled ?? true,
