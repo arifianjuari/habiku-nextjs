@@ -8,8 +8,8 @@ function mapRpcError(message: string): string {
   if (message.includes("goal_not_ready")) {
     return "Target belum siap untuk diklaim.";
   }
-  if (message.includes("claim_already_pending")) {
-    return "Permintaan cair hadiah sudah menunggu persetujuan.";
+  if (message.includes("insufficient_wallet")) {
+    return "Energi di dompet belum cukup untuk mencairkan hadiah ini.";
   }
   if (message.includes("pocket_not_found")) {
     return "Belum ada kantong tabungan. Minta Papa/Mama membuatnya dulu.";

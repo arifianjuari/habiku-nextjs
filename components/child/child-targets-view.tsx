@@ -191,7 +191,7 @@ export function ChildTargetsView() {
 
                         <span className="text-[9px] text-slate-400 block italic leading-none">
                           {isReady
-                            ? "Keren! Tunjukkan ini ke Papa/Mama untuk ditukarkan hadiah aslinya! 🎉"
+                            ? "Keren! Target penuh — pilih cairkan hadiah atau tabung energinya. 🎉"
                             : `${goal.target_hp - goal.current_hp} HP energi lagi untuk menebus target ini.`}
                         </span>
                       </div>

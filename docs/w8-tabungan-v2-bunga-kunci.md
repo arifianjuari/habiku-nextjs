@@ -6,7 +6,7 @@ Perluasan [W7 tabungan digital](./w7-tabungan-digital.md): kantong berbunga, dep
 
 | Peran | Path | Keterangan |
 |-------|------|------------|
-| Ortu | `/parent/savings` | Buat kantong v2, antrean cair hadiah + penarikan |
+| Ortu | `/parent/savings` | Buat kantong v2, antrean penarikan (cair hadiah tidak mengantre) |
 | Anak | `/child/savings` | Lihat kantong, countdown kunci, proyeksi bunga |
 | Anak | `/child/targets` | Modal klaim saat `ready_to_claim`: Cair vs Tabung |
 
@@ -70,7 +70,7 @@ Indeks unik parsial: satu `default_for_goal_save = true` per `profile_id`.
 | RPC | Pemanggil |
 |-----|-----------|
 | `create_savings_pocket_v2` | Ortu |
-| `request_goal_reward_redeem` | Keluarga (mode anak) |
+| `request_goal_reward_redeem` | Keluarga (mode anak) — langsung cair, tanpa antrean |
 | `approve_goal_reward_redeem` | Ortu |
 | `reject_goal_reward_redeem` | Ortu |
 | `save_goal_hp_to_savings` | Keluarga (mode anak) |
@@ -79,7 +79,7 @@ Indeks unik parsial: satu `default_for_goal_save = true` per `profile_id`.
 ### Perilaku `ready_to_claim`
 
 Saat alokasi HP membuat `current_hp >= target_hp`, status goal menjadi **`ready_to_claim`** (bukan langsung `completed`). Anak memilih:
-- **Cair** → `goal_claim_requests` pending → ortu approve → `completed`, HP = 0
+- **Cair** → `request_goal_reward_redeem` langsung `approved` → `completed`, HP = 0, tanpa persetujuan ortu
 - **Tabung** → `save_goal_hp_to_savings` → setoran kantong + `completed`, HP = 0
 
 ### Bunga
@@ -97,8 +97,8 @@ Saat alokasi HP membuat `current_hp >= target_hp`, status goal menjadi **`ready_
 
 | Tipe | Pemicu |
 |------|--------|
-| `goal_claim_pending` | Anak ajukan cair hadiah |
-| `goal_claim_approved` | Ortu setujui cair |
+| `goal_claim_redeemed` | Anak mencairkan hadiah (pemberitahuan ke ortu, bukan antrean) |
+| `goal_claim_approved` | Hadiah cair untuk anak |
 | `goal_saved_to_pocket` | Anak tabung dari target |
 | `savings_interest_posted` | Job akrual bulanan |
 
@@ -112,6 +112,6 @@ Env tambahan: `CRON_SECRET` untuk job bunga (lihat [`deployment-env-checklist.md
 
 ## Definition of Done
 
-**W8a:** kantong v2, klaim target, antrean ortu, tanpa cron.
+**W8a:** kantong v2, klaim target (cair langsung, tabung atomik), antrean hanya untuk penarikan kantong, tanpa cron.
 
 **W8b:** cron bunga + ledger `savings_interest` + proyeksi di UI anak/ortu.

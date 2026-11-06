@@ -85,7 +85,7 @@ Gratis (Free-to-use); donasi komunitas di masa depan (gateway §7). Tidak ada pa
 | F15 | **Validasi Tugas** | Konfirmasi manual ortu |
 | F16 | **Kantong tabungan v2** | Ortu membuat kantong tipe `flexible` (akumulatif) atau `term` (deposito sekali-setor); bunga %/bulan, durasi kunci (bulan), koefisien bonus kunci |
 | F17 | **Bunga tabungan** | Akrual bulanan pada saldo kantong terkunci/aktif; tercatat di ledger `savings_interest`; plafon keluarga |
-| F18 | **Klaim target → tabung/cair** | Saat `current_hp >= target_hp`, goal masuk state `ready_to_claim`; anak pilih cair (antrean ortu) atau tabung (RPC atomik ke kantong) |
+| F18 | **Klaim target → tabung/cair** | Saat `current_hp >= target_hp`, goal masuk state `ready_to_claim`; anak pilih cair (langsung selesai, tanpa antrean ortu) atau tabung (RPC atomik ke kantong) |
 
 ### 2.2. Non-Fungsional
 
@@ -507,7 +507,7 @@ Detail migrasi: [`w8-tabungan-v2-bunga-kunci.md`](./w8-tabungan-v2-bunga-kunci.m
 | `savings_pockets` | `pocket_type` (`flexible` \| `term`), `monthly_interest_bps`, `lock_months`, `lock_bonus_coefficient`, `default_for_goal_save` (maks. 1 per anak) |
 | `savings_transactions` | `locked_until`, `interest_accrued`, `principal_snapshot`; kind baru `interest` |
 | `goals` | Status `ready_to_claim` (HP penuh, menunggu keputusan anak) |
-| `goal_claim_requests` | Antrean cair hadiah fisik (`pending` → `approved` / `rejected`) |
+| `goal_claim_requests` | Jejak cair hadiah fisik. Pilihan anak langsung `approved`; `pending` hanya sisa data lama |
 | `ledger_type` | `savings_interest`, `goal_redeem_spend` |
 | `family_settings` | `savings_interest_enabled`, `max_monthly_interest_bps`, `goal_save_enabled` |
 
@@ -532,9 +532,9 @@ await supabase.rpc("approve_task_history", { task_history_id, account_id, goal_i
 | RPC | Pemanggil | Keterangan |
 |-----|-----------|------------|
 | `create_savings_pocket_v2` | Ortu | Tipe kantong, bunga, kunci, koefisien, default klaim target |
-| `request_goal_reward_redeem` | Anak | Antrean cair hadiah fisik |
-| `approve_goal_reward_redeem` | Ortu | Setujui → goal `completed`, HP = 0 |
-| `reject_goal_reward_redeem` | Ortu | Tolak; goal tetap `ready_to_claim` |
+| `request_goal_reward_redeem` | Anak | Cair hadiah langsung: goal `completed`, HP = 0, debit `goal_redeem_spend` |
+| `approve_goal_reward_redeem` | Ortu | Sisa antrean lama → goal `completed`, HP = 0 |
+| `reject_goal_reward_redeem` | Ortu | Tolak sisa antrean lama; goal tetap `ready_to_claim` |
 | `save_goal_hp_to_savings` | Anak | Transfer HP goal → kantong (validasi `term` vs `flexible`) |
 | `accrue_savings_interest` | Cron/service | Job bulanan akrual bunga |
 
@@ -557,11 +557,10 @@ flowchart TD
   childChoice[Anak memilih]
   redeem[Cairkan hadiah fisik]
   save[Tabung ke kantong]
-  parentQueue[Antrean ortu]
   pocketDeposit[Setoran ke kantong + kunci]
   completed[goal completed]
   hpFull --> readyState --> childChoice
-  childChoice --> redeem --> parentQueue --> completed
+  childChoice --> redeem --> completed
   childChoice --> save --> pocketDeposit --> completed
 ```
 
