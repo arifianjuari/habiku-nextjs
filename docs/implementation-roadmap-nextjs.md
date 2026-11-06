@@ -110,11 +110,11 @@ Detail: [`w7-tabungan-digital.md`](./w7-tabungan-digital.md)
 | State goal `ready_to_claim` | ✅ | `resolve_goal_status_on_hp_reached` di RPC alokasi HP |
 | RPC klaim target | ✅ | `request/approve/reject_goal_reward_redeem`, `save_goal_hp_to_savings` |
 | UI ortu `/parent/savings` | ✅ | Form kantong: bunga %, kunci bulan, koefisien, tipe deposito |
-| UI ortu antrean klaim hadiah | ✅ | Kartu pending cair hadiah di halaman tabungan |
+| UI ortu antrean klaim hadiah | ✅ | Kartu sisa pending lama; cair baru langsung selesai, tidak masuk antrean |
 | UI anak klaim target | ✅ | Modal di `/child/targets`: Cair vs Tabung |
 | UI anak kantong | ✅ | Countdown kunci, proyeksi bunga |
 | Job bunga bulanan | ✅ | Route cron `/api/cron/accrue-savings-interest` + `CRON_SECRET` |
-| Notifikasi | ✅ | `goal_claim_pending`, `goal_saved_to_pocket`, bunga via ledger |
+| Notifikasi | ✅ | `goal_claim_redeemed` ke ortu, `goal_saved_to_pocket`, bunga via ledger |
 | Toggle engagement | ✅ | `goal_save_enabled`, `savings_interest_enabled` di pengaturan ortu |
 | E2E alur klaim | ⬜ | Target penuh → tabung → saldo kantong (manual QA) |
 

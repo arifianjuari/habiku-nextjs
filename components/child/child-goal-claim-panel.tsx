@@ -40,7 +40,7 @@ export function ChildGoalClaimPanel({ goal, goalSaveEnabled }: ChildGoalClaimPan
       const res = await requestGoalRewardRedeemAction(goal.id);
       if (res.error) toast.error(res.error);
       else {
-        toast.success("Permintaan hadiah dikirim ke Papa/Mama!");
+        toast.success("Hadiah berhasil dicairkan! Selamat menikmati!");
         setOpen(false);
         invalidate();
       }
@@ -93,7 +93,7 @@ export function ChildGoalClaimPanel({ goal, goalSaveEnabled }: ChildGoalClaimPan
               <div>
                 <p className="text-sm font-bold text-emerald-900">Cairkan hadiah</p>
                 <p className="text-[10px] text-emerald-700/80">
-                  Papa/Mama akan menyetujui hadiah fisikmu.
+                  Hadiah langsung jadi milikmu. Tunjukkan ke Papa/Mama untuk diambil.
                 </p>
               </div>
             </button>
