@@ -86,6 +86,7 @@ Gratis (Free-to-use); donasi komunitas di masa depan (gateway §7). Tidak ada pa
 | F16 | **Kantong tabungan v2** | Ortu membuat kantong tipe `flexible` (akumulatif) atau `term` (deposito sekali-setor); bunga %/bulan, durasi kunci (bulan), koefisien bonus kunci |
 | F17 | **Bunga tabungan** | Akrual bulanan pada saldo kantong terkunci/aktif; tercatat di ledger `savings_interest`; plafon keluarga |
 | F18 | **Klaim target → tabung/cair** | Saat `current_hp >= target_hp`, goal masuk state `ready_to_claim`; anak pilih cair (langsung selesai, tanpa antrean ortu) atau tabung (RPC atomik ke kantong) |
+| F19 | **Pengajuan target anak** | Dari halaman target anak, anak mengajukan judul hadiah dan besaran energi. Ortu meninjau di tab Target; menyetujui membuat goal aktif (energi boleh disesuaikan), menolak tetap tercatat |
 
 ### 2.2. Non-Fungsional
 
@@ -540,6 +541,14 @@ await supabase.rpc("approve_task_history", { task_history_id, account_id, goal_i
 
 RPC W7 tetap berlaku: `create_savings_pocket`, `deposit_to_savings`, `request_savings_withdraw`, dll.
 
+### 10.2. Pengajuan target dari anak
+
+| RPC | Pemanggil | Keterangan |
+|-----|-----------|------------|
+| `submit_goal_request` | Anak (akun keluarga di mode anak) | Judul hadiah + usulan energi → `goal_requests` pending, notifikasi ortu |
+| `approve_goal_request` | Ortu | Buat `goals` aktif. Energi di dialog memakai usulan anak dan boleh diubah |
+| `reject_goal_request` | Ortu | Tolak pengajuan; anak dapat notifikasi |
+
 ---
 
 ## 11. Gameplay Mechanics
@@ -776,4 +785,4 @@ Detail tugas per sprint: [`implementation-roadmap-nextjs.md`](./implementation-r
 
 Jika terjadi konflik **produk** (fitur, aturan bisnis): utamakan konsistensi dengan PRD React lalu update kedua dokumen. Jika konflik **teknis web**: utamakan dokumen ini.
 
-**Terakhir diperbarui:** 2026-06-06 — Tabungan v2 (W8): F16–F18, skema, RPC, gameplay kantong berbunga & klaim target.
+**Terakhir diperbarui:** 2026-11-08 — F19 pengajuan target dari halaman anak (judul + besaran energi, tinjauan ortu).

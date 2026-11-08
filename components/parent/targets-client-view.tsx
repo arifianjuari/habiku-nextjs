@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -39,7 +39,9 @@ import {
 import type { ChildProfile, Goal } from "@/types/database";
 import { GoalVisualStateBadge } from "@/components/shared/goal-visual-state-badge";
 import { getGoalVisualStateMeta } from "@/lib/goals/visual-state";
+import { GoalRequestsPanel } from "@/components/parent/goal-requests-panel";
 import { IncidentalRewardDialog } from "@/components/parent/incidental-reward-dialog";
+import type { PendingGoalRequest } from "@/lib/parent/fetch-family-page-data";
 import { cn } from "@/lib/utils";
 import { useParentListCache } from "@/lib/hooks/use-parent-list-cache";
 import { parentQueryKeys } from "@/lib/parent/query-keys";
@@ -47,6 +49,7 @@ import { parentQueryKeys } from "@/lib/parent/query-keys";
 interface TargetsClientViewProps {
   children: ChildProfile[];
   initialGoals: Goal[];
+  initialPendingGoalRequests?: PendingGoalRequest[];
   activeChildId: string;
   onActiveChildIdChange: (childId: string) => void;
 }
@@ -144,6 +147,7 @@ function FormSwitch({
 export function TargetsClientView({
   children,
   initialGoals,
+  initialPendingGoalRequests = [],
   activeChildId,
   onActiveChildIdChange,
 }: TargetsClientViewProps) {
@@ -151,6 +155,10 @@ export function TargetsClientView({
   const [goals, setGoals] = useParentListCache<Goal[]>(
     parentQueryKeys.targets(familyId),
     initialGoals,
+  );
+  const [pendingGoalRequests, setPendingGoalRequests] = useParentListCache<PendingGoalRequest[]>(
+    [...parentQueryKeys.targets(familyId), "pending-goal-requests"],
+    initialPendingGoalRequests,
   );
   const [isOpen, setIsOpen] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -197,6 +205,14 @@ export function TargetsClientView({
       return acc;
     }, {});
   }, [children, goals]);
+
+  useEffect(() => {
+    setPendingGoalRequests(initialPendingGoalRequests);
+  }, [initialPendingGoalRequests, setPendingGoalRequests]);
+
+  const handleGoalCreatedFromRequest = (goal: Goal) => {
+    setGoals((prev) => [goal, ...prev.filter((item) => item.id !== goal.id)]);
+  };
 
   const resetForm = () => {
     setEditingGoalId(null);
@@ -425,6 +441,12 @@ export function TargetsClientView({
           profiles={children}
           activeChildId={activeChildId}
           onActiveChildIdChange={onActiveChildIdChange}
+        />
+
+        <GoalRequestsPanel
+          requests={pendingGoalRequests}
+          onRequestsChange={setPendingGoalRequests}
+          onGoalCreated={handleGoalCreatedFromRequest}
         />
 
         {/* Target Aktif */}

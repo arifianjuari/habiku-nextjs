@@ -464,15 +464,23 @@ export type Database = {
         Row: {
           id: string;
           profile_id: string;
+          title: string;
+          note: string | null;
+          requested_target_hp: number | null;
           status: RequestStatus;
+          created_goal_id: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["goal_requests"]["Row"],
-          "id" | "created_at"
+          "id" | "created_at" | "updated_at"
         > & {
           id?: string;
           created_at?: string;
+          updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["goal_requests"]["Insert"]>;
         Relationships: [];
@@ -602,6 +610,7 @@ export type ChildProfile = Database["public"]["Tables"]["child_profiles"]["Row"]
 export type Family = Database["public"]["Tables"]["families"]["Row"];
 export type FamilySettings = Database["public"]["Tables"]["family_settings"]["Row"];
 export type Goal = Database["public"]["Tables"]["goals"]["Row"];
+export type GoalRequest = Database["public"]["Tables"]["goal_requests"]["Row"];
 export type Task = Database["public"]["Tables"]["tasks"]["Row"];
 export type TaskRequest = Database["public"]["Tables"]["task_requests"]["Row"];
 export type TaskHistory = Database["public"]["Tables"]["task_history"]["Row"];

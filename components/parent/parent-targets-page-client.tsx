@@ -30,7 +30,11 @@ export function ParentTargetsPageClient({ familyId }: ParentTargetsPageClientPro
 
   return (
     <div className="space-y-4">
-      <TargetsPageRoot children={data.children} initialGoals={data.goals} />
+      <TargetsPageRoot
+        children={data.children}
+        initialGoals={data.goals}
+        pendingGoalRequests={data.pendingGoalRequests}
+      />
     </div>
   );
 }

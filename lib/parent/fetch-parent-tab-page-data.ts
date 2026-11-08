@@ -4,10 +4,11 @@ import {
   fetchFamilyGoalsClient,
   fetchFamilyTasksClient,
   fetchParentSavingsDataClient,
+  fetchPendingGoalRequestsClient,
   fetchPendingTaskRequestsClient,
 } from "@/lib/parent/fetch-family-page-data-client";
 import { createClient } from "@/lib/supabase/client";
-import type { PendingTaskRequest } from "@/lib/parent/fetch-family-page-data";
+import type { PendingGoalRequest, PendingTaskRequest } from "@/lib/parent/fetch-family-page-data";
 import type { ParentSavingsData } from "@/lib/savings/types";
 import type { ChildProfile, Goal, Task } from "@/types/database";
 
@@ -21,6 +22,7 @@ export type ParentTasksData = {
 export type ParentTargetsData = {
   children: ChildProfile[];
   goals: Goal[];
+  pendingGoalRequests: PendingGoalRequest[];
 };
 
 export type ParentProfilesData = {
@@ -59,11 +61,12 @@ export async function fetchParentTasksPageData(familyId: string): Promise<Parent
 
 export async function fetchParentTargetsPageData(familyId: string): Promise<ParentTargetsData> {
   const children = await fetchFamilyChildrenClient(familyId);
-  const goals = await fetchFamilyGoalsClient(
-    familyId,
-    children.map((c) => c.id),
-  );
-  return { children, goals };
+  const childIds = children.map((c) => c.id);
+  const [goals, pendingGoalRequests] = await Promise.all([
+    fetchFamilyGoalsClient(familyId, childIds),
+    fetchPendingGoalRequestsClient(familyId, children),
+  ]);
+  return { children, goals, pendingGoalRequests };
 }
 
 export async function fetchParentSavingsPageData(familyId: string): Promise<ParentSavingsData> {

@@ -387,7 +387,7 @@ Audit log pemberian apresiasi kilat sekali jalan oleh orang tua (di luar rutinit
 
 #### Tabel `goal_requests` / `task_requests`
 Pengajuan target/ide misi dari mode anak untuk ditinjau orang tua.
-- **RLS**: SELECT sekeluarga. Anak dapat mengajukan (INSERT pending), orang tua meninjau dan memicu RPC `approve_goal_request()` atau `approve_task_request()` untuk otomatis menutup permintaan dan menerbitkannya menjadi entri riil (`goals` / `tasks`).
+- **RLS**: SELECT sekeluarga. Anak mengajukan lewat RPC `submit_goal_request()` (judul + `requested_target_hp`) atau `submit_task_request()`. Orang tua meninjau dan memicu RPC `approve_goal_request()` atau `approve_task_request()` untuk menutup permintaan dan menerbitkannya menjadi entri riil (`goals` / `tasks`). Saat menyetujui target, ortu boleh menyesuaikan besaran energi dari usulan anak.
 
 #### Tabel `goal_hp_transfers`
 Audit log perpindahan energi/HP antar dua target aktif milik seorang anak.

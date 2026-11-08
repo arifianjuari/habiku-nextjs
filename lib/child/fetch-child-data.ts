@@ -13,7 +13,7 @@ import {
   fetchFamilySharedGoal,
   type FamilySharedGoal,
 } from "@/lib/parent/family-shared-goal";
-import type { ChildProfile, Goal, Task, TaskRequest } from "@/types/database";
+import type { ChildProfile, Goal, GoalRequest, Task, TaskRequest } from "@/types/database";
 
 /** RPC kustom belum terdaftar di generated Database types. */
 function callProfileRpc(supabase: AppSupabaseClient, fn: string, profileId: string) {
@@ -64,6 +64,7 @@ export type ChildTargetsData = {
   goals: Goal[];
   totalPoints: number;
   goalSaveEnabled: boolean;
+  pendingRequests: GoalRequest[];
 };
 
 export type ChildMissionsBundle = {
@@ -275,13 +276,20 @@ export async function fetchChildTargetsData(
 ): Promise<ChildTargetsData> {
   const client = supabase ?? createClient();
 
+  const pendingRequestsPromise = client
+    .from("goal_requests")
+    .select("*")
+    .eq("profile_id", profileId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
   const { data: child } = await client
     .from("child_profiles")
     .select("family_id")
     .eq("id", profileId)
     .maybeSingle();
 
-  const [goalsResult, totalPoints, settingsResult] = await Promise.all([
+  const [goalsResult, totalPoints, settingsResult, pendingRequestsResult] = await Promise.all([
     client
       .from("goals")
       .select("*")
@@ -295,11 +303,13 @@ export async function fetchChildTargetsData(
           .eq("family_id", child.family_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    pendingRequestsPromise,
   ]);
 
   return {
     goals: goalsResult.data ?? [],
     totalPoints,
     goalSaveEnabled: settingsResult.data?.goal_save_enabled ?? true,
+    pendingRequests: (pendingRequestsResult.data as GoalRequest[]) ?? [],
   };
 }

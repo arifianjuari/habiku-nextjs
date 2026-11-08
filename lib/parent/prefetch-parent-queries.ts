@@ -58,6 +58,11 @@ export function prefetchParentTargets(queryClient: QueryClient, familyId: string
   return prefetchIfStale(queryClient, parentTargetsPageQueryKey(familyId), () =>
     fetchParentTargetsPageData(familyId).then((data) => {
       seedParentListCache(queryClient, parentQueryKeys.targets(familyId), data.goals);
+      seedParentListCache(
+        queryClient,
+        [...parentQueryKeys.targets(familyId), "pending-goal-requests"],
+        data.pendingGoalRequests,
+      );
       return data;
     }),
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useChildModeStore } from "@/lib/stores/child-mode-store";
 import { useChildTargetsData } from "@/lib/hooks/use-child-targets-data";
 import { PageLoadingSkeleton } from "@/components/shared/page-loading-skeleton";
@@ -18,9 +19,12 @@ import {
   Heart,
   ChevronRight,
   Flame,
+  Clock,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChildGoalRequestDialog } from "@/components/child/child-goal-request-dialog";
 import type { Goal } from "@/types/database";
 import { GoalVisualStateBadge } from "@/components/shared/goal-visual-state-badge";
 import { getGoalVisualStateMeta } from "@/lib/goals/visual-state";
@@ -30,6 +34,7 @@ import { ChildGoalClaimPanel } from "@/components/child/child-goal-claim-panel";
 export function ChildTargetsView() {
   const { profileId } = useChildModeStore();
   const { data, isLoading, isFetching } = useChildTargetsData(profileId);
+  const [requestOpen, setRequestOpen] = useState(false);
 
   if (!profileId || (isLoading && !data)) {
     return <PageLoadingSkeleton variant="child" className="min-h-[50vh]" />;
@@ -43,7 +48,7 @@ export function ChildTargetsView() {
     );
   }
 
-  const { goals, totalPoints, goalSaveEnabled } = data;
+  const { goals, totalPoints, goalSaveEnabled, pendingRequests } = data;
   const activeGoals = goals.filter((g) => g.status === "active");
   const readyToClaimGoals = goals.filter((g) => g.status === "ready_to_claim");
   const completedGoals = goals.filter((g) => g.status === "completed");
@@ -54,7 +59,7 @@ export function ChildTargetsView() {
     <div className="relative space-y-6" data-fetching={isFetching ? "" : undefined}>
       <ChildFetchingIndicator isFetching={isFetching && !!data} />
       {/* 1. Header Area */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-900 leading-none mb-1">
             Target & Hadiahku 🎁
@@ -63,11 +68,75 @@ export function ChildTargetsView() {
             Kumpulkan poin energi dari misimu untuk menebus hadiah impian!
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-2xl bg-amber-50 border border-amber-200/50 px-3 py-1.5 shadow-sm">
-          <Zap className="h-4 w-4 text-amber-500 fill-amber-500 animate-pulse shrink-0" />
-          <span className="text-xs font-extrabold text-amber-950">{totalPoints} E</span>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <div className="flex items-center gap-1 rounded-2xl bg-amber-50 border border-amber-200/50 px-3 py-1.5 shadow-sm">
+            <Zap className="h-4 w-4 text-amber-500 fill-amber-500 animate-pulse shrink-0" />
+            <span className="text-xs font-extrabold text-amber-950">{totalPoints} E</span>
+          </div>
+          <Button
+            type="button"
+            size="xs"
+            onClick={() => setRequestOpen(true)}
+            className="rounded-lg bg-violet-700 font-bold text-white hover:bg-violet-800"
+          >
+            <Gift className="mr-1 h-3.5 w-3.5" aria-hidden />
+            Ajukan
+          </Button>
         </div>
       </div>
+
+      {pendingRequests.length > 0 ? (
+        <div className="space-y-1.5">
+          <p className="text-[9px] font-extrabold uppercase tracking-wide text-violet-700">
+            Menunggu ortu ({pendingRequests.length})
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {pendingRequests.map((request) => (
+              <Card
+                key={request.id}
+                className="overflow-hidden rounded-xl border border-violet-200 bg-violet-50/90 shadow-sm"
+              >
+                <CardContent className="px-2.5 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-600 text-white">
+                      <Clock className="h-3.5 w-3.5" aria-hidden />
+                    </div>
+                    <div className="min-w-0 flex-1 leading-none">
+                      <div className="flex items-baseline justify-between gap-1">
+                        <p className="truncate text-[13px] font-bold text-slate-900">
+                          {request.title}
+                        </p>
+                        {request.requested_target_hp != null ? (
+                          <span className="inline-flex shrink-0 items-center gap-0.5 text-[9px] font-black text-violet-800">
+                            <Zap className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                            {request.requested_target_hp} E
+                          </span>
+                        ) : null}
+                      </div>
+                      {request.note ? (
+                        <p className="mt-0.5 truncate text-[9px] font-medium text-violet-800/90">
+                          {request.note}
+                        </p>
+                      ) : null}
+                      <p className="mt-0.5 text-[8px] font-semibold text-violet-600">
+                        Menunggu persetujuan ortu
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {profileId ? (
+        <ChildGoalRequestDialog
+          open={requestOpen}
+          onOpenChange={setRequestOpen}
+          profileId={profileId}
+        />
+      ) : null}
 
       {readyToClaimGoals.length > 0 ? (
         <div className="space-y-3">

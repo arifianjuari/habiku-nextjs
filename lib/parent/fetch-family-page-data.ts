@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getFamilyChildren } from "@/lib/parent/parent-home-data";
-import type { ChildProfile, Goal, Task, TaskRequest } from "@/types/database";
+import type { ChildProfile, Goal, GoalRequest, Task, TaskRequest } from "@/types/database";
 
 export async function fetchFamilyChildren(familyId: string): Promise<ChildProfile[]> {
   return getFamilyChildren(familyId);
@@ -85,6 +85,10 @@ export async function fetchFamilyChildrenAndGoals(familyId: string): Promise<{
 }
 
 export type PendingTaskRequest = TaskRequest & {
+  child_name: string;
+};
+
+export type PendingGoalRequest = GoalRequest & {
   child_name: string;
 };
 
