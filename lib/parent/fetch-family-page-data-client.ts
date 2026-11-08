@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
-import type { ChildProfile, Goal, Task } from "@/types/database";
-import type { PendingTaskRequest } from "@/lib/parent/fetch-family-page-data";
+import type { PendingGoalRequest, PendingTaskRequest } from "@/lib/parent/fetch-family-page-data";
+import type { ChildProfile, Goal, GoalRequest, Task } from "@/types/database";
 import { enrichPockets } from "@/lib/savings/enrich-pockets";
 import {
   emptyParentGoldSavingsData,
@@ -152,6 +152,37 @@ export async function fetchPendingTaskRequestsClient(
 
   return (requests ?? []).map((request) => ({
     ...(request as PendingTaskRequest),
+    child_name: nameById.get(request.profile_id) ?? "Anak",
+  }));
+}
+
+export async function fetchPendingGoalRequestsClient(
+  familyId: string,
+  children?: Pick<ChildProfile, "id" | "name">[],
+): Promise<PendingGoalRequest[]> {
+  const supabase = createClient();
+  const childList =
+    children ??
+    ((await supabase
+      .from("child_profiles")
+      .select("id, name")
+      .eq("family_id", familyId)
+      .is("archived_at", null)).data ?? []);
+
+  const childIds = childList.map((c) => c.id);
+  if (childIds.length === 0) return [];
+
+  const nameById = new Map(childList.map((c) => [c.id, c.name]));
+
+  const { data: requests } = await supabase
+    .from("goal_requests")
+    .select("*")
+    .in("profile_id", childIds)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  return (requests ?? []).map((request) => ({
+    ...(request as GoalRequest),
     child_name: nameById.get(request.profile_id) ?? "Anak",
   }));
 }

@@ -10,6 +10,11 @@ import {
 import { sendTaskPendingWebPush } from "@/lib/push/send-task-pending-web-push";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { RPC } from "@/lib/database/rpc";
+import {
+  GOAL_REQUEST_NOTE_MAX,
+  GOAL_REQUEST_TITLE_MAX,
+  parseGoalRequestHp,
+} from "@/lib/goals/goal-request";
 import type { ParentFrequencyType } from "@/lib/tasks/mission-frequency";
 import {
   parseMaxSubmissionsPerPeriodNumber,
@@ -220,6 +225,81 @@ export async function submitTaskRequestAction(
 
   revalidatePath("/child/missions");
   revalidatePath("/parent/tasks");
+  return { success: true, requestId: data };
+}
+
+function mapGoalRequestError(message: string): string {
+  if (message.includes("title_required")) {
+    return "Nama hadiah wajib diisi.";
+  }
+  if (message.includes("title_too_long")) {
+    return "Nama hadiah terlalu panjang.";
+  }
+  if (message.includes("invalid_hp")) {
+    return "Energi target harus antara 1 dan 100.000.";
+  }
+  if (message.includes("note_too_long")) {
+    return "Catatan terlalu panjang.";
+  }
+  if (message.includes("profile_not_found") || message.includes("forbidden")) {
+    return "Profil anak tidak valid.";
+  }
+  return message || "Gagal mengajukan target.";
+}
+
+export async function submitGoalRequestAction(
+  profileId: string,
+  title: string,
+  requestedTargetHp: number,
+  note?: string,
+) {
+  const context = await getSessionContext();
+  if (!context) {
+    return { error: "Sesi tidak valid." };
+  }
+
+  if (!profileId) {
+    return { error: "ID profil anak wajib disertakan." };
+  }
+
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) {
+    return { error: "Nama hadiah wajib diisi." };
+  }
+  if (trimmedTitle.length > GOAL_REQUEST_TITLE_MAX) {
+    return { error: "Nama hadiah terlalu panjang." };
+  }
+
+  const targetHp = parseGoalRequestHp(requestedTargetHp);
+  if (targetHp === null) {
+    return { error: "Energi target harus antara 1 dan 100.000." };
+  }
+
+  const trimmedNote = note?.trim() ?? "";
+  if (trimmedNote.length > GOAL_REQUEST_NOTE_MAX) {
+    return { error: "Catatan terlalu panjang." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await (supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: string | null; error: { message: string } | null }>;
+  }).rpc(RPC.submitGoalRequest, {
+    p_profile_id: profileId,
+    p_title: trimmedTitle,
+    p_requested_target_hp: targetHp,
+    p_note: trimmedNote || null,
+  });
+
+  if (error) {
+    console.error("submit_goal_request:", error);
+    return { error: mapGoalRequestError(error.message) };
+  }
+
+  revalidatePath("/child/targets");
+  revalidatePath("/parent/targets");
   return { success: true, requestId: data };
 }
 

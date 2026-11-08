@@ -3,6 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { GoalStatus } from "@/lib/database/enums";
+import { RPC } from "@/lib/database/rpc";
+import { getSessionContext } from "@/lib/auth/get-session-context";
+import { parseGoalRequestHp } from "@/lib/goals/goal-request";
+import type { Goal } from "@/types/database";
 
 export async function createGoal(prevState: any, formData: FormData) {
   const childId = String(formData.get("childId") ?? "").trim();
@@ -202,5 +206,88 @@ export async function transferGoalHpAction(
   revalidatePath("/parent");
   revalidatePath(`/parent/goal/${profileId}`);
   revalidatePath("/child/home");
+  return { success: true };
+}
+
+function mapGoalRequestReviewError(message: string): string {
+  if (message.includes("invalid_hp")) {
+    return "Energi target harus antara 1 dan 100.000.";
+  }
+  if (message.includes("forbidden")) {
+    return "Hanya orang tua yang bisa meninjau pengajuan ini.";
+  }
+  if (message.includes("not_found")) {
+    return "Pengajuan tidak ditemukan atau sudah ditinjau.";
+  }
+  return message || "Gagal meninjau pengajuan target.";
+}
+
+export async function approveGoalRequestAction(requestId: string, targetHp: number) {
+  const context = await getSessionContext();
+  if (!context) {
+    return { error: "Sesi tidak valid." };
+  }
+
+  if (!requestId) {
+    return { error: "Pengajuan tidak valid." };
+  }
+
+  const hp = parseGoalRequestHp(targetHp);
+  if (hp === null) {
+    return { error: "Energi target harus antara 1 dan 100.000." };
+  }
+
+  const supabase = await createClient();
+  const { data: goalId, error } = await (supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: string | null; error: { message: string } | null }>;
+  }).rpc(RPC.approveGoalRequest, {
+    p_request_id: requestId,
+    p_target_hp: hp,
+  });
+
+  if (error) {
+    console.error("approve_goal_request:", error);
+    return { error: mapGoalRequestReviewError(error.message) };
+  }
+
+  const { data: goal } = goalId
+    ? await supabase.from("goals").select("*").eq("id", goalId).maybeSingle()
+    : { data: null };
+
+  revalidatePath("/parent/targets");
+  revalidatePath("/child/targets");
+  return { success: true, goal: (goal as Goal | null) ?? null };
+}
+
+export async function rejectGoalRequestAction(requestId: string) {
+  const context = await getSessionContext();
+  if (!context) {
+    return { error: "Sesi tidak valid." };
+  }
+
+  if (!requestId) {
+    return { error: "Pengajuan tidak valid." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  }).rpc(RPC.rejectGoalRequest, {
+    p_request_id: requestId,
+  });
+
+  if (error) {
+    console.error("reject_goal_request:", error);
+    return { error: mapGoalRequestReviewError(error.message) };
+  }
+
+  revalidatePath("/parent/targets");
+  revalidatePath("/child/targets");
   return { success: true };
 }
